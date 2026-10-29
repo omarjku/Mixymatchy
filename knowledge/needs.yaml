@@ -1,0 +1,33 @@
+# Catalogue of "needs": the kinds of fact a role or task can ask for.
+# A need is documented when at least one verified Fact matches its types AND (if given) its concepts.
+# Concepts are the normalised keys set during extraction (see drugs.yaml / synonyms.yaml).
+# Owner: M1 (clinical content) + E2 (matching). Draft v0.
+
+age:                 {label: Age,                               types: [history],        concepts: [age]}
+weight_trend:        {label: Weight and BMI over time,          types: [measurement],    concepts: [weight, bmi, height]}
+antithrombotic:      {label: Blood thinners,                    types: [medication],     concepts: [class:antiplatelet, class:anticoagulant]}
+allergy:             {label: Allergies,                         types: [allergy]}
+contrast_allergy:    {label: Contrast media allergy,            types: [allergy],        concepts: [contrast_allergy]}
+lvef:                {label: Heart pumping function (LVEF),     types: [measurement, finding], concepts: [lvef]}
+rhythm:              {label: Heart rhythm,                      types: [finding],        concepts: [ecg, holter]}
+airway:              {label: Airway assessment,                 types: [finding],        concepts: [airway]}
+prior_anaesthesia:   {label: Previous anaesthesia problems,     types: [history],        concepts: [anaesthesia_history]}
+sleep_apnoea:        {label: Sleep apnoea,                      types: [diagnosis],      concepts: [sleep_apnoea]}
+reflux:              {label: Reflux / hiatus hernia,            types: [diagnosis],      concepts: [gerd, hiatus_hernia]}
+diabetes_drugs:      {label: Glucose-lowering drugs,            types: [medication],     concepts: [class:antidiabetic]}
+bp_drugs:            {label: Blood pressure drugs,              types: [medication],     concepts: [class:antihypertensive]}
+all_medication:      {label: Current medication,                types: [medication]}
+hba1c:               {label: HbA1c,                             types: [measurement],    concepts: [hba1c]}
+kidney_function:     {label: Kidney function,                   types: [measurement],    concepts: [creatinine, egfr]}
+histology:           {label: Histology,                         types: [finding, diagnosis], concepts: [histology]}
+tnm:                 {label: TNM stage and grade,               types: [finding],        concepts: [tnm]}
+receptors:           {label: Receptor status,                   types: [finding],        concepts: [er, pr, her2]}
+ki67:                {label: Ki-67,                             types: [finding],        concepts: [ki67]}
+lymph_nodes:         {label: Lymph node findings,               types: [finding],        concepts: [lymph_nodes]}
+tumour_board:        {label: Tumour board recommendation and date, types: [plan, recommendation], concepts: [tumour_board, surgery_plan]}
+prior_episodes:      {label: Similar episodes before and cause, types: [history, diagnosis], concepts: [amaurosis_fugax, hypertensive_crisis]}
+carotid:             {label: Carotid stenosis (side, degree),   types: [finding, diagnosis], concepts: [carotid_stenosis]}
+followups:           {label: Recommended follow-ups,            types: [recommendation]}
+active_diagnoses:    {label: Active diagnoses,                  types: [diagnosis]}
+lupus_therapy:       {label: Lupus treatment,                   types: [medication],     concepts: [class:immunosuppressant, class:antimalarial]}
+bone_health:         {label: Osteoporosis and bone treatment,   types: [diagnosis, medication], concepts: [osteoporosis, drug:alendronic_acid]}

@@ -1,0 +1,9 @@
+# Words in the task that add needs on top of the role's list. Owner: M1. Draft v0.
+contrast: [contrast_allergy, kidney_function]
+ct: [contrast_allergy, kidney_function]
+angiography: [contrast_allergy, kidney_function]
+surgery: [antithrombotic, allergy]
+quadrantectomy: [antithrombotic, allergy, tumour_board]
+weight: [weight_trend]
+eye: [prior_episodes, carotid]
+vision: [prior_episodes, carotid]
