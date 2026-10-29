@@ -14,4 +14,8 @@ RUN pip install --no-cache-dir "fastapi>=0.115" "uvicorn[standard]>=0.30" "pydan
 COPY . .
 COPY --from=web /web/out /app/static
 ENV STATIC_DIR=/app/static
+# Hugging Face Spaces runs containers as uid 1000; the app writes data/ at start-up.
+RUN useradd -m -u 1000 user && chown -R user /app
+USER user
+EXPOSE 8000
 CMD ["sh", "deploy/start.sh"]

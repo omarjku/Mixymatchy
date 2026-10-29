@@ -1,0 +1,35 @@
+# Mirrors the repo to a Hugging Face Docker Space on every push, so testers always see the latest build.
+# Needs: repository secret HF_TOKEN (HF write token) and repository variable HF_SPACE (e.g. user/second-look).
+# The Space itself holds DATA_ZIP_B64, SITE_USER and SITE_PASSWORD as Space secrets.
+name: Deploy to Hugging Face Space
+
+on:
+  push:
+    branches: [main, claude/peaceful-ride-nw0xm5]
+  workflow_dispatch:
+
+concurrency:
+  group: hf-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Push snapshot to the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+        run: |
+          set -e
+          test -n "$HF_TOKEN" && test -n "$HF_SPACE" || { echo "HF_TOKEN / HF_SPACE not configured"; exit 1; }
+          HF_USER="${HF_SPACE%%/*}"
+          rm -rf .git
+          cp deploy/hf/README.md README.md
+          git init -q -b main
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy ${GITHUB_SHA::7}"
+          git push --force "https://${HF_USER}:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" main
