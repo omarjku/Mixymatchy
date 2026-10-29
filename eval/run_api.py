@@ -1,19 +1,28 @@
-"""Score the app on the 5 situations.  python eval/run.py  (from the repo root, backend running)
+"""Score the running app over HTTP on the 5 situations.
 
-Implemented:  latency per situation, keyword check of the 15 expected answers, source-document check,
-              traceability check (every shown fact has segments).
-              stats on screen match the facts on screen.
-TODO(M2/E2):  key tokens per question in eval/answer_keys.json, contradiction scoring against
-              eval/contradictions_gold.json, unseen-situation run with screen dumps for clinician review.
+    uvicorn --app-dir backend app.main:app --port 8000 &     (from the repo root)
+    python3 -m eval.run_api [--api http://127.0.0.1:8000] [--runs 3]
+
+Per question: the token logic of eval/answer_keys.json (eval.core.eval_question, the same check the
+engine and adapter tests use) applied only to the facts in the /briefing response, each linked to a
+source document through its segment ids. Documents and segments are fetched from the API as well.
+Also reports latency per situation, untraced facts, and whether stats.facts_shown matches the screen.
 """
+import argparse
 import json
 import re
+import statistics
 import sys
 import time
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from eval.core import Build, eval_question, norm  # noqa: E402
+
 API = "http://127.0.0.1:8000"  # not "localhost": avoids a 2 s IPv6 lookup delay on Windows
 
 
@@ -28,6 +37,11 @@ def situations() -> list[tuple[str, str]]:
     return out
 
 
+def get(path: str):
+    with urllib.request.urlopen(f"{API}{path}", timeout=30) as r:
+        return json.load(r)
+
+
 def post(situation: str) -> tuple[dict, float]:
     req = urllib.request.Request(f"{API}/briefing", data=json.dumps({"situation": situation}).encode(),
                                  headers={"Content-Type": "application/json"})
@@ -37,34 +51,52 @@ def post(situation: str) -> tuple[dict, float]:
     return body, time.perf_counter() - t0
 
 
+def source_build(facts: list[dict]) -> tuple[Build, dict]:
+    docs, passages = {}, []
+    for d in get("/documents"):
+        full = get(f"/documents/{d['id']}")
+        docs[d["id"]] = {"title": full["title"], "date": full["date"], "display_text": full["text"]}
+        passages += full["segments"]
+    rows = {}
+    for f in facts:
+        attrs = {"value": f.get("value"), "unit": f.get("unit"), "side": f.get("side"), "status": f.get("status")}
+        rows[f["id"]] = {"id": f["id"], "label_en": f["label_en"], "attrs": attrs, "date": f.get("date"),
+                         "status": f.get("status"), "passage_ids": f["segment_ids"]}
+    texts = {i: norm(r["label_en"] + " | " + " ".join(str(v) for v in r["attrs"].values() if v))
+             for i, r in rows.items()}
+    return Build(docs, passages, list(rows.values())), texts
+
+
 def main() -> int:
-    expected = json.loads((ROOT / "cases" / "expected.json").read_text(encoding="utf-8"))
-    keys = {}
-    keys_file = ROOT / "eval" / "answer_keys.json"
-    if keys_file.exists():
-        keys = json.loads(keys_file.read_text(encoding="utf-8"))
-    rows, worst = [], 0.0
+    global API
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--api", default=API)
+    ap.add_argument("--runs", type=int, default=3, help="requests per situation for the latency figures")
+    a = ap.parse_args()
+    API = a.api.rstrip("/")
+    keys = json.loads((ROOT / "eval" / "answer_keys.json").read_text(encoding="utf-8"))
+    rows, lat = [], []
     for i, (title, desc) in enumerate(situations(), start=1):
-        briefing, secs = post(f"{title}. {desc}")
-        worst = max(worst, secs)
-        facts = [f for n in briefing["needs"] for f in n["facts"]]
-        screen = json.dumps(briefing, ensure_ascii=False).lower()
-        docs_on_screen = {sid.split(":")[0] for f in facts for sid in f["segment_ids"]}
-        untraced = [f for f in facts if not f["segment_ids"]]
-        if briefing["stats"].get("facts_shown") != len(facts):  # every number on screen must be computed
+        times = []
+        for _ in range(max(1, a.runs)):
+            briefing, secs = post(f"{title}. {desc}")
+            times.append(secs)
+        lat += times
+        facts = [f for n in briefing["needs"] for f in n["facts"] + n["superseded"]] + briefing["blind_spot"]
+        shown = [f for n in briefing["needs"] for f in n["facts"]]
+        if briefing["stats"].get("facts_shown") != len(shown):  # every number on screen must be computed
             print(f"WARNING situation {i}: stats.facts_shown != facts on screen")
-        for q in [e for e in expected if e["id"].startswith(f"{i}.")]:
-            tokens = keys.get(q["id"], [])
-            hit = bool(tokens) and all(t.lower() in screen for t in tokens)
-            linked = bool(docs_on_screen & set(q["sources"]))
-            rows.append((q["id"], hit and linked, f"{secs:.1f}s", len(untraced)))
-    print("| Q | correct+linked | latency | untraced facts |\n|---|---|---|---|")
+        untraced = sum(not f["segment_ids"] for f in facts)
+        build, texts = source_build(facts)
+        for qid in sorted(k for k in keys if k.startswith(f"{i}.")):
+            res = eval_question(build, qid, keys[qid], texts)
+            rows.append((qid, res["pass"], f"{statistics.median(times) * 1000:.0f} ms", untraced))
+    print("| Q | correct+linked | median latency | untraced facts |\n|---|---|---|---|")
     for r in rows:
         print(f"| {r[0]} | {'yes' if r[1] else 'no'} | {r[2]} | {r[3]} |")
-    print(f"\nCorrect: {sum(r[1] for r in rows)}/{len(rows)} · slowest: {worst:.1f}s")
-    if not keys:
-        print("(eval/answer_keys.json missing: add key tokens per question, e.g. {\"1.1\": [\"100 mg\"]})")
-    return 0
+    print(f"\nCorrect: {sum(r[1] for r in rows)}/{len(rows)} · median {statistics.median(lat) * 1000:.0f} ms"
+          f" · slowest {max(lat) * 1000:.0f} ms over {len(lat)} requests")
+    return 0 if all(r[1] for r in rows) else 1
 
 
 if __name__ == "__main__":
