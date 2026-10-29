@@ -1,0 +1,308 @@
+"""Adapter: our deterministic engine -> the frontend contract in schema.py.
+
+Data flow
+  offline   pipeline/  -> data/build/{docs,passages,facts}.json
+            compare/   -> data/build/compare.json
+  online    engine.screen.build_screen(situation)  -> screen dict
+            this module                             -> schema.Briefing
+
+Nothing here invents patient content: every Fact is an engine fact (which the engine
+re-verifies word for word against its passage at load time), every Segment is a passage.
+Missing build files are built on first use by calling the pipeline/compare builders.
+
+Mapping rules (documented once, applied everywhere)
+  docs.json            -> Document (text = display_text; department from documents.json metadata)
+  passages.json        -> Segment  (id = passage id; kind line|sentence -> sentence, table_row -> table_row)
+  card                 -> NeedResult (consistent|conflicting|outdated -> documented)
+  card item            -> Fact (one per displayed item: the same statement repeated in several letters
+                          is one Fact whose segment_ids cover every letter; id = newest engine fact id)
+  card status          -> Fact.trust: conflicting -> conflicting, outdated -> stale,
+                          consistent -> consistent (item found in >= 2 letters) or single (1 letter)
+  latest/current_meds "earlier" and meds no longer on the latest list -> NeedResult.superseded
+  series_change        -> Computed (formula + the segments of the first and last value)
+  absent_after         -> Computed "No record that this took place after ..." linked to the recommendation
+  compare contradictions -> Finding(kind=conflict, tier contradiction | documentation_note)
+  compare blind spots  -> Briefing.blind_spot facts + Finding(kind=dropped); unstated computed
+                          values (e.g. weight change never written down) -> Finding(kind=silence)
+  open follow-ups      -> Finding(kind=followup)
+  stats                -> counted from the Briefing object itself
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import threading
+from functools import lru_cache
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:  # engine/, pipeline/, compare/ are top-level packages of the repo
+    sys.path.insert(0, str(ROOT))
+
+from .schema import Briefing, Computed, Document, Fact, Finding, NeedResult, Segment  # noqa: E402
+
+BUILD_DIR = Path(os.environ.get("SECOND_LOOK_BUILD", ROOT / "data" / "build"))
+RAW_DIR = ROOT / "data" / os.environ.get("PATIENT_ID", "patient-0000-0001")
+BUILD_FILES = ("docs.json", "passages.json", "facts.json")
+
+_lock = threading.Lock()
+
+TYPE_BY_SECTION = {
+    "medications": "medication", "allergies": "allergy", "problems": "diagnosis", "past_illness": "history",
+    "procedures": "procedure", "results": "finding", "vital_signs": "measurement", "plan_of_care": "plan",
+    "social_history": "history", "functional_status": "finding",
+}
+SEGMENT_KIND = {"line": "sentence", "sentence": "sentence", "table_row": "table_row", "heading": "heading"}
+
+
+# ----------------------------------------------------------------- build artefacts
+
+def ensure_build() -> None:
+    """Build data/build/* with pipeline/ and compare/ if any file is missing (needs the raw patient data)."""
+    with _lock:
+        if any(not (BUILD_DIR / f).exists() for f in BUILD_FILES):
+            from pipeline import build as pipeline_build
+            pipeline_build.main()
+        if not (BUILD_DIR / "compare.json").exists():
+            from compare import build as compare_build
+            compare_build.main(str(BUILD_DIR))
+
+
+@lru_cache
+def engine_store():
+    ensure_build()
+    from engine.data import store
+    return store()
+
+
+@lru_cache
+def _departments() -> dict[str, str]:
+    """Document metadata (not patient facts): department per document id."""
+    path = RAW_DIR / "documents.json"
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {str(d.get("id")): d.get("department") or d.get("division") or "" for d in data.get("documents", [])}
+
+
+@lru_cache
+def documents() -> list[Document]:
+    st, dep = engine_store(), _departments()
+    docs = [Document(id=i, title=d.get("title") or "", date=d.get("date") or "", type=d.get("type") or "",
+                     department=dep.get(i, ""), text=d.get("display_text") or "") for i, d in st.docs.items()]
+    return sorted(docs, key=lambda d: (d.date, d.id))
+
+
+@lru_cache
+def segments() -> list[Segment]:
+    st = engine_store()
+    return [Segment(id=p["id"], doc_id=p["doc_id"], kind=SEGMENT_KIND.get(p.get("kind"), "sentence"),
+                    section=p.get("section"), text=p["text"], start=p["start"], end=p["end"],
+                    doc_date=st.doc_date(p["doc_id"]) or "") for p in st.passages]
+
+
+@lru_cache
+def segment_index() -> dict[str, Segment]:
+    return {s.id: s for s in segments()}
+
+
+def document(doc_id: str) -> Document | None:
+    return next((d for d in documents() if d.id == doc_id), None)
+
+
+# ----------------------------------------------------------------- facts
+
+def _fact_type(f: dict) -> str:
+    sec = f.get("ips_section")
+    if sec == "plan_of_care" and f.get("status") == "recommended":
+        return "recommendation"
+    if sec == "results" and (f.get("attrs") or {}).get("value") not in (None, ""):
+        return "measurement"
+    return TYPE_BY_SECTION.get(sec, "finding")
+
+
+def _side(sides: set[str]) -> str | None:
+    sides = {s for s in sides if s in ("left", "right", "both")}
+    if not sides:
+        return None
+    return "both" if len(sides) > 1 or "both" in sides else sides.pop()
+
+
+def _in_label(token, label: str) -> bool:
+    return token is None or str(token).replace(",", ".").lower() in label.replace(",", ".").lower()
+
+
+def item_fact(st, it: dict, trust: str) -> Fact:
+    """One displayed item (same statement, possibly in several letters) -> one Fact."""
+    members = [st.fact_by_id[x] for x in it["facts"] if x in st.fact_by_id]
+    newest = [f for f in members if str(f.get("date") or "")[:10] == str(it.get("date") or "")[:10]]
+    rep = (newest or members)[-1]
+    attrs = rep.get("attrs") or {}
+    label = it.get("label_en") or rep.get("label_en") or ""
+    value, unit = attrs.get("value"), attrs.get("unit")
+    if value not in (None, "") and _in_label(value, label) and _in_label(unit, label):
+        value = unit = None  # the label already states it; avoid "Weight 78 kg: 78 kg" on screen
+    docs = it.get("docs") or st.fact_docs(rep)
+    if trust == "consistent" and len(docs) < 2:
+        trust = "single"
+    seg_ids = list(dict.fromkeys(it.get("passages") or [p for f in members for p in f.get("passage_ids") or []]))
+    return Fact(
+        id=rep["id"], type=_fact_type(rep), concept=rep.get("category") or "",
+        classes=[rep["category"]] if rep.get("ips_section") == "medications" and rep.get("category") else [],
+        label_en=label, value=None if value in (None, "") else str(value), unit=unit or None,
+        date=str(it.get("date"))[:10] if it.get("date") else None,
+        side=_side({str((f.get("attrs") or {}).get("side") or "").lower() for f in members}),
+        status=it.get("status") or rep.get("status"), segment_ids=seg_ids, trust=trust)
+
+
+def _trust(card_status: str) -> str:
+    return {"conflicting": "conflicting", "outdated": "stale"}.get(card_status, "consistent")
+
+
+# ----------------------------------------------------------------- cards -> needs
+
+def need_result(st, card: dict) -> NeedResult:
+    status = card.get("status")
+    res = NeedResult(need=card["need"], label=card.get("label_en") or card["need"],
+                     status="not_applicable" if status == "not_applicable"
+                     else "not_documented" if status == "not_documented" else "documented")
+    if res.status == "not_applicable":
+        res.reason = card.get("value_en", "").replace("Not applicable: ", "") or None
+        res.reason_segment_ids = list(card.get("passages") or [])
+        return res
+    if res.status == "not_documented":
+        res.reason = card.get("value_en") or "Not documented"
+        res.reason_segment_ids = list(card.get("passages") or [])  # possible mentions, open to check
+        for rec in card.get("related") or []:  # absent_after: the recommendation it was checked against
+            res.computed.append(Computed(
+                label=rec["label_en"], value="No record that this took place after %s" % card.get("threshold"),
+                formula="searched %d documents for a matching fact dated after %s (as of the briefing date)"
+                        % (len(st.docs), card.get("threshold")),
+                segment_ids=rec["passages"]))
+        return res
+
+    trust = _trust(status)
+    for it in card.get("items") or []:
+        fact = item_fact(st, it, "stale" if it.get("not_on_latest_list") else trust)
+        if it.get("not_on_latest_list"):
+            res.superseded.append(fact.model_copy(update={"status": "not on latest medication list"}))
+        else:
+            res.facts.append(fact)
+        for e in it.get("earlier") or []:  # same drug, different dose/schedule on an older list
+            res.superseded.append(item_fact(st, e, "stale"))
+    for e in card.get("earlier") or []:  # "latest": older values hidden behind the newest one
+        res.superseded.append(item_fact(st, e, "stale"))
+    for rec in card.get("related") or []:  # absent_after with a later record: show what it answered
+        res.facts.append(item_fact(st, rec, trust))
+
+    calc = card.get("calculated")
+    if calc and card.get("items"):
+        first, last = card["items"][0], card["items"][-1]
+        unit = calc.get("unit") or ""
+        v0, v1 = (st.fact_by_id[i["facts"][0]] for i in (first, last))
+        a = (v0.get("attrs") or {}).get("value")
+        b = (v1.get("attrs") or {}).get("value")
+        res.computed.append(Computed(
+            label=card.get("label_en") or "Change",
+            value="%+g %s over %d months" % (calc["change"], unit, calc["months"]),
+            formula="%s %s (%s) - %s %s (%s); %s" % (b, unit, calc["to"], a, unit, calc["from"], calc["method"]),
+            segment_ids=list(dict.fromkeys(first["passages"] + last["passages"]))))
+    if not res.facts and res.superseded:
+        res.facts, res.superseded = res.superseded, []
+    return res
+
+
+# ----------------------------------------------------------------- findings
+
+def _concepts(st, fact_ids) -> list[str]:
+    return sorted({st.fact_by_id[x]["category"] for x in fact_ids if x in st.fact_by_id})
+
+
+def findings(st, screen: dict) -> tuple[list[Finding], list[Fact]]:
+    out: list[Finding] = []
+    for c in screen.get("contradictions") or []:
+        counted = c.get("counted", True)
+        out.append(Finding(
+            id=c["id"], kind="conflict", tier="contradiction" if counted else "documentation_note",
+            title=c.get("title_en") or "Contradiction", explanation=c.get("detail_en") or "",
+            segment_ids=c.get("passages") or [], fact_ids=c.get("facts") or [],
+            concepts=_concepts(st, c.get("facts") or []),
+            severity=("high" if c.get("relevant") else "medium") if counted else "low"))
+
+    blind: list[Fact] = []
+    bs = screen.get("blind_spot") or {}
+    for i, b in enumerate(bs.get("items") or [], 1):
+        fids, pids = b.get("facts") or [], b.get("passages") or []
+        if not pids:
+            continue
+        if b.get("kind") == "unstated_computed":
+            out.append(Finding(id="silence%02d" % i, kind="silence", title=b["label_en"],
+                               explanation="Calculated from the letters; no letter states it.",
+                               segment_ids=pids, fact_ids=fids, concepts=_concepts(st, fids), severity="medium"))
+            continue
+        it = {"label_en": b["label_en"], "date": b.get("last_documented"), "facts": fids,
+              "passages": pids, "docs": b.get("docs")}
+        blind.append(item_fact(st, it, "consistent"))
+        out.append(Finding(
+            id="dropped%02d" % i, kind="dropped", title=b["label_en"],
+            explanation="Last documented %s; not mentioned in the latest letter (%s, %s)."
+                        % (b.get("last_documented"), bs.get("latest_document"), bs.get("latest_document_date")),
+            segment_ids=pids, fact_ids=fids, concepts=_concepts(st, fids), severity="medium"))
+
+    comp = st.compare if isinstance(st.compare, dict) else {}
+    for fu in comp.get("open_followups") or []:
+        if not fu.get("is_open") or not fu.get("passage_ids"):
+            continue
+        out.append(Finding(
+            id=fu["id"], kind="followup", title=fu.get("label_en") or "Open follow-up",
+            explanation="Recommended %s (document %s); no later record that it took place. %s"
+                        % (fu.get("authored_date"), fu.get("authored_doc"), fu.get("searched") or ""),
+            segment_ids=fu["passage_ids"], fact_ids=fu.get("fact_ids") or [],
+            concepts=_concepts(st, fu.get("fact_ids") or []), severity="medium"))
+    return out, blind
+
+
+# ----------------------------------------------------------------- briefing
+
+def stats_of(b: Briefing, facts_dropped: int, task_concepts: int | None) -> dict:
+    """Every number on screen is counted from the briefing itself."""
+    known = segment_index()
+    shown = [f for n in b.needs for f in n.facts]
+    verified = [f for f in shown if f.segment_ids and all(s in known for s in f.segment_ids)]
+    return {
+        "facts_shown": len(shown),
+        "facts_verified": len(verified),
+        "facts_dropped": facts_dropped,
+        "computed_values": sum(len(n.computed) for n in b.needs),
+        "not_documented": sum(n.status == "not_documented" for n in b.needs),
+        "not_applicable": sum(n.status == "not_applicable" for n in b.needs),
+        "blind_spot": len(b.blind_spot),
+        "task_concepts": task_concepts if task_concepts is not None else len(b.blind_spot),
+        "contradictions": sum(f.kind == "conflict" and f.tier == "contradiction" for f in b.findings),
+        "documentation_notes": sum(f.kind == "conflict" and f.tier == "documentation_note" for f in b.findings),
+        "followups_open": sum(f.kind == "followup" for f in b.findings),
+    }
+
+
+def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | None = None) -> Briefing:
+    st = engine_store()
+    from engine.screen import build_screen
+    if use_llm is None:
+        use_llm = os.environ.get("SECOND_LOOK_LLM") == "1"
+    screen = build_screen(situation, as_of=as_of, use_llm=use_llm)
+    u = screen["understood"]
+
+    cards, seen = [], set()
+    for c in (screen.get("safety_strip") or []) + (screen.get("cards") or []):
+        if c["need"] not in seen:
+            seen.add(c["need"])
+            cards.append(c)
+    found, blind = findings(st, screen)
+    b = Briefing(situation=situation, role=u.get("role_id") or "other",
+                 task=", ".join(u.get("task_labels") or []) or situation, as_of=u.get("as_of_date") or "",
+                 needs=[need_result(st, c) for c in cards], blind_spot=blind, findings=found)
+    bs = screen.get("blind_spot") or {}
+    b.stats = stats_of(b, len(st.removed), bs.get("of_total_problems"))
+    b.stats["engine_ms"] = screen.get("timing_ms")
+    return b

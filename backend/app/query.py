@@ -1,4 +1,5 @@
-"""Step B: turn a situation into a briefing (owner: E2). Must stay fast: no LLM call except parsing.
+"""Step B, LLM-store path (SECOND_LOOK_BACKEND=llm): turn a situation into a briefing (owner: E2).
+The default path is app/adapter.py (deterministic engine). Must stay fast: no LLM call except parsing.
 
 Implemented:  keyword role parser (fallback), needs from rulebook roles + tasks,
               smart answers per need (latest as of date, current medication list overrides older lists,
@@ -16,9 +17,15 @@ from .config import AS_OF_DEFAULT, RULEBOOK_DIR
 from .schema import Briefing, Computed, Fact, Finding, NeedResult, Segment
 
 
+# roles.json / tasks.json at the rulebook root now hold the engine's schema (engine/); this LLM-store
+# path keeps reading the original keyword rulebook from rulebook/scaffold/.
+SCAFFOLD = {"roles", "tasks"}
+
+
 @lru_cache
 def rulebook(name: str) -> dict:
-    data = json.loads((RULEBOOK_DIR / f"{name}.json").read_text(encoding="utf-8"))
+    folder = RULEBOOK_DIR / "scaffold" if name in SCAFFOLD else RULEBOOK_DIR
+    data = json.loads((folder / f"{name}.json").read_text(encoding="utf-8"))
     return {k: v for k, v in data.items() if not k.startswith("_")}
 
 

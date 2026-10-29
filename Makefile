@@ -1,20 +1,27 @@
-.PHONY: install precompute backend frontend eval test
+.PHONY: install build precompute backend frontend eval test
 
 install:
-	cd backend && pip install -r requirements.txt
+	pip install -r backend/requirements.txt
 	cd frontend && npm install
 
+build:
+	python3 -m pipeline.build
+	python3 -m compare.build
+
+# LLM path only (SECOND_LOOK_BACKEND=llm)
 precompute:
 	cd backend && python -m app.precompute
 
 backend:
-	cd backend && uvicorn app.main:app --reload --port 8000
+	uvicorn --app-dir backend app.main:app --reload --port 8000
 
 frontend:
 	cd frontend && npm run dev
 
 eval:
-	python eval/run.py
+	python3 -m eval.run
+	python3 -m eval.run_api
 
 test:
-	cd backend && python -m pytest -q
+	python3 -m unittest engine.test_engine compare.test_compare eval.test_eval
+	cd backend && python3 -m pytest -q

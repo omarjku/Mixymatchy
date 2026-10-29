@@ -16,90 +16,111 @@ the product plan in [docs/PLAN.md](docs/PLAN.md).
 
 ## Architecture
 
+Two halves meet at one contract, `backend/app/schema.py` (mirrored by `frontend/lib/api.ts`).
+The default path is fully deterministic and needs no API key; the LLM is optional.
+
 ```
-OFFLINE (once per patient)                      ONLINE (per request, target 2-4 s)
-backend/app/precompute.py                        backend/app/main.py  POST /briefing
-  ingest.py   normalise + split into segments      query.py  parse situation -> role + needs
-              with stable IDs (12340012:s041)                (rulebook/roles.json, tasks.json)
-  extract.py  Claude extracts facts that cite                select verified facts per need
-              segment IDs only                               smart answers: latest as of date, newest
-  verify.py   code checks each value is in its                 medication list wins, computed change,
-              cited segment, drops the rest                    "nothing recorded after X"
-  rules.py    deterministic conflict rules,                  "not documented" / "not applicable"
-              tiered: contradiction vs note                  blind spot vs latest letter, findings
-  store.py    -> cache/*.json (git-ignored)                  stats computed from the screen
+OFFLINE (once per patient, python3)              ONLINE (per request, ~20 ms)
+pipeline/   python3 -m pipeline.build              backend/app/main.py   FastAPI: /health, /documents,
+  documents -> display text -> passages              /documents/{id}, /segments/{id}, POST /briefing
+  (exact offsets, 12340012:p0042)                  backend/app/adapter.py
+  rules + IBM hints -> facts that quote their        engine.screen.build_screen(situation)
+  passage word for word                                engine/understand.py  role + tasks (rulebook/
+  -> data/build/{docs,passages,facts}.json               roles.json, tasks.json; optional Haiku hint)
+compare/    python3 -m compare.build                   engine/fill.py  one card per need: latest as of,
+  contradictions, tiered: contradiction vs               newest medication list wins, series change,
+  documentation note; blind spots vs latest              "nothing recorded after", not documented /
+  letter; open follow-ups -> compare.json                not applicable (with evidence)
+                                                       engine/data.py  re-verifies every fact at load
+Both are run automatically by the backend          -> mapped to schema.Briefing (facts, superseded,
+on first start if data/build/ is missing.             computed, findings, blind spot, stats counted
+                                                      from the briefing itself)
                                                  frontend/ (Next.js): briefing + source pane
 ```
+
+Mapping engine -> contract (details in `backend/app/adapter.py`): passages become `Segment`s, each card
+becomes a `NeedResult`, each displayed item a `Fact` (one per statement, with the segments of every letter
+that repeats it); card status `conflicting`/`outdated` becomes `Fact.trust` `conflicting`/`stale`; older
+values (e.g. a dose from an older medication list) go to `superseded`; compare contradictions, blind spots and
+open follow-ups become `Finding`s (`conflict`, `dropped`, `followup`; an unstated computed change is `silence`).
 
 | Component | Tech | Role |
 |---|---|---|
 | Frontend | Next.js 15, React 19, Tailwind 4 | Input, briefing, source viewer |
-| Backend | Python, FastAPI | Fact store, rules, briefing API |
-| AI | Claude Opus (extraction, offline), Claude Haiku (situation parsing, online) | Reads German letters, understands the request |
-| Rulebook | `rulebook/*.json` | What each role and task needs (with guideline citation + reviewer), drug names, synonyms |
-| Eval + tests | `eval/run.py`, `backend/tests/` | Scores the 15 questions, traceability, latency; unit tests for the guarantees |
+| Backend | Python, FastAPI | Serves the engine's results in the schema.py contract |
+| Offline build | `pipeline/`, `compare/` (stdlib Python) | Passages, verified facts, contradictions, blind spots, follow-ups |
+| Engine | `engine/` (stdlib Python) | Situation -> role/tasks -> one card per need |
+| AI (optional) | Claude Haiku for situation parsing (`SECOND_LOOK_LLM=1`); Claude extraction in `backend/app/extract.py` (`SECOND_LOOK_BACKEND=llm`) | Proposes a reading of the request; never produces facts or "not documented" |
+| Rulebook | `rulebook/roles.json`, `tasks.json` (engine); `rulebook/scaffold/` (original keyword rulebook for the LLM path) | What each role and task needs |
+| Eval + tests | `eval/`, `engine/test_engine.py`, `compare/test_compare.py`, `backend/tests/` | 15 questions, traceability, contradictions, latency |
 
-### Status of the scaffold
+### Status
 
 | Part | Status |
 |---|---|
-| Ingest + segmentation with stable IDs and exact offsets | working |
-| BMI conflict rule (tier: contradiction) | working (finds both BMI contradictions) |
-| Fact verifier | working; negative test drops 5/5 invented facts |
-| Smart answers: latest as of 15.04.2016, newest medication list overrides, computed weight change, "nothing recorded after" | working, unit-tested on fixtures |
-| "Not documented" vs "not applicable" (with evidence) | working, unit-tested |
-| Blind spot vs latest letter, stats computed from the screen | working, unit-tested |
-| Briefing API + role keyword parser | working (real data shows "not documented" until extraction exists) |
-| Frontend: input, role chips, briefing, computed values, contradiction tiers, multi-letter source pane | working |
-| Claude extraction + sceptic pass | TODO (E1) `backend/app/extract.py` |
-| More conflict rules (dates, laterality, findings), fact families, trust marks | TODO (E2) `backend/app/rules.py`, `query.py` |
-| LLM situation parser | TODO (E2) `backend/app/query.py` |
-| Eval answer keys, contradiction scoring, unseen situations | TODO (M2/E2) `eval/` |
+| Passages with exact offsets, facts that quote their passage, load-time re-verification | working (`pipeline/`, `engine/data.py`) |
+| Contradictions (5 counted) and documentation notes (3), blind spot (9 of 30), open follow-ups (2 of 8) | working (`compare/`) |
+| Role/task understanding, cards per need, smart answers, not documented vs not applicable | working (`engine/`), 8 unseen situations tested |
+| FastAPI serving the engine in the schema.py contract | working (`backend/app/adapter.py`), 15/15 answers over HTTP, ~20 ms median |
+| Frontend on the merged API | working, unchanged |
+| LLM path: Claude extraction + verifier into `cache/` | kept, off by default (`SECOND_LOOK_BACKEND=llm`); extraction is still a stub |
+| Superseded values and computed values shown in full in the UI | partly: the UI shows a count + source link for superseded values |
 | Guideline citations in the rulebook (`TODO-cite`) + second reviewer | TODO (M1, M2) `rulebook/` |
 
 ## Setup
 
-Requirements: Python 3.11+, Node 20+, an Anthropic API key.
+Requirements: Python 3.11+, Node 20+. An Anthropic API key is optional.
 
 ```bash
 # 1. data: copy the organisers' data folder into the repo root (it is git-ignored)
 #    -> data/patient-0000-0001/...
-cp .env.example .env            # add ANTHROPIC_API_KEY
 
-# 2. backend
-cd backend
-pip install -r requirements.txt
-python -m app.precompute --skip-llm   # builds cache/ (drop --skip-llm once extraction is implemented)
-uvicorn app.main:app --reload --port 8000
+# 2. offline build (optional: the backend does this on first start if data/build/ is missing)
+python3 -m pipeline.build          # -> data/build/docs.json, passages.json, facts.json
+python3 -m compare.build           # -> data/build/compare.json
+python3 -m engine.query --brief "Anaesthetist, pre-op check"   # the engine on the command line
 
-# 3. frontend (new terminal)
+# 3. backend (from the repo root; engine/, pipeline/, compare/ are imported from there)
+pip install -r backend/requirements.txt
+uvicorn --app-dir backend app.main:app --port 8000
+#   or: cd backend && uvicorn app.main:app --reload --port 8000
+#   SECOND_LOOK_LLM=1 + ANTHROPIC_API_KEY: Haiku proposes the role/tasks (validated against the rulebook)
+#   SECOND_LOOK_BACKEND=llm: the teammate's LLM-extracted store (cd backend && python -m app.precompute)
+
+# 4. frontend (new terminal)
 cd frontend
 npm install
 npm run dev                      # http://localhost:3000
 
-# 4. tests and evaluation
-cd backend && python -m pytest -q   # unit tests (no API key needed)
-python eval/run.py                  # from repo root, backend running
+# 5. tests and evaluation (from the repo root)
+python3 -m unittest engine.test_engine compare.test_compare eval.test_eval
+cd backend && python3 -m pytest -q && cd ..   # adapter + LLM-path unit tests
+python3 -m eval.run                           # offline eval -> data/build/eval_report.md
+python3 -m eval.run_api                       # HTTP eval against the running backend (15 questions, latency)
 ```
 
-With `make`: `make install`, `make precompute`, `make backend`, `make frontend`, `make test`, `make eval`.
+With `make`: `make install`, `make build`, `make backend`, `make frontend`, `make test`, `make eval`.
 
 ## Repository layout
 
 ```
-backend/app/    ingest, extract, verify, rules, query, store, schema, main (API), precompute
-backend/tests/  unit tests for the guarantees (verifier, smart answers, not applicable, blind spot, stats)
-rulebook/       needs.json, roles.json, tasks.json, drugs.json, synonyms.json   (clinicians own the content)
+pipeline/       offline: documents -> passages -> verified facts (data/build/)
+compare/        offline: contradictions, blind spots, open follow-ups (data/build/compare.json)
+engine/         online: situation -> role/tasks -> cards (CLI: python3 -m engine.query)
+backend/app/    FastAPI: main (API), adapter (engine -> schema), schema (the contract), store;
+                LLM path: ingest, extract, verify, rules, query, precompute
+backend/tests/  adapter tests (5 situations, 15 answers, links, stats) + LLM-path unit tests
+rulebook/       roles.json, tasks.json (engine), needs.json, drugs.json, synonyms.json, scaffold/
 frontend/       Next.js app (app/page.tsx, components/SourcePane.tsx, lib/api.ts)
-eval/           run.py, contradictions_gold.json, unseen_situations.json
+eval/           core.py, answer_keys.json, run.py (offline), run_api.py (HTTP), contradictions_gold.json
 cases/          the 5 situations and expected answers from the organisers
-docs/           challenge brief and product plan
+docs/           challenge brief, product plan, data contracts
 ```
 
 ## Rules we follow
 
 - Only facts from the documents appear on screen. Translations, generic drug names and calculated values are allowed.
-- The model cites segment IDs; it never writes the text shown as evidence. Unverifiable facts are dropped.
+- Every fact quotes its passage word for word and is re-checked at load; unverifiable facts are dropped. An LLM may only propose a reading of the request.
 - "Not documented" is decided by code, not by the model.
 - Guidelines may shape `rulebook/` (what to look for, cited as `evidence`), never what is shown as a fact.
 - Every number on screen (counts, blind spot "3 of 11", weight change) is computed, never typed in.
