@@ -14,7 +14,7 @@ def main() -> None:
     store.save("segments", segments)
     print(f"ingest: {len(docs)} documents, {len(segments)} segments")
 
-    facts = []
+    facts, all_dropped = [], []
     if "--skip-llm" not in sys.argv:
         seg_by_id = {s.id: s for s in segments}
         for d in docs:
@@ -25,8 +25,10 @@ def main() -> None:
                 break
             kept, dropped = verify_facts(raw, seg_by_id)
             facts += kept
+            all_dropped += dropped
             print(f"extract {d.id}: {len(kept)} kept, {len(dropped)} dropped")
     store.save("facts", facts)
+    store.save_raw("dropped", all_dropped)  # the proof bar's "dropped" count comes from here
 
     findings = run_rules(segments)
     store.save("findings", findings)

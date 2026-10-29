@@ -1,14 +1,14 @@
 [
-  {"id": "C1", "title": "Carotid stenosis side (left vs right in copied duplex text)", "docs": ["12340008", "12340012"], "verdict": "real"},
-  {"id": "C2", "title": "BMI 2015 does not match height and weight", "docs": ["12340012"], "verdict": "real"},
-  {"id": "C3", "title": "BMI April 2016 does not match height and weight", "docs": ["12340014"], "verdict": "real"},
-  {"id": "C4", "title": "Admission date April 2016 (header vs course text)", "docs": ["12340018"], "verdict": "real"},
-  {"id": "C5", "title": "Biopsy date (histology vs discharge letter)", "docs": ["12340016", "12340018"], "verdict": "real"},
-  {"id": "C6", "title": "Axillary lymph nodes (enlarged right vs none / N0)", "docs": ["12340014", "12340018"], "verdict": "likely_real"},
-  {"id": "C7", "title": "Haemodynamic relevance of left stenosis within one letter", "docs": ["12340012"], "verdict": "real_may_merge_with_C1"},
-  {"id": "C8", "title": "2015 admission date vs 24h BP start", "docs": ["12340012", "12340010"], "verdict": "borderline"},
-  {"id": "C9", "title": "Administrative typos (discharge year, case number)", "docs": ["12340018", "12340016"], "verdict": "borderline"},
-  {"id": "FA1", "title": "Height 170 vs 171 cm", "docs": ["12340012", "12340014", "12340018"], "verdict": "false_alarm"},
-  {"id": "FA2", "title": "Weight 67 vs 66 kg", "docs": ["12340014", "12340018"], "verdict": "false_alarm"},
-  {"id": "FA3", "title": "Candesartan dose change 2015 -> 2016 (change over time)", "docs": ["12340012", "12340018"], "verdict": "false_alarm"}
+  {"id": "C1", "title": "Carotid stenosis side (left vs right in copied duplex text)", "docs": ["12340008", "12340012"], "verdict": "real", "tier": "contradiction"},
+  {"id": "C2", "title": "BMI 2015 does not match height and weight", "docs": ["12340012"], "verdict": "real", "tier": "contradiction"},
+  {"id": "C3", "title": "BMI April 2016 does not match height and weight", "docs": ["12340014"], "verdict": "real", "tier": "contradiction"},
+  {"id": "C4", "title": "Admission date April 2016 (header vs course text)", "docs": ["12340018"], "verdict": "real", "tier": "contradiction"},
+  {"id": "C5", "title": "Biopsy date (histology vs discharge letter)", "docs": ["12340016", "12340018"], "verdict": "real", "tier": "contradiction"},
+  {"id": "C6", "title": "Axillary lymph nodes (enlarged right vs none / N0)", "docs": ["12340014", "12340018"], "verdict": "likely_real", "tier": "contradiction (M1/M2 decide; show prominently to surgeon either way)"},
+  {"id": "C7", "title": "Haemodynamic relevance of left stenosis within one letter", "docs": ["12340012"], "verdict": "real_may_merge_with_C1", "tier": "contradiction (may count with C1)"},
+  {"id": "C8", "title": "2015 admission date vs 24h BP start", "docs": ["12340012", "12340010"], "verdict": "borderline", "tier": "documentation_note"},
+  {"id": "C9", "title": "Administrative typos (discharge year, case number)", "docs": ["12340018", "12340016"], "verdict": "borderline", "tier": "documentation_note"},
+  {"id": "FA1", "title": "Height 170 vs 171 cm", "docs": ["12340012", "12340014", "12340018"], "verdict": "false_alarm", "tier": "never_show"},
+  {"id": "FA2", "title": "Weight 67 vs 66 kg", "docs": ["12340014", "12340018"], "verdict": "false_alarm", "tier": "never_show"},
+  {"id": "FA3", "title": "Candesartan dose change 2015 -> 2016 (change over time)", "docs": ["12340012", "12340018"], "verdict": "false_alarm", "tier": "never_show"}
 ]

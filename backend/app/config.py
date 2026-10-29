@@ -11,7 +11,7 @@ DATA_DIR = (ROOT / os.getenv("DATA_DIR", "data")).resolve()
 PATIENT_ID = os.getenv("PATIENT_ID", "patient-0000-0001")
 PATIENT_DIR = DATA_DIR / PATIENT_ID
 CACHE_DIR = ROOT / "cache"
-KNOWLEDGE_DIR = ROOT / "knowledge"
+RULEBOOK_DIR = ROOT / "rulebook"
 CASES_DIR = ROOT / "cases"
 
 EXTRACT_MODEL = os.getenv("EXTRACT_MODEL", "claude-opus-5-5")

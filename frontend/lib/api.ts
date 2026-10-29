@@ -21,17 +21,29 @@ export interface Fact {
 export interface Finding {
   id: string;
   kind: "conflict" | "dropped" | "followup" | "silence";
+  tier?: "contradiction" | "documentation_note" | null;
   title: string;
   explanation: string;
   segment_ids: string[];
   severity: "high" | "medium" | "low";
 }
 
+export interface Computed {
+  label: string;
+  value: string;
+  formula: string;
+  segment_ids: string[];
+}
+
 export interface NeedResult {
   need: string;
   label: string;
-  status: "documented" | "not_documented";
+  status: "documented" | "not_documented" | "not_applicable";
   facts: Fact[];
+  computed: Computed[];
+  superseded: Fact[];
+  reason?: string | null;
+  reason_segment_ids: string[];
 }
 
 export interface Briefing {
@@ -42,7 +54,19 @@ export interface Briefing {
   needs: NeedResult[];
   blind_spot: Fact[];
   findings: Finding[];
-  stats: { facts_shown?: number; facts_verified?: number; facts_dropped?: number };
+  // Computed by the backend from this briefing; never typed in.
+  stats: {
+    facts_shown: number;
+    facts_verified: number;
+    facts_dropped: number;
+    computed_values: number;
+    not_documented: number;
+    not_applicable: number;
+    blind_spot: number;
+    task_concepts: number;
+    contradictions: number;
+    documentation_notes: number;
+  };
 }
 
 export interface Segment {
