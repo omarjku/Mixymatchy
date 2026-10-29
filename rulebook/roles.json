@@ -1,0 +1,117 @@
+{
+ "_doc": "Roles: synonyms for free-text matching, default tasks when no task trigger fires, tasks suppressed for this role, extra role needs. safety_strip is shown on every screen. Need rows: category (fact categories from data/build/facts.json; categories with no facts yet produce 'not documented'), label_en, priority must|should, compute null(list all)|latest|series_change|absent_after:<YYYY-MM-DD|recommendation>|current_meds, applies_if (e.g. {\"sex\":\"male\"}), optional match / match_all (regex on the fact's English label + attrs), status_in, max_age_days, search_terms (regex, scanned in passages when no fact is found), recommendation_match (absent_after:recommendation), source = guideline citation (TODO-cite: medical student fills in).",
+ "default_as_of": "2016-04-15",
+ "outdated_after_days": 183,
+ "safety_strip": [
+  {"id": "allergy", "category": ["allergy"], "label_en": "Allergies", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+  {"id": "antithrombotic", "category": ["antithrombotic", "anticoagulant_oral"], "label_en": "Blood thinners (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+  {"id": "current_meds", "category": ["medications:*"], "label_en": "Current medications", "priority": "must", "compute": "current_meds", "applies_if": null, "display": "count", "source": "TODO-cite"},
+  {"id": "problems", "category": ["diagnosis"], "label_en": "Active problems", "priority": "must", "compute": null, "applies_if": null, "status_in": ["current"], "display": "names", "source": "TODO-cite"}
+ ],
+ "roles": [
+  {
+   "id": "anaesthetist",
+   "label_en": "Anaesthetist",
+   "synonyms": ["anaesthetist", "anesthetist", "anaesthesiologist", "anesthesiologist", "anaesthesia", "anesthesia", "anaesthetics", "anesthetics", "narkosearzt", "anästhesist"],
+   "default_tasks": ["pre_op"],
+   "suppress_tasks": ["oncology_staging", "surgery_planning", "endocrine_therapy"],
+   "needs": []
+  },
+  {
+   "id": "surgeon",
+   "label_en": "Surgeon",
+   "synonyms": ["surgeon", "breast surgeon", "general surgeon", "surgical oncologist", "gynaecologic surgeon", "gynecologic surgeon", "chirurg", "operating surgeon"],
+   "default_tasks": ["surgery_planning", "oncology_staging"],
+   "suppress_tasks": [],
+   "needs": []
+  },
+  {
+   "id": "vascular_surgeon",
+   "label_en": "Vascular surgeon",
+   "synonyms": ["vascular surgeon", "vascular surgery", "gefäßchirurg", "angiologist", "angiology"],
+   "default_tasks": ["carotid_review"],
+   "suppress_tasks": ["oncology_staging"],
+   "needs": []
+  },
+  {
+   "id": "gp",
+   "label_en": "General practitioner",
+   "synonyms": ["gp", "general practitioner", "family doctor", "family physician", "primary care", "family medicine", "hausarzt", "house doctor", "practice doctor"],
+   "default_tasks": ["gp_review"],
+   "suppress_tasks": [],
+   "needs": []
+  },
+  {
+   "id": "emergency_physician",
+   "label_en": "Emergency physician",
+   "synonyms": ["emergency physician", "emergency doctor", "emergency department", "emergency room", "er doctor", "er physician", "ed physician", "ed doctor", "a&e", "casualty", "er", "ed", "notarzt", "notaufnahme", "emergency medicine"],
+   "default_tasks": ["emergency_general"],
+   "suppress_tasks": [],
+   "needs": []
+  },
+  {
+   "id": "oncologist",
+   "label_en": "Oncologist",
+   "synonyms": ["oncologist", "medical oncologist", "radiation oncologist", "radiotherapist", "oncology", "haemato-oncologist", "hemato-oncologist", "onkologe"],
+   "default_tasks": ["oncology_staging"],
+   "suppress_tasks": [],
+   "needs": []
+  },
+  {
+   "id": "radiologist",
+   "label_en": "Radiologist",
+   "synonyms": ["radiologist", "radiology", "interventional radiologist", "neuroradiologist", "radiologe"],
+   "default_tasks": ["contrast_imaging"],
+   "suppress_tasks": [],
+   "needs": []
+  },
+  {
+   "id": "pharmacist",
+   "label_en": "Pharmacist",
+   "synonyms": ["pharmacist", "clinical pharmacist", "hospital pharmacist", "pharmacy", "apotheker"],
+   "default_tasks": ["med_review"],
+   "suppress_tasks": [],
+   "needs": []
+  },
+  {
+   "id": "nurse",
+   "label_en": "Nurse",
+   "synonyms": ["nurse", "ward nurse", "admission nurse", "nursing staff", "registered nurse", "pflege", "nursing"],
+   "default_tasks": ["nursing_admission"],
+   "suppress_tasks": ["oncology_staging"],
+   "needs": []
+  },
+  {
+   "id": "cardiologist",
+   "label_en": "Cardiologist",
+   "synonyms": ["cardiologist", "cardiology", "heart specialist", "kardiologe"],
+   "default_tasks": ["cardiac_risk"],
+   "suppress_tasks": [],
+   "needs": []
+  },
+  {
+   "id": "endocrinologist",
+   "label_en": "Endocrinologist",
+   "synonyms": ["endocrinologist", "endocrinology", "diabetologist", "diabetes specialist", "endokrinologe"],
+   "default_tasks": ["diabetes_review", "bone_metabolism"],
+   "suppress_tasks": [],
+   "needs": []
+  },
+  {
+   "id": "ward_physician",
+   "label_en": "Ward physician",
+   "synonyms": ["ward physician", "ward doctor", "internist", "internal medicine", "resident", "hospitalist", "attending", "house officer", "junior doctor", "stationsarzt"],
+   "default_tasks": ["med_review", "followup_review"],
+   "suppress_tasks": [],
+   "needs": []
+  },
+  {
+   "id": "other",
+   "label_en": "Other clinician",
+   "synonyms": [],
+   "default_tasks": ["general_overview"],
+   "suppress_tasks": [],
+   "needs": []
+  }
+ ]
+}
