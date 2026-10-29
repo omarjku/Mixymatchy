@@ -6,10 +6,15 @@
 Default backend: the deterministic engine (engine/ over data/build/, see app/adapter.py).
 SECOND_LOOK_BACKEND=llm switches to the LLM-extracted store in cache/ (app/query.py).
 """
+import base64
+import hmac
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 
 from . import store
 from .schema import Briefing, BriefingRequest
@@ -26,6 +31,21 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Second Look API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# Deployment gate: the patient data must not be public, so a hosted instance sets SITE_USER and
+# SITE_PASSWORD and every request (page, API, documents) needs them. Unset locally = no gate.
+SITE_USER = os.environ.get("SITE_USER", "")
+SITE_PASSWORD = os.environ.get("SITE_PASSWORD", "")
+
+
+@app.middleware("http")
+async def site_gate(request, call_next):
+    if not SITE_PASSWORD or request.url.path == "/health":
+        return await call_next(request)
+    expected = "Basic " + base64.b64encode(f"{SITE_USER}:{SITE_PASSWORD}".encode()).decode()
+    if hmac.compare_digest(request.headers.get("authorization", ""), expected):
+        return await call_next(request)
+    return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Second Look"'})
 
 
 @app.get("/health")
@@ -59,3 +79,8 @@ def segment(segment_id: str) -> dict:
 @app.post("/briefing", response_model=Briefing)
 def briefing(req: BriefingRequest) -> Briefing:
     return store.briefing(req.situation)
+
+
+# Deployment: serve the exported frontend from the same origin (registered last, so API routes win).
+if os.environ.get("STATIC_DIR"):
+    app.mount("/", StaticFiles(directory=os.environ["STATIC_DIR"], html=True), name="frontend")
