@@ -2,6 +2,7 @@
 
 Implemented:  latency per situation, keyword check of the 15 expected answers, source-document check,
               traceability check (every shown fact has segments).
+              stats on screen match the facts on screen.
 TODO(M2/E2):  key tokens per question in eval/answer_keys.json, contradiction scoring against
               eval/contradictions_gold.json, unseen-situation run with screen dumps for clinician review.
 """
@@ -50,6 +51,8 @@ def main() -> int:
         screen = json.dumps(briefing, ensure_ascii=False).lower()
         docs_on_screen = {sid.split(":")[0] for f in facts for sid in f["segment_ids"]}
         untraced = [f for f in facts if not f["segment_ids"]]
+        if briefing["stats"].get("facts_shown") != len(facts):  # every number on screen must be computed
+            print(f"WARNING situation {i}: stats.facts_shown != facts on screen")
         for q in [e for e in expected if e["id"].startswith(f"{i}.")]:
             tokens = keys.get(q["id"], [])
             hit = bool(tokens) and all(t.lower() in screen for t in tokens)

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Briefing, Fact, getBriefing, Trust } from "@/lib/api";
+import { Briefing, Fact, Finding, getBriefing, Trust } from "@/lib/api";
 import { SourcePane } from "@/components/SourcePane";
 
 const ROLES = [
@@ -18,7 +18,17 @@ const TRUST: Record<Trust, { mark: string; className: string; title: string }> =
   single: { mark: "•", className: "text-slate-500", title: "Mentioned once" },
 };
 
-function FactRow({ fact, onSource }: { fact: Fact; onSource: (ids: string[]) => void }) {
+type ShowSource = (ids: string[]) => void;
+
+function SourceLink({ ids, onSource }: { ids: string[]; onSource: ShowSource }) {
+  return (
+    <button className="text-sm text-[var(--teal)] underline" onClick={() => onSource(ids)}>
+      source
+    </button>
+  );
+}
+
+function FactRow({ fact, onSource }: { fact: Fact; onSource: ShowSource }) {
   const t = TRUST[fact.trust];
   return (
     <li className="flex items-baseline gap-2 py-1">
@@ -30,10 +40,22 @@ function FactRow({ fact, onSource }: { fact: Fact; onSource: (ids: string[]) => 
         {fact.value ? `: ${fact.value}${fact.unit ? ` ${fact.unit}` : ""}` : ""}
         {fact.date ? <span className="text-[var(--muted)]"> ({fact.date})</span> : null}
       </span>
-      <button className="text-sm text-[var(--teal)] underline" onClick={() => onSource(fact.segment_ids)}>
-        source
-      </button>
+      <SourceLink ids={fact.segment_ids} onSource={onSource} />
     </li>
+  );
+}
+
+function FindingList({ title, items, tone, onSource }: { title: string; items: Finding[]; tone: string; onSource: ShowSource }) {
+  if (!items.length) return null;
+  return (
+    <div className="rounded bg-white p-4 shadow-sm">
+      <p className={`mb-2 text-xs font-semibold uppercase ${tone}`}>{title}</p>
+      {items.map((f) => (
+        <div key={f.id} className="py-1 text-sm">
+          <b>{f.title}.</b> {f.explanation} <SourceLink ids={f.segment_ids} onSource={onSource} />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -56,6 +78,9 @@ export default function Home() {
       setLoading(false);
     }
   }
+
+  const conflicts = briefing?.findings.filter((f) => f.kind === "conflict") ?? [];
+  const s = briefing?.stats;
 
   return (
     <main className="mx-auto max-w-7xl p-6">
@@ -90,14 +115,16 @@ export default function Home() {
       </div>
       {error && <p className="mb-4 text-red-700">{error}</p>}
 
-      {briefing && (
+      {briefing && s && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
           <section className="space-y-4">
-            {/* TODO(E2/E3): blind spot box once the backend computes it */}
             {briefing.blind_spot.length > 0 && (
               <div className="rounded border-l-4 border-red-700 bg-red-50 p-3">
-                <p className="font-semibold text-red-800">Blind spot</p>
-                <ul>
+                <p className="font-semibold text-red-800">
+                  Blind spot: reading only the latest letter, you would miss {s.blind_spot} of {s.task_concepts} facts for
+                  this task
+                </p>
+                <ul className="text-sm">
                   {briefing.blind_spot.map((f) => (
                     <FactRow key={f.id} fact={f} onSource={setSource} />
                   ))}
@@ -112,36 +139,52 @@ export default function Home() {
               {briefing.needs.map((n) => (
                 <div key={n.need} className="border-b border-slate-100 py-2 last:border-0">
                   <p className="text-sm font-semibold">{n.label}</p>
-                  {n.status === "not_documented" ? (
-                    <p className="text-sm text-[var(--muted)]">○ Not documented</p>
-                  ) : (
+                  {n.status === "not_documented" && <p className="text-sm text-[var(--muted)]">○ Not documented</p>}
+                  {n.status === "not_applicable" && (
+                    <p className="text-sm text-[var(--muted)]">
+                      – Not applicable ({n.reason}) <SourceLink ids={n.reason_segment_ids} onSource={setSource} />
+                    </p>
+                  )}
+                  {n.status === "documented" && (
                     <ul className="text-sm">
                       {n.facts.map((f) => (
                         <FactRow key={f.id} fact={f} onSource={setSource} />
                       ))}
                     </ul>
                   )}
+                  {n.computed.map((c) => (
+                    <p key={c.label + c.value} className="text-sm" title={c.formula}>
+                      <span className="text-[var(--teal)]">=</span> {c.label}: <b>{c.value}</b>{" "}
+                      <span className="text-[var(--muted)]">({c.formula})</span>{" "}
+                      <SourceLink ids={c.segment_ids} onSource={setSource} />
+                    </p>
+                  ))}
+                  {n.superseded.length > 0 && (
+                    <p className="text-xs text-[var(--muted)]">
+                      {n.superseded.length} older value(s) replaced by newer documents{" "}
+                      <SourceLink ids={n.superseded.flatMap((f) => f.segment_ids)} onSource={setSource} />
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
 
-            {briefing.findings.length > 0 && (
-              <div className="rounded bg-white p-4 shadow-sm">
-                <p className="mb-2 text-xs font-semibold uppercase text-red-700">The record disagrees</p>
-                {briefing.findings.map((f) => (
-                  <div key={f.id} className="py-1 text-sm">
-                    <span className="text-red-700">⚠</span> <b>{f.title}.</b> {f.explanation}{" "}
-                    <button className="text-[var(--teal)] underline" onClick={() => setSource(f.segment_ids)}>
-                      source
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <FindingList
+              title={`The record disagrees · ${s.contradictions}`}
+              items={conflicts.filter((f) => f.tier === "contradiction")}
+              tone="text-red-700"
+              onSource={setSource}
+            />
+            <FindingList
+              title={`Documentation notes · ${s.documentation_notes}`}
+              items={conflicts.filter((f) => f.tier === "documentation_note")}
+              tone="text-[var(--muted)]"
+              onSource={setSource}
+            />
 
             <p className="rounded bg-green-50 p-2 text-sm">
-              {briefing.stats.facts_shown ?? 0} facts · {briefing.stats.facts_verified ?? 0} verified against the letters ·{" "}
-              {briefing.stats.facts_dropped ?? 0} dropped
+              {s.facts_shown} facts · {s.facts_verified} verified against the letters · {s.facts_dropped} dropped ·{" "}
+              {s.computed_values} computed · {s.not_documented} not documented
             </p>
           </section>
 

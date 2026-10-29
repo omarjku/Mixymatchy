@@ -1,0 +1,65 @@
+{
+  "_about": "What each role needs (keys from needs.json, in display order). 'keywords' drive the rule-based fallback parser. 'evidence': M1 replaces TODO-cite with a guideline reference; a second person fills 'reviewed_by'. Guideline references explain why a need is on the list; they are never shown as patient facts.",
+
+  "anaesthetist": {
+    "label": "Anaesthetist",
+    "keywords": ["anaesthetist", "anesthetist", "anaesthesia", "anesthesia", "pre-op", "preoperative", "pre-operative"],
+    "needs": ["age", "weight_trend", "antithrombotic", "allergy", "lvef", "rhythm", "airway", "prior_anaesthesia",
+              "sleep_apnoea", "reflux", "diabetes_drugs", "bp_drugs", "kidney_function", "carotid"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  },
+  "surgeon": {
+    "label": "Surgeon",
+    "keywords": ["surgeon", "surgery planning", "operation planning", "tumour board", "tumor board"],
+    "needs": ["histology", "tnm", "receptors", "ki67", "lymph_nodes", "tumour_board", "antithrombotic", "allergy"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  },
+  "gp_diabetes": {
+    "label": "GP, diabetes review",
+    "keywords": ["diabetes", "hba1c", "glucose", "metformin"],
+    "needs": ["diabetes_drugs", "hba1c", "weight_trend", "bp_drugs", "kidney_function"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  },
+  "emergency": {
+    "label": "Emergency physician",
+    "keywords": ["emergency", "er", "ed", "night duty", "dizziness", "blurred vision", "a&e"],
+    "needs": ["prior_episodes", "carotid", "contrast_allergy", "allergy", "antithrombotic", "bp_drugs", "diabetes_drugs", "age"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  },
+  "gp_followup": {
+    "label": "GP, open follow-ups",
+    "keywords": ["follow-up", "follow-ups", "followup", "open items"],
+    "needs": ["followups", "carotid"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  },
+  "oncologist": {
+    "label": "Medical oncologist",
+    "keywords": ["oncologist", "endocrine therapy", "chemotherapy"],
+    "needs": ["histology", "tnm", "receptors", "ki67", "bone_health", "age", "all_medication"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  },
+  "radiation_oncologist": {
+    "label": "Radiation oncologist",
+    "keywords": ["radiation", "radiotherapy", "iort"],
+    "needs": ["histology", "tnm", "tumour_board", "active_diagnoses", "lupus_therapy", "allergy"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  },
+  "pharmacist": {
+    "label": "Pharmacist",
+    "keywords": ["pharmacist", "medication review", "reconciliation"],
+    "needs": ["all_medication", "allergy", "kidney_function", "weight_trend"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  },
+  "rheumatologist": {
+    "label": "Rheumatologist",
+    "keywords": ["rheumatologist", "lupus", "sle"],
+    "needs": ["active_diagnoses", "lupus_therapy", "all_medication", "bone_health"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  },
+  "fallback": {
+    "label": "General overview",
+    "keywords": [],
+    "needs": ["active_diagnoses", "all_medication", "allergy", "followups"],
+    "evidence": "TODO-cite", "reviewed_by": null
+  }
+}

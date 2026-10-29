@@ -1,4 +1,4 @@
-.PHONY: install precompute backend frontend eval
+.PHONY: install precompute backend frontend eval test
 
 install:
 	cd backend && pip install -r requirements.txt
@@ -15,3 +15,6 @@ frontend:
 
 eval:
 	python eval/run.py
+
+test:
+	cd backend && python -m pytest -q

@@ -6,7 +6,7 @@ that is shown on screen; the server resolves IDs to text. Output is checked by v
 TODO(E1):
   - call Claude with the tool schema below, one call per document, prompt caching on the system prompt
   - add the sceptic pass: a second call that tries to refute each fact against its segments
-  - map brand names / synonyms via knowledge/drugs.yaml and knowledge/synonyms.yaml into Fact.concept
+  - map brand names / synonyms via rulebook/drugs.json and rulebook/synonyms.json into Fact.concept
 """
 import json
 

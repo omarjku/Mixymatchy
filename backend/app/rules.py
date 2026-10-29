@@ -5,6 +5,9 @@ TODO(E2):      same-event date conflicts, laterality flips within a fact family,
                finding vs later finding, dropped facts, open follow-ups.
 False alarms to avoid: height 170 vs 171 cm, small weight differences, changes over time,
                differences from IBM's JSON files.
+Tiers:         tier="contradiction" only when the passages cannot all be true; typos and case numbers
+               get tier="documentation_note". Clinicians decide borderline cases (eval/contradictions_gold.json).
+Wording:       lineage findings say "possible copy error", never "copied wrong".
 """
 import re
 
@@ -33,7 +36,8 @@ def bmi_mismatch(segments: list[Segment]) -> list[Finding]:
         calc = w[0] / (h[0] / 100) ** 2
         if abs(calc - b[0]) > BMI_TOLERANCE:
             findings.append(Finding(
-                id=f"bmi-{doc_id}", kind="conflict", title="BMI does not match height and weight",
+                id=f"bmi-{doc_id}", kind="conflict", tier="contradiction",
+                title="BMI does not match height and weight",
                 explanation=f"Stated BMI {b[0]:g}, but {w[0]:g} kg at {h[0]:g} cm gives {calc:.1f}.",
                 segment_ids=[h[1].id, w[1].id, b[1].id], concepts=["weight", "bmi"],
                 severity="medium", source="rule"))
