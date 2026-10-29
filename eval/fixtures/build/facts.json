@@ -1,0 +1,203 @@
+[
+ {
+  "id": "f01",
+  "ips_section": "allergies",
+  "category": "allergy",
+  "code": null,
+  "label_en": "Penicillin allergy (rash)",
+  "attrs": {},
+  "date": "2020-01-10",
+  "date_precision": "day",
+  "status": "current",
+  "quote": "Penicillin-Allergie (Exanthem)",
+  "passage_ids": [
+   "90000001:p0004"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f02",
+  "ips_section": "medications",
+  "category": "antihypertensive",
+  "code": null,
+  "label_en": "Ramipril 5 mg 1-0-0",
+  "attrs": {
+   "dose": "5 mg",
+   "schedule": "1-0-0"
+  },
+  "date": "2020-01-10",
+  "date_precision": "day",
+  "status": "current",
+  "quote": "Ramipril 5mg oral 1 0 0 0 ST",
+  "passage_ids": [
+   "90000001:p0009"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f03",
+  "ips_section": "medications",
+  "category": "antihypertensive",
+  "code": null,
+  "label_en": "Metoprolol 47.5 mg 1-0-1/2",
+  "attrs": {},
+  "date": "2020-01-10",
+  "date_precision": "day",
+  "status": "historical",
+  "quote": "Metoprolol 47,5mg oral 1 0 1/2 0 ST",
+  "passage_ids": [
+   "90000001:p0010"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f04",
+  "ips_section": "medications",
+  "category": "antihypertensive",
+  "code": null,
+  "label_en": "Metoprolol 47.5 mg 1-0-1",
+  "attrs": {},
+  "date": "2020-03-02",
+  "date_precision": "day",
+  "status": "current",
+  "quote": "Metoprolol 47,5mg 1 0 1 0",
+  "passage_ids": [
+   "90000002:p0003"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f05",
+  "ips_section": "vital_signs",
+  "category": "height",
+  "code": null,
+  "label_en": "Height 180 cm",
+  "attrs": {
+   "value": 180,
+   "unit": "cm"
+  },
+  "date": "2020-01-10",
+  "date_precision": "day",
+  "status": "current",
+  "quote": "Größe: 180 cm",
+  "passage_ids": [
+   "90000001:p0005"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f06",
+  "ips_section": "vital_signs",
+  "category": "weight",
+  "code": null,
+  "label_en": "Weight 90 kg",
+  "attrs": {
+   "value": 90,
+   "unit": "kg"
+  },
+  "date": "2020-01-10",
+  "date_precision": "day",
+  "status": "current",
+  "quote": "Gewicht: 90 kg",
+  "passage_ids": [
+   "90000001:p0006"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f07",
+  "ips_section": "vital_signs",
+  "category": "bmi",
+  "code": null,
+  "label_en": "BMI 31.5",
+  "attrs": {
+   "value": 31.5
+  },
+  "date": "2020-01-10",
+  "date_precision": "day",
+  "status": "current",
+  "quote": "BMI: 31,5",
+  "passage_ids": [
+   "90000001:p0007"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f08",
+  "ips_section": "vital_signs",
+  "category": "weight",
+  "code": null,
+  "label_en": "Weight 85 kg",
+  "attrs": {
+   "value": 85,
+   "unit": "kg"
+  },
+  "date": "2020-03-02",
+  "date_precision": "day",
+  "status": "current",
+  "quote": "Gewicht: 85 kg",
+  "passage_ids": [
+   "90000002:p0002"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f09",
+  "ips_section": "results",
+  "category": "lv_function",
+  "code": null,
+  "label_en": "LVEF 55%",
+  "attrs": {},
+  "date": "2020-03-02",
+  "date_precision": "day",
+  "status": "current",
+  "quote": "EF 55%",
+  "passage_ids": [
+   "90000002:p0004"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f10",
+  "ips_section": "plan_of_care",
+  "category": "followup",
+  "code": null,
+  "label_en": "GP check in 4 weeks and lab check",
+  "attrs": {},
+  "date": "2020-01-10",
+  "date_precision": "day",
+  "status": "recommended",
+  "quote": "Kontrolle beim Hausarzt in 4 Wochen & Laborkontrolle.",
+  "passage_ids": [
+   "90000001:p0012"
+  ],
+  "origin": "rule",
+  "verified": true
+ },
+ {
+  "id": "f11",
+  "ips_section": "past_illness",
+  "category": "admission",
+  "code": null,
+  "label_en": "Admission 03.01.2020",
+  "attrs": {},
+  "date": "2020-01-03",
+  "date_precision": "day",
+  "status": "current",
+  "quote": "Aufnahme am 03/01/2020",
+  "passage_ids": [
+   "90000001:p0002"
+  ],
+  "origin": "rule",
+  "verified": true
+ }
+]
