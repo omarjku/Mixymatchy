@@ -1,0 +1,14 @@
+{
+  "_about": "Words in the task that add needs on top of the role's list. Same review rules as roles.json.",
+
+  "contrast":       {"adds": ["contrast_allergy", "kidney_function"], "evidence": "TODO-cite", "reviewed_by": null},
+  "ct":             {"adds": ["contrast_allergy", "kidney_function"], "evidence": "TODO-cite", "reviewed_by": null},
+  "angiography":    {"adds": ["contrast_allergy", "kidney_function"], "evidence": "TODO-cite", "reviewed_by": null},
+  "surgery":        {"adds": ["antithrombotic", "allergy"],           "evidence": "TODO-cite", "reviewed_by": null},
+  "quadrantectomy": {"adds": ["antithrombotic", "allergy", "tumour_board"], "evidence": "TODO-cite", "reviewed_by": null},
+  "weight":         {"adds": ["weight_trend"],                        "evidence": "TODO-cite", "reviewed_by": null},
+  "eye":            {"adds": ["prior_episodes", "carotid"],           "evidence": "TODO-cite", "reviewed_by": null},
+  "vision":         {"adds": ["prior_episodes", "carotid"],           "evidence": "TODO-cite", "reviewed_by": null},
+  "prostate":       {"adds": ["prostate"],                            "evidence": "TODO-cite", "reviewed_by": null},
+  "pregnancy":      {"adds": ["pregnancy"],                           "evidence": "TODO-cite", "reviewed_by": null}
+}

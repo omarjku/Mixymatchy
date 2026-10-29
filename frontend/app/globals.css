@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #1b2430;
+  --muted: #5b6573;
+  --teal: #0f6e6e;
+}
+
+body {
+  color: var(--ink);
+  background: #f7f8fa;
+}
+
+mark {
+  background: #ffe08a;
+  padding: 0 2px;
+  border-radius: 2px;
+}
