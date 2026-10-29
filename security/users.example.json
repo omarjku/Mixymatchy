@@ -1,0 +1,11 @@
+{
+  "users": [
+    {
+      "staff_id": "dr.demo",
+      "display_name": "Dr. Dana Demo",
+      "role": "anaesthetist",
+      "password_hash": "pbkdf2_sha256$240000$5XTW6qUxi2aD/9/0792ZUA==$nMrmHZBN5+9W5OrJGIijMcliSNrXrHu7ghhxKznbXts=",
+      "pin_hash": "pbkdf2_sha256$240000$94S+HWlwbgyzIWCW9C4zew==$tcHVFZWoH+cUM6Y5PSK/eHM/T94HBm2Jyl2zd8gnL6M="
+    }
+  ]
+}
