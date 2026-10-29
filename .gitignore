@@ -4,3 +4,18 @@ __pycache__/
 # IBM data must never be committed (challenge rule)
 data/
 *.zip
+
+# Generated fact store and secrets
+cache/
+.env
+.env.local
+
+# Python
+.venv/
+*.pyc
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts

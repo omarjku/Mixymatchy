@@ -1,0 +1,17 @@
+[
+  {"id": "U1", "situation": "Radiation oncologist planning intraoperative radiotherapy (IORT) for her breast cancer."},
+  {"id": "U2", "situation": "Medical oncologist deciding on endocrine therapy after surgery."},
+  {"id": "U3", "situation": "Hospital pharmacist doing a medication reconciliation at admission."},
+  {"id": "U4", "situation": "Ward nurse doing the admission assessment the evening before surgery."},
+  {"id": "U5", "situation": "Rheumatologist reviewing her lupus."},
+  {"id": "U6", "situation": "Ophthalmologist seeing her for a follow-up of the left eye."},
+  {"id": "U7", "situation": "Cardiologist reviewing her blood pressure and carotid findings."},
+  {"id": "U8", "situation": "Vascular surgeon assessing the carotid stenosis."},
+  {"id": "U9", "situation": "Radiologist planning a staging CT with iodinated contrast."},
+  {"id": "U10", "situation": "Dietitian reviewing her weight."},
+  {"id": "U11", "situation": "Physiotherapist planning mobilisation after breast surgery."},
+  {"id": "U12", "situation": "Covering doctor at the weekend, needs a quick overview."},
+  {"id": "U13", "situation": "Anästhesistin, Prämedikationsvisite vor der Brust-OP."},
+  {"id": "U14", "situation": "anestetist preop chek"},
+  {"id": "U15", "situation": "GP checking her HbA1c from May 2016."}
+]

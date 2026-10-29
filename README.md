@@ -1,69 +1,97 @@
-# Track 1: Clinical Documentation
+# Second Look
 
-## What to build
+**The right patient facts for every doctor's task, and a warning when the record is wrong.**
 
-An app where a clinician enters their role and task and gets one screen with the patient facts that task needs.
+A clinician types who they are and what they are doing ("Anaesthetist, pre-op check before breast surgery").
+Second Look returns one screen with:
 
-Example: "anaesthetist, pre-operative check before breast surgery" shows her age, blood thinners, allergies and heart function. The tumour's receptor status is left out, because it does not matter for anaesthesia.
+1. the facts that task needs, each linked to the exact sentence in the original letter,
+2. "not documented" where the letters are silent,
+3. what the record gets wrong: contradictions, facts the latest letter forgot, open follow-ups.
 
-- Every fact links to the sentence or table row it comes from.
-- If the task needs something the documents do not contain, the screen says "not documented".
-- The app points out contradictions in the documents.
-- The screen shows only facts from the documents. Translations, generic drug names and calculated values such as a weight change are fine.
-- You may hard-code which kinds of facts a role or task needs. Your app has to find the facts, passages and contradictions itself.
+Built for Track 1 (Clinical Documentation). The challenge brief is in [docs/CHALLENGE.md](docs/CHALLENGE.md),
+the product plan in [docs/PLAN.md](docs/PLAN.md).
 
-## What you get
+> The IBM patient data is **not** in this repository (challenge rule). See *Setup*.
 
-- `data/patient-0000-0001/documents/`: eight German clinical documents from 2015 and 2016 for one synthetic patient, Anna Musterfrau.
-- `data/patient-0000-0001/*.json`: diagnoses, procedures, medication and measurements that an earlier version of IBM's Medical Cockpit pipeline extracted from the documents. They say which document a fact comes from. Where they and the documents differ, the documents count.
-- You can open IBM's Medical Cockpit for this patient at https://route-patient-summary-mla-demo.ohpdemo01-990e7b837f1894cb67c000b2ea26e354-0000.eu-de.containers.appdomain.cloud/#/cp-dashboard/0000-0001 to see where the JSON files come from. It lists everything about the patient, while your app should show only what one role needs for one task. If the page does not load, turn off your VPN. IBM switches the Cockpit off after the hackathon. Everything you need is in this repository.
-- `cases/situations.md`: 5 situations with 3 questions each. `cases/expected.json` has the answers.
-- `data/README.md` describes every file.
+## Architecture
 
-Clone this repository to get the data.
+```
+OFFLINE (once per patient)                      ONLINE (per request, target 2-4 s)
+backend/app/precompute.py                        backend/app/main.py  POST /briefing
+  ingest.py   normalise + split into segments      query.py  parse situation -> role + needs
+              with stable IDs (12340012:s041)                (knowledge/roles.yaml, triggers.yaml)
+  extract.py  Claude extracts facts that cite                select verified facts per need
+              segment IDs only                               missing need -> "not documented"
+  verify.py   code checks each value is in its               attach findings for those needs
+              cited segment, drops the rest
+  rules.py    deterministic conflict rules           frontend/ (Next.js)
+  store.py    -> cache/*.json (git-ignored)            briefing + source pane with highlighted passage
+```
 
-## How to test
-
-Enter a situation's title and description into your app. Then check whether the screen answers its three questions.
-
-## Metrics
-
-Measure these on the 5 situations. The jury also tests your app on new situations for the same patient, written in English like the five here, possibly with other roles.
-
-| Metric | How to measure | Target |
+| Component | Tech | Role |
 |---|---|---|
-| Correct answers | The screen shows the expected answer without clicking (scrolling is fine), with a link to one of its source documents. Wording can differ. A "not documented" answer needs no link | 15 of 15 |
-| Traceability | Share of facts on screen whose link shows the right passage | 100% |
-| Invented facts | Facts on the 5 screens that are not in the documents | 0 |
-| Contradictions | Real contradictions your app shows, minus false alarms. Each counts once | 5 or more |
-| Load time | Slowest of the 5, from submitting to the complete screen | Under 10 s |
+| Frontend | Next.js 15, React 19, Tailwind 4 | Input, briefing, source viewer |
+| Backend | Python, FastAPI | Fact store, rules, briefing API |
+| AI | Claude Opus (extraction, offline), Claude Haiku (situation parsing, online) | Reads German letters, understands the request |
+| Knowledge | `knowledge/*.yaml` | What each role needs, drug names, synonyms, task triggers |
+| Eval | `eval/run.py` | Scores the 15 questions, traceability, latency |
 
-A contradiction is two or more passages that cannot all be true, for example two dates for the same event or a BMI that does not match the height and weight in the same letter. Each one must link all its passages. Small measurement differences, values that changed over time and differences from the JSON files are false alarms. We know of at least 5.
+### Status of the scaffold
 
-## You decide
+| Part | Status |
+|---|---|
+| Ingest + segmentation with stable IDs and exact offsets | working |
+| BMI conflict rule | working (finds both BMI contradictions) |
+| Fact verifier | working |
+| Briefing API + role keyword parser + "not documented" | working (all needs empty until extraction exists) |
+| Frontend: input, role chips, briefing, source pane with highlight | working |
+| Claude extraction + sceptic pass | TODO (E1) `backend/app/extract.py` |
+| More conflict rules, blind spot, families, follow-ups, trust marks | TODO (E2) `backend/app/rules.py`, `query.py` |
+| LLM situation parser | TODO (E2) `backend/app/query.py` |
+| Eval answer keys, contradiction scoring, unseen situations | TODO (M2/E2) `eval/` |
 
-- How the situation is entered: free text, a role picker, voice.
-- Rules, an LLM or both.
-- IBM's extraction or your own.
-- The language of your interface, English or German.
-- Your stack. Cloud AI models are fine, because the patient is made up.
+## Setup
 
-## Rules
+Requirements: Python 3.11+, Node 20+, an Anthropic API key.
 
-Use only synthetic data. Do not publish IBM's data: keep the `data` folder out of your repository.
+```bash
+# 1. data: copy the organisers' data folder into the repo root (it is git-ignored)
+#    -> data/patient-0000-0001/...
+cp .env.example .env            # add ANTHROPIC_API_KEY
 
-## Judging
+# 2. backend
+cd backend
+pip install -r requirements.txt
+python -m app.precompute --skip-llm   # builds cache/ (drop --skip-llm once extraction is implemented)
+uvicorn app.main:app --reload --port 8000
 
-| Criterion | Weight | Question |
-|---|---|---|
-| Clinical approach and impact | 33.3% | Would a clinician trust and use this screen in that situation? |
-| Technical quality and AI | 33.3% | Does the screen change with the role and task? Is every fact linked to its source? If you use AI, does it help? |
-| Execution and prototype | 33.3% | Does the app work end to end, on the five situations and on new ones? |
+# 3. frontend (new terminal)
+cd frontend
+npm install
+npm run dev                      # http://localhost:3000
 
-The jury scores each criterion from 1 to 10 and takes your metric results into account.
+# 4. evaluation (backend running)
+python eval/run.py
+```
 
-## Submission
+With `make`: `make install`, `make precompute`, `make backend`, `make frontend`, `make eval`.
 
-1. A video of up to 2 minutes showing your demo. Say what works and what does not.
-2. A link to your public repository with instructions to run it, without the `data` folder. Its README has to explain your technical architecture: which components you built, how they work together and which models or services you use.
-3. Your metric results on the 5 situations.
+## Repository layout
+
+```
+backend/app/    ingest, extract, verify, rules, query, store, schema, main (API), precompute
+knowledge/      needs.yaml, roles.yaml, triggers.yaml, drugs.yaml, synonyms.yaml   (clinicians own the content)
+frontend/       Next.js app (app/page.tsx, components/SourcePane.tsx, lib/api.ts)
+eval/           run.py, contradictions_gold.json, unseen_situations.json
+cases/          the 5 situations and expected answers from the organisers
+docs/           challenge brief and product plan
+```
+
+## Rules we follow
+
+- Only facts from the documents appear on screen. Translations, generic drug names and calculated values are allowed.
+- The model cites segment IDs; it never writes the text shown as evidence. Unverifiable facts are dropped.
+- "Not documented" is decided by code, not by the model.
+- Guidelines may shape `knowledge/` (what to look for), never what is shown as a fact.
+- `data/`, `cache/` and `.env` are never committed.
