@@ -4,6 +4,8 @@ import { ArrowLeft01Icon, Download04Icon, StopCircleIcon, VolumeHighIcon } from 
 import { ContradictionCard } from "@/components/ContradictionCard";
 import { FactCard } from "@/components/FactCard";
 import { PatientCard } from "@/components/PatientCard";
+import { hasHistory } from "@/components/ValueHistory";
+import { ViewTabs } from "@/components/ViewTabs";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { roles } from "@/data/roles";
@@ -26,8 +28,10 @@ export function ResultsScreen() {
   const voiceAvailable = useGermanVoiceAvailable();
   const [speaking, setSpeaking] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [view, setView] = useState<"overview" | "history">("overview");
 
   const brief = state?.brief;
+  const historyCount = brief?.facts.filter((f) => f.trust !== "not_documented" && hasHistory(f)).length ?? 0;
   const speechText = useMemo(() => (brief ? briefToSpeech(brief) : ""), [brief]);
 
   const speechEvents = useMemo(
@@ -99,6 +103,26 @@ export function ResultsScreen() {
         <PatientCard brief={brief} roleName={roleName} generatedAt={generatedAt} />
       </header>
 
+      <div className="mt-4">
+        <ViewTabs
+          tabs={[
+            { id: "overview", label: t("results.view.overview") },
+            { id: "history", label: t("results.view.history") },
+          ]}
+          active={view}
+          onChange={setView}
+          label={t("results.view.label")}
+          panelId="facts-panel"
+        />
+        <p className="mt-2 px-2 text-xs text-ink-muted" aria-live="polite">
+          {view === "overview"
+            ? t("results.view.overviewHint")
+            : historyCount > 0
+              ? t("results.view.historyAvailable", { n: historyCount, m: brief.facts.length })
+              : t("results.view.historyNone")}
+        </p>
+      </div>
+
       {brief.contradictions.length > 0 && (
         <section aria-labelledby="contradictions-heading" className="mt-6">
           <h2 id="contradictions-heading" className="mb-3 text-sm font-semibold text-contradiction-deep">
@@ -116,7 +140,7 @@ export function ResultsScreen() {
         </section>
       )}
 
-      <section aria-labelledby="facts-heading" className="mt-6">
+      <section id="facts-panel" aria-labelledby="facts-heading" className="mt-6">
         <h2 id="facts-heading" className="mb-3 text-sm font-semibold text-ink-muted">
           {t("results.factsHeading")} ({brief.facts.length})
         </h2>
@@ -130,6 +154,7 @@ export function ResultsScreen() {
               <FactCard
                 key={fact.id}
                 fact={fact}
+                showHistory={view === "history"}
                 onPressSource={showSource}
                 onPressGuideline={showGuideline}
                 onPressFlag={() => comingSoon(t("results.flagTitle"))}

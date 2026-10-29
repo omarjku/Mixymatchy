@@ -4,7 +4,7 @@ Phone-first web app for Track 1: a clinician picks a role, types a task, and get
 patient facts that task needs, each linked to its source. Opens in a phone browser, no native build.
 
 Stack: React 19, Vite, TypeScript, Tailwind CSS 4, shadcn/ui primitives, Watermelon UI components
-(quick-switcher, expandable-profile-card), Hugeicons, Motion.
+(quick-switcher, expandable-profile-card, continuous-tabs), Hugeicons, Motion.
 
 ## Run
 
@@ -24,8 +24,8 @@ Runs end to end on **mock data** (`src/data/mockFacts.ts`, invented patients, no
 | Start: role chips, task bar with display / read-aloud mode | done |
 | Loading: skeleton, 10 s timeout, error + retry | done |
 | Results: patient card with trust counts + stats panel, contradictions, fact cards, source and guideline sheets | done |
+| Übersicht / Verlauf tabs: screen-wide switch, value history (trend line + dated values) on facts that have one | done |
 | Read aloud (Web Speech API, German voices only, prefers on-device voices) | done |
-| Übersicht / Verlauf tabs | next |
 | Source viewer with the three tracks (dialog-stack), flag form, PDF export, EN/DE toggle | to do |
 
 ## Not yet connected to the backend
@@ -42,7 +42,7 @@ schema.
 
 ```
 src/screens/      RoleTaskSelectScreen, LoadingScreen, ResultsScreen, StyleguideScreen (/dev/styleguide, dev only)
-src/components/   TaskBar, PatientCard, FactCard, ContradictionCard, Sparkline
+src/components/   TaskBar, PatientCard, FactCard, ContradictionCard, ViewTabs, ValueHistory, Sparkline
 src/components/ui/          app-level Button, Card, Badge, Modal, Chip, Icon, Skeleton (use these)
 src/components/primitives/  shadcn/ui source the ui/ components wrap
 src/theme/theme.css         all color tokens, with measured contrast ratios

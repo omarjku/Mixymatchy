@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight01Icon, Cancel01Icon, File01Icon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/Icon";
-import { parseGermanNumber, Sparkline } from "@/components/Sparkline";
+import { hasHistory, ValueHistory } from "@/components/ValueHistory";
 import { t } from "@/i18n/strings";
 import { cn } from "@/lib/utils";
 import type { Fact, FactTrust, PatientBrief, SourceCitation } from "@/types/fact";
@@ -51,7 +51,7 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
     marker,
     count: brief.facts.filter((f) => f.trust === trust).length,
   }));
-  const series = brief.facts.filter((f) => f.isTimeSeries && f.history && f.history.length > 0);
+  const series = brief.facts.filter(hasHistory);
   const documents = collectDocuments(brief);
 
   return (
@@ -208,35 +208,11 @@ function PatientIdentity({
 }
 
 function SeriesRow({ fact }: { fact: Fact }) {
-  const history = fact.history ?? [];
-  const numbers = history.map((h) => parseGermanNumber(h.value)).filter((n): n is number => n !== null);
-  const unit = fact.value?.replace(/^[-\d.,\s]+/, "").trim() ?? "";
-  const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
-
   return (
     <li className="rounded-2xl border border-line p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-ink-muted">{fact.label}</p>
-          <p className="text-[17px] font-semibold text-ink">{fact.value}</p>
-        </div>
-        {numbers.length === history.length && <Sparkline values={numbers} className="h-9 w-[120px] shrink-0" />}
-      </div>
-      <table className="mt-2 w-full text-xs">
-        <caption className="sr-only">
-          {t("patient.trend")}: {fact.label}
-        </caption>
-        <tbody>
-          {history.map((h) => (
-            <tr key={h.date} className="text-ink-muted">
-              <td className="py-0.5">{dateFormat.format(new Date(h.date))}</td>
-              <td className="py-0.5 text-right font-mono text-ink">
-                {h.value} {unit}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <p className="text-sm text-ink-muted">{fact.label}</p>
+      <p className="text-[17px] font-semibold text-ink">{fact.value}</p>
+      <ValueHistory fact={fact} />
     </li>
   );
 }

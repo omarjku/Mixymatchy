@@ -1,4 +1,4 @@
-// Tiny trend line for a numeric history. Decorative (aria-hidden): the exact values are always listed
+// Trend line for a numeric history. Decorative (aria-hidden): the exact values are always listed
 // next to it, so nobody has to read numbers off a line.
 
 export function parseGermanNumber(value: string): number | null {
@@ -9,9 +9,9 @@ export function parseGermanNumber(value: string): number | null {
 export function Sparkline({ values, className }: { values: number[]; className?: string }) {
   if (values.length < 2) return null;
 
-  const width = 120;
-  const height = 36;
-  const pad = 4;
+  const width = 300;
+  const height = 48;
+  const pad = 6;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1; // flat series: draw a level line in the middle
@@ -20,25 +20,32 @@ export function Sparkline({ values, className }: { values: number[]; className?:
     const y = max === min ? height / 2 : pad + (1 - (v - min) / span) * (height - pad * 2);
     return [x, y] as const;
   });
-  const [lastX, lastY] = points[points.length - 1];
 
+  // Points are zero-length lines with round caps: with non-scaling strokes they stay round
+  // even when the SVG is stretched to the card width (a <circle> would turn into an oval).
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className={className}
-      aria-hidden
-      preserveAspectRatio="none"
-      fill="none"
-    >
+    <svg viewBox={`0 0 ${width} ${height}`} className={className} aria-hidden preserveAspectRatio="none" fill="none">
       <polyline
         points={points.map(([x, y]) => `${x},${y}`).join(" ")}
-        stroke="var(--color-primary-strong)"
+        stroke="var(--color-primary)"
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
         vectorEffect="non-scaling-stroke"
       />
-      <circle cx={lastX} cy={lastY} r={3} fill="var(--color-primary-strong)" />
+      {points.map(([x, y], i) => (
+        <line
+          key={i}
+          x1={x}
+          y1={y}
+          x2={x}
+          y2={y}
+          stroke="var(--color-primary-strong)"
+          strokeWidth={i === points.length - 1 ? 8 : 5}
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      ))}
     </svg>
   );
 }

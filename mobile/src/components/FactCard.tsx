@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, type CardTone } from "@/components/ui/Card";
 import { Icon, type IconGlyph } from "@/components/ui/Icon";
+import { hasHistory, ValueHistory } from "@/components/ValueHistory";
 import { t } from "@/i18n/strings";
 import { cn } from "@/lib/utils";
 import type { Fact, FactTrust } from "@/types/fact";
@@ -12,6 +13,7 @@ import type { Fact, FactTrust } from "@/types/fact";
 
 export interface FactCardProps {
   fact: Fact;
+  showHistory?: boolean; // "Verlauf" view: add the value history when the fact has one
   onPressSource: (fact: Fact) => void;
   onPressGuideline: (fact: Fact) => void;
   onPressFlag: (fact: Fact) => void;
@@ -23,7 +25,7 @@ const tones: Record<FactTrust, CardTone> = {
   not_documented: "undocumented",
 };
 
-export function FactCard({ fact, onPressSource, onPressGuideline, onPressFlag }: FactCardProps) {
+export function FactCard({ fact, showHistory = false, onPressSource, onPressGuideline, onPressFlag }: FactCardProps) {
   const documented = fact.trust !== "not_documented";
 
   return (
@@ -36,6 +38,12 @@ export function FactCard({ fact, onPressSource, onPressGuideline, onPressFlag }:
           <p className="mt-1 text-[17px] font-medium leading-snug text-undocumented">{t("trust.not_documented")}</p>
         )}
       </div>
+
+      {showHistory && documented && hasHistory(fact) && (
+        <div className="pr-2">
+          <ValueHistory fact={fact} />
+        </div>
+      )}
 
       <Button
         variant="icon"

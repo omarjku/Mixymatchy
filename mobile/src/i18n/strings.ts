@@ -87,6 +87,12 @@ export const strings = {
   "results.comingSoon": "Folgt in einem späteren Schritt.",
   "results.flagTitle": "Angabe melden",
   "results.severity": "Schweregrad",
+  "results.view.label": "Ansicht",
+  "results.view.overview": "Übersicht",
+  "results.view.history": "Verlauf",
+  "results.view.historyAvailable": "Verlauf für {n} von {m} Angaben verfügbar.",
+  "results.view.historyNone": "Für keine Angabe sind Verlaufswerte dokumentiert.",
+  "results.view.overviewHint": "Aktuelle Werte. Verlauf zeigt frühere Werte, wo dokumentiert.",
 
   // Patient card
   "patient.id": "ID",
@@ -112,6 +118,8 @@ export const strings = {
 
 export type StringKey = keyof typeof strings;
 
-export function t(key: StringKey): string {
-  return strings[key];
+// Optional vars fill {placeholders}, so word order stays in the translation: t("x", { n: 1, m: 5 })
+export function t(key: StringKey, vars?: Record<string, string | number>): string {
+  const text: string = strings[key];
+  return vars ? text.replace(/\{(\w+)\}/g, (match, name) => String(vars[name] ?? match)) : text;
 }
