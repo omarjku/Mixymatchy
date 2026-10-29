@@ -1,0 +1,118 @@
+{
+ "F1": {
+  "question": "Which allergy?",
+  "sources": [
+   "90000001"
+  ],
+  "items": [
+   {
+    "name": "penicillin allergy with rash",
+    "groups": [
+     [
+      "penicillin"
+     ],
+     [
+      "allerg"
+     ],
+     [
+      "exanthem",
+      "rash"
+     ]
+    ]
+   }
+  ]
+ },
+ "F2": {
+  "question": "Current beta blocker dose?",
+  "sources": [
+   "90000002"
+  ],
+  "items": [
+   {
+    "name": "metoprolol 47.5 mg 1-0-1",
+    "groups": [
+     [
+      "metoprolol"
+     ],
+     [
+      "47,5 mg"
+     ],
+     [
+      "1-0-1",
+      "1 0 1 0"
+     ]
+    ]
+   }
+  ]
+ },
+ "F3": {
+  "question": "Weight change?",
+  "sources": [
+   "90000001",
+   "90000002"
+  ],
+  "items": [
+   {
+    "name": "90 kg",
+    "sources": [
+     "90000001"
+    ],
+    "groups": [
+     [
+      "weight"
+     ],
+     [
+      "90kg"
+     ]
+    ]
+   },
+   {
+    "name": "85 kg",
+    "sources": [
+     "90000002"
+    ],
+    "groups": [
+     [
+      "weight"
+     ],
+     [
+      "85 kg"
+     ]
+    ]
+   }
+  ]
+ },
+ "F4": {
+  "question": "Was the follow-up lab check done?",
+  "mode": "not_documented",
+  "sources": [],
+  "items": [
+   {
+    "name": "lab check recommended",
+    "sources": [
+     "90000001"
+    ],
+    "groups": [
+     [
+      "laborkontroll",
+      "lab check"
+     ]
+    ]
+   }
+  ],
+  "forbid": {
+   "why": "would claim the lab check happened",
+   "groups": [
+    [
+     "lab",
+     "labor"
+    ]
+   ],
+   "date_after": "2020-01-09",
+   "ignore_status": [
+    "recommended",
+    "planned"
+   ]
+  }
+ }
+}

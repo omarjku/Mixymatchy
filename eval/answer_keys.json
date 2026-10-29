@@ -1,0 +1,342 @@
+{
+  "_doc": "Derived from cases/expected.json. Each question has items; an item is a list of token groups (each group = alternatives, matched case-insensitively after normalisation: decimal comma->point, '-'/':'/'_'/brackets->space, '100mg'=='100 mg'). Alternatives starting alphanumeric need a leading word boundary; alternatives ending in a digit need a trailing boundary (so '1-0-1' does not match '1-0-1/2'); otherwise they match as prefixes. '@date:PREFIX' matches fact.date. scope 'fact' (default): one fact linked to a source doc must contain all groups; scope 'union': union of source-doc facts that match the first group. 'sources' on an item overrides the question sources. 'forbid' lists fact patterns that make the question fail.",
+  "1.1": {
+    "question": "Which antithrombotic drug (blood thinner) does she take and at what dose?",
+    "sources": ["12340011", "12340012", "12340018"],
+    "items": [
+      {
+        "name": "ASS 100 mg once in the morning",
+        "groups": [
+          ["ass", "acetylsal", "aspirin"],
+          ["100 mg"],
+          ["1-0-0", "1 0 0 0", "morgens", "once in the morning", "in the morning", "once daily in the morning"]
+        ]
+      }
+    ]
+  },
+  "1.2": {
+    "question": "Which allergy is documented?",
+    "sources": ["12340012", "12340018"],
+    "items": [
+      {
+        "name": "contrast media allergy with nausea, dizziness, vomiting",
+        "groups": [
+          ["km-allergie", "kontrastmittel", "contrast"],
+          ["allerg"],
+          ["übelkeit", "uebelkeit", "nausea"],
+          ["schwindel", "dizziness", "vertigo"],
+          ["erbrechen", "vomiting", "emesis"]
+        ]
+      }
+    ]
+  },
+  "1.3": {
+    "question": "What was the last documented left-ventricular ejection fraction?",
+    "sources": ["12340012"],
+    "items": [
+      {
+        "name": "LVEF 60% (June 2015 echo)",
+        "groups": [
+          ["ef", "ejection fraction", "lvef", "lv-funktion", "lv function", "ejektionsfraktion"],
+          ["60%"],
+          ["@date:2015-06", "06/2015", "06.2015", "june 2015", "juni 2015"]
+        ]
+      }
+    ]
+  },
+  "2.1": {
+    "question": "What is the histology and the TNM stage?",
+    "sources": ["12340016", "12340018"],
+    "items": [
+      {
+        "name": "invasive ductal carcinoma, left breast",
+        "groups": [
+          ["invasiv duktal", "invasive ductal", "ductal carcinoma", "duktales mammakarzinom", "idc"],
+          ["left", "links", "linke", "li."]
+        ]
+      },
+      {
+        "name": "TNM T2 N0 M0 (G2)",
+        "groups": [
+          ["t2", "pt2", "ct2"],
+          ["n0", "pn0", "cn0"],
+          ["m0", "pm0", "cm0"],
+          ["g2"]
+        ]
+      }
+    ]
+  },
+  "2.2": {
+    "question": "What is the receptor status and the Ki-67 rate?",
+    "sources": ["12340016"],
+    "items": [
+      {
+        "name": "ER positive 100%, Allred 8",
+        "groups": [
+          ["östrogen", "oestrogen", "estrogen", "er+", "er positive", "er pos"],
+          ["positiv", "er+"],
+          ["100%"],
+          ["allred-score: 8", "allred 8", "allred score 8", "allred score of 8", "allred_score 8"]
+        ]
+      },
+      {
+        "name": "PR positive 70%, Allred 7",
+        "groups": [
+          ["progesteron", "pr+", "pr positive", "pgr"],
+          ["positiv", "pr+"],
+          ["70%"],
+          ["allred-score: 7", "allred 7", "allred score 7", "allred score of 7", "allred_score 7"]
+        ]
+      },
+      {
+        "name": "HER2 negative",
+        "groups": [
+          ["her2", "her 2", "her-2", "erbb2"],
+          ["negativ"]
+        ]
+      },
+      {
+        "name": "Ki-67 20%",
+        "groups": [
+          ["ki67", "ki-67", "ki 67", "mib-1"],
+          ["20%"]
+        ]
+      }
+    ]
+  },
+  "2.3": {
+    "question": "What did the tumour board recommend and when is it scheduled?",
+    "sources": ["12340018"],
+    "items": [
+      {
+        "name": "quadrantectomy + IORT on 16 May 2016",
+        "groups": [
+          ["quadrant"],
+          ["iort", "intraoperative radi", "intraoperativer bestrahlung", "intraoperative bestrahlung", "intraoperative irradiation"],
+          ["16.05.2016", "16 may 2016", "16. mai 2016", "2016-05-16", "16/05/2016", "@date:2016-05-16"]
+        ]
+      }
+    ]
+  },
+  "3.1": {
+    "question": "Which glucose-lowering drugs does she take and at what doses?",
+    "sources": ["12340012", "12340018"],
+    "items": [
+      {
+        "name": "metformin 1000 mg 1-1-1",
+        "groups": [
+          ["metformin", "glucophage"],
+          ["1000 mg"],
+          ["1-1-1", "1 1 1 0", "three times daily", "three times a day"]
+        ]
+      },
+      {
+        "name": "pioglitazone 30 mg 0-1-0",
+        "groups": [
+          ["pioglitazon", "actos"],
+          ["30 mg"],
+          ["0-1-0", "0 1 0 0", "at midday", "at noon", "once at midday"]
+        ]
+      },
+      {
+        "name": "exenatide 5 µg s.c. 1-0-1",
+        "groups": [
+          ["exenatid", "byetta"],
+          ["5 µg", "5 mcg", "5 ug", "5 microgram"],
+          ["1-0-1", "1 0 1 0", "twice daily", "morning and evening"]
+        ]
+      }
+    ]
+  },
+  "3.2": {
+    "question": "What is her latest HbA1c and from when?",
+    "sources": ["12340011", "12340012"],
+    "items": [
+      {
+        "name": "HbA1c 6.4% (June 2015)",
+        "groups": [
+          ["hba1c"],
+          ["6.4%", "6,4%"],
+          ["@date:2015-06", "06/2015", "06.2015", "june 2015", "juni 2015"]
+        ]
+      }
+    ]
+  },
+  "3.3": {
+    "question": "How did her weight change between June 2015 and April 2016?",
+    "sources": ["12340012", "12340014", "12340018"],
+    "items": [
+      {
+        "name": "weight 78 kg (June 2015, 12340012)",
+        "sources": ["12340012"],
+        "groups": [
+          ["weight", "gewicht", "body weight"],
+          ["78 kg"]
+        ]
+      },
+      {
+        "name": "weight 67 kg (4 April 2016, 12340014)",
+        "sources": ["12340014"],
+        "groups": [
+          ["weight", "gewicht", "body weight"],
+          ["67 kg"]
+        ]
+      },
+      {
+        "name": "weight 66 kg (April 2016 stay, 12340018)",
+        "sources": ["12340018"],
+        "groups": [
+          ["weight", "gewicht", "body weight"],
+          ["66 kg"]
+        ]
+      }
+    ]
+  },
+  "4.1": {
+    "question": "Has this happened before and what was found to be the cause?",
+    "sources": ["12340011", "12340012"],
+    "items": [
+      {
+        "name": "hypertensive crisis (June 2015)",
+        "groups": [
+          ["hypertensive krise", "hypertensiver krise", "hypertensiven krise", "hypertensive crisis", "hypertensive emergency"]
+        ]
+      },
+      {
+        "name": "transient vision loss left eye (amaurosis fugax)",
+        "groups": [
+          ["amaurosis fugax", "sehstörung", "sehbeeinträchtigung", "sehverlust", "sehschwäche", "vision loss", "visual loss", "blurred vision", "visual disturbance", "verschwommen"],
+          ["li.", "links", "linke", "left"]
+        ]
+      },
+      {
+        "name": "cause: 60% stenosis of the left internal carotid artery",
+        "groups": [
+          ["stenose", "stenosis", "karotisstenose", "carotisstenose", "abgangsstenose"],
+          ["60%", "60 %ige", "60%ige"],
+          ["carotis", "karotis", "carotid"],
+          ["li.", "links", "linke", "left", "sin."]
+        ]
+      }
+    ]
+  },
+  "4.2": {
+    "question": "Is anything documented that matters before giving iodinated contrast?",
+    "sources": ["12340012", "12340018"],
+    "items": [
+      {
+        "name": "contrast media allergy",
+        "groups": [
+          ["km-allergie", "kontrastmittel", "contrast"],
+          ["allerg"]
+        ]
+      },
+      {
+        "name": "head CT 2015 done without contrast",
+        "groups": [
+          ["ct", "computed tomograph"],
+          ["nativ", "non-contrast", "without contrast", "unenhanced", "native", "plain"]
+        ]
+      },
+      {
+        "name": "metformin (Glucophage 1000 mg)",
+        "groups": [
+          ["metformin", "glucophage"],
+          ["1000 mg"]
+        ]
+      }
+    ],
+    "forbid": {
+      "why": "kidney function is not documented; any creatinine/eGFR fact would be invented",
+      "groups": [
+        ["kreatinin", "creatinin", "egfr", "gfr", "nierenfunktion", "kidney function", "renal function", "nierenwert"]
+      ],
+      "ignore_status": []
+    }
+  },
+  "4.3": {
+    "question": "Which antihypertensive does she take and at what dose?",
+    "sources": ["12340018"],
+    "items": [
+      {
+        "name": "candesartan 16 mg 1-0-1 (April 2016)",
+        "groups": [
+          ["candesartan", "blopress"],
+          ["16 mg"],
+          ["1-0-1", "1 0 1 0", "twice daily", "morning and evening"]
+        ]
+      }
+    ]
+  },
+  "5.1": {
+    "question": "Which follow-ups were recommended at discharge in June 2015?",
+    "sources": ["12340011", "12340012"],
+    "items": [
+      {
+        "name": "carotid duplex in 2 months",
+        "groups": [
+          ["duplex", "doppler", "ultrasound", "sonograph", "ultraschall"],
+          ["carotis", "karotis", "carotid"],
+          ["2 monat", "2 month", "two month", "zwei monat", "8 week"]
+        ]
+      },
+      {
+        "name": "regular eye check-ups",
+        "groups": [
+          ["augenkontroll", "augenärztliche kontroll", "augenaerztliche kontroll", "eye", "ophthalm"],
+          ["regelmäßig", "regelmaessig", "regular"]
+        ]
+      },
+      {
+        "name": "regular BP checks + medication adjustment by GP",
+        "groups": [
+          ["blutdruckkontroll", "blutdruck", "blood pressure", "bp"],
+          ["regelmäßig", "regelmaessig", "regular"],
+          ["hausarzt", "gp", "general practitioner", "family doctor", "primary care"]
+        ]
+      }
+    ]
+  },
+  "5.2": {
+    "question": "Is there a record that the follow-up carotid ultrasound took place?",
+    "mode": "not_documented",
+    "sources": [],
+    "items": [
+      {
+        "name": "the duplex follow-up recommendation exists (so 'not documented' is grounded)",
+        "sources": ["12340011", "12340012"],
+        "groups": [
+          ["duplex", "doppler", "ultrasound", "sonograph", "ultraschall"],
+          ["carotis", "karotis", "carotid"],
+          ["2 monat", "2 month", "two month", "zwei monat", "8 week", "follow-up", "geplant", "planned", "recommend", "nächste"]
+        ]
+      }
+    ],
+    "forbid": {
+      "why": "a carotid duplex/ultrasound dated after the 2015 discharge (14.06.2015) reads as if the follow-up took place; if this is the in-stay duplex reported in a later letter, date it to the exam (11.06.2015) or the stay month (2015-06, month precision), not the letter date",
+      "groups": [
+        ["carotis", "karotis", "carotid", "halsarterien", "hirnversorgende", "neck arter"],
+        ["duplex", "doppler", "sonograph", "ultrasound", "ultraschall"]
+      ],
+      "date_after": "2015-06-14",
+      "ignore_status": ["recommended", "planned"],
+      "ignore_if_any": [
+        ["geplant", "planned", "empfohlen", "recommend", "follow-up", "followup", "nächste", "next", "2 monat", "2 month"]
+      ]
+    }
+  },
+  "5.3": {
+    "question": "On which side is the carotid stenosis?",
+    "sources": ["12340008", "12340011", "12340012"],
+    "items": [
+      {
+        "name": "left internal carotid stenosis up to 60%",
+        "groups": [
+          ["carotis", "karotis", "carotid"],
+          ["links", "linke", "left", "li.", "sin."],
+          ["60%", "60%ige"]
+        ]
+      }
+    ]
+  }
+}

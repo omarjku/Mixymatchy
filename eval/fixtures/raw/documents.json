@@ -1,0 +1,30 @@
+{
+ "documents": [
+  {
+   "id": "90000001",
+   "title": "Entlassungsbrief",
+   "date": "2020-01-10",
+   "admission": {
+    "admission": {
+     "date": "2020-01-04"
+    },
+    "discharge": {
+     "date": "2020-01-08"
+    }
+   }
+  },
+  {
+   "id": "90000002",
+   "title": "Ambulanzbrief",
+   "date": "2020-03-02",
+   "admission": {
+    "admission": {
+     "date": "2020-01-04"
+    },
+    "discharge": {
+     "date": "2020-01-08"
+    }
+   }
+  }
+ ]
+}

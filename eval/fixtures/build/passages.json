@@ -1,0 +1,146 @@
+[
+ {
+  "id": "90000001:p0001",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 0,
+  "end": 16,
+  "text": "Entlassungsbrief"
+ },
+ {
+  "id": "90000001:p0002",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 17,
+  "end": 65,
+  "text": "Aufnahme am 03/01/2020 | Entlassen am 09/01/2020"
+ },
+ {
+  "id": "90000001:p0003",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 67,
+  "end": 77,
+  "text": "Allergien:"
+ },
+ {
+  "id": "90000001:p0004",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 78,
+  "end": 108,
+  "text": "Penicillin-Allergie (Exanthem)"
+ },
+ {
+  "id": "90000001:p0005",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 110,
+  "end": 123,
+  "text": "Größe: 180 cm"
+ },
+ {
+  "id": "90000001:p0006",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 124,
+  "end": 138,
+  "text": "Gewicht: 90 kg"
+ },
+ {
+  "id": "90000001:p0007",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 139,
+  "end": 148,
+  "text": "BMI: 31,5"
+ },
+ {
+  "id": "90000001:p0008",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 150,
+  "end": 172,
+  "text": "Entlassungsmedikation:"
+ },
+ {
+  "id": "90000001:p0009",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 173,
+  "end": 201,
+  "text": "Ramipril 5mg oral 1 0 0 0 ST"
+ },
+ {
+  "id": "90000001:p0010",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 202,
+  "end": 237,
+  "text": "Metoprolol 47,5mg oral 1 0 1/2 0 ST"
+ },
+ {
+  "id": "90000001:p0011",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 239,
+  "end": 249,
+  "text": "Procedere:"
+ },
+ {
+  "id": "90000001:p0012",
+  "doc_id": "90000001",
+  "section": null,
+  "kind": "line",
+  "start": 250,
+  "end": 303,
+  "text": "Kontrolle beim Hausarzt in 4 Wochen & Laborkontrolle."
+ },
+ {
+  "id": "90000002:p0001",
+  "doc_id": "90000002",
+  "section": null,
+  "kind": "line",
+  "start": 0,
+  "end": 13,
+  "text": "Ambulanzbrief"
+ },
+ {
+  "id": "90000002:p0002",
+  "doc_id": "90000002",
+  "section": null,
+  "kind": "line",
+  "start": 14,
+  "end": 28,
+  "text": "Gewicht: 85 kg"
+ },
+ {
+  "id": "90000002:p0003",
+  "doc_id": "90000002",
+  "section": null,
+  "kind": "line",
+  "start": 29,
+  "end": 66,
+  "text": "Medikation: Metoprolol 47,5mg 1 0 1 0"
+ },
+ {
+  "id": "90000002:p0004",
+  "doc_id": "90000002",
+  "section": null,
+  "kind": "line",
+  "start": 67,
+  "end": 112,
+  "text": "Echo: EF 55%, Befund > Vorbefund unverändert."
+ }
+]

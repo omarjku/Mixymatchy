@@ -1,14 +1,338 @@
 {
-  "_about": "Words in the task that add needs on top of the role's list. Same review rules as roles.json.",
-
-  "contrast":       {"adds": ["contrast_allergy", "kidney_function"], "evidence": "TODO-cite", "reviewed_by": null},
-  "ct":             {"adds": ["contrast_allergy", "kidney_function"], "evidence": "TODO-cite", "reviewed_by": null},
-  "angiography":    {"adds": ["contrast_allergy", "kidney_function"], "evidence": "TODO-cite", "reviewed_by": null},
-  "surgery":        {"adds": ["antithrombotic", "allergy"],           "evidence": "TODO-cite", "reviewed_by": null},
-  "quadrantectomy": {"adds": ["antithrombotic", "allergy", "tumour_board"], "evidence": "TODO-cite", "reviewed_by": null},
-  "weight":         {"adds": ["weight_trend"],                        "evidence": "TODO-cite", "reviewed_by": null},
-  "eye":            {"adds": ["prior_episodes", "carotid"],           "evidence": "TODO-cite", "reviewed_by": null},
-  "vision":         {"adds": ["prior_episodes", "carotid"],           "evidence": "TODO-cite", "reviewed_by": null},
-  "prostate":       {"adds": ["prostate"],                            "evidence": "TODO-cite", "reviewed_by": null},
-  "pregnancy":      {"adds": ["pregnancy"],                           "evidence": "TODO-cite", "reviewed_by": null}
+ "_doc": "Tasks: trigger words (lower-case prefixes matched at a word start) and needs. Need rows: category (fact categories from data/build/facts.json; categories with no facts yet produce 'not documented'), label_en, priority must|should, compute null(list all)|latest|series_change|absent_after:<YYYY-MM-DD|recommendation>|current_meds, applies_if (e.g. {\"sex\":\"male\"}), optional match / match_all (regex on the fact's English label + attrs), status_in, max_age_days, search_terms (regex, scanned in passages when no fact is found), recommendation_match (absent_after:recommendation), source = guideline citation (TODO-cite: medical student fills in).",
+ "tasks": [
+  {
+   "id": "pre_op",
+   "label_en": "Pre-operative (anaesthesia) assessment",
+   "triggers": ["pre-op", "preop", "pre op", "pre-operative", "preoperative", "pre operative", "anaesthe", "anesthe", "before surgery", "before the operation", "before her operation", "before the surgery", "perioperative", "peri-operative", "fit for surgery", "surgical clearance", "premedication"],
+   "needs": [
+    {"id": "antithrombotic", "category": ["antithrombotic", "anticoagulant_oral"], "label_en": "Antithrombotic / anticoagulant drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "lvef", "category": ["lv_function"], "label_en": "Left-ventricular ejection fraction (last measured)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "airway", "category": ["airway"], "label_en": "Airway assessment (Mallampati, mouth opening, dentition)", "priority": "must", "compute": null, "applies_if": null, "search_terms": ["mallampati", "atemweg", "intubat", "airway", "mundöffnung", "zahnstatus", "reklination"], "source": "TODO-cite"},
+    {"id": "sleep_apnoea", "category": ["diagnosis"], "label_en": "Sleep apnoea", "priority": "must", "compute": null, "applies_if": null, "match": "sleep apn", "search_terms": ["schlafapnoe", "\\bosas?\\b", "cpap"], "source": "TODO-cite"},
+    {"id": "diabetes_meds", "category": ["glucose_lowering"], "label_en": "Glucose-lowering drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "planned_procedure", "category": ["planned_procedure", "planned_admission"], "label_en": "Planned procedure / tumour board decision", "priority": "must", "compute": null, "applies_if": null, "search_terms": [], "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"},
+    {"id": "anticoagulant_oral", "category": ["anticoagulant_oral"], "label_en": "Oral anticoagulant or heparin (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "search_terms": ["marcumar", "phenprocoumon", "warfarin", "rivaroxaban", "xarelto", "apixaban", "eliquis", "edoxaban", "dabigatran", "pradaxa", "heparin", "enoxaparin", "lovenox", "fragmin", "clopidogrel", "plavix", "ticagrelor", "prasugrel"], "source": "TODO-cite"},
+    {"id": "reflux", "category": ["diagnosis"], "label_en": "Reflux / hiatus hernia (aspiration risk)", "priority": "should", "compute": null, "applies_if": null, "match": "reflux|hiatus", "source": "TODO-cite"},
+    {"id": "rhythm", "category": ["heart_rate", "diagnosis"], "label_en": "Heart rhythm / arrhythmia findings", "priority": "should", "compute": null, "applies_if": null, "match": "holter|sinus|rhythm|atrial|arrhythm|extrasystol|fibrillation|ventricular", "source": "TODO-cite"},
+    {"id": "echo_other", "category": ["echo"], "label_en": "Other echocardiography findings", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "hba1c", "category": ["hba1c"], "label_en": "HbA1c (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "antihypertensives", "category": ["antihypertensive"], "label_en": "Antihypertensive drugs (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "weight", "category": ["weight"], "label_en": "Body weight (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "bmi", "category": ["bmi"], "label_en": "BMI as written (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "coagulation", "category": ["coagulation"], "label_en": "Coagulation (INR / aPTT / platelets)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\binr\\b", "\\bquick\\b", "\\bptt\\b", "aptt", "gerinnung", "thrombozytenzahl", "platelet count"], "source": "TODO-cite"},
+    {"id": "haemoglobin", "category": ["haemoglobin"], "label_en": "Haemoglobin", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["hämoglobin", "haemoglobin", "hemoglobin", "\\bhb\\b", "anämie", "anaemi", "anemi"], "source": "TODO-cite"},
+    {"id": "potassium", "category": ["potassium"], "label_en": "Potassium", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["kalium", "potassium"], "source": "TODO-cite"},
+    {"id": "functional_capacity", "category": ["functional_capacity"], "label_en": "Functional capacity (METs / exercise tolerance)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\bmets?\\b", "belastbar", "stockwerk", "treppe", "exercise tolerance", "\\bnyha\\b", "ergometr"], "source": "TODO-cite"},
+    {"id": "smoking", "category": ["smoking_status"], "label_en": "Smoking status", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["nikotin", "raucher", "rauchen", "pack.?years", "smok", "tabak"], "source": "TODO-cite"},
+    {"id": "carotid", "category": ["carotid_stenosis", "carotid_bruit"], "label_en": "Carotid stenosis (side, degree)", "priority": "should", "compute": null, "applies_if": null, "max_age_days": 183, "source": "TODO-cite"},
+    {"id": "sle", "category": ["diagnosis"], "label_en": "Systemic lupus erythematosus", "priority": "should", "compute": null, "applies_if": null, "match": "lupus", "source": "TODO-cite"},
+    {"id": "asa_class", "category": ["asa_class"], "label_en": "ASA physical status", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\basa\\s*(i{1,3}|iv|[1-5])\\b", "asa-klass"], "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "surgery_planning",
+   "label_en": "Surgical planning",
+   "triggers": ["surgery planning", "surgical planning", "plan the operation", "planning her operation", "planning the operation", "operation planning", "operative planning", "plan surgery", "planning surgery", "plan her surgery", "planning her surgery", "operate", "resection", "excision"],
+   "needs": [
+    {"id": "planned_procedure", "category": ["planned_procedure", "planned_admission"], "label_en": "Planned procedure / tumour board decision", "priority": "must", "compute": null, "applies_if": null, "search_terms": [], "source": "TODO-cite"},
+    {"id": "antithrombotic", "category": ["antithrombotic", "anticoagulant_oral"], "label_en": "Antithrombotic / anticoagulant drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "anticoagulant_oral", "category": ["anticoagulant_oral"], "label_en": "Oral anticoagulant or heparin (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "search_terms": ["marcumar", "phenprocoumon", "warfarin", "rivaroxaban", "xarelto", "apixaban", "eliquis", "edoxaban", "dabigatran", "pradaxa", "heparin", "enoxaparin", "lovenox", "fragmin", "clopidogrel", "plavix", "ticagrelor", "prasugrel"], "source": "TODO-cite"},
+    {"id": "breast_imaging", "category": ["imaging", "procedure"], "label_en": "Breast imaging", "priority": "should", "compute": null, "applies_if": null, "match": "mammo|breast", "source": "TODO-cite"},
+    {"id": "coagulation", "category": ["coagulation"], "label_en": "Coagulation (INR / aPTT / platelets)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\binr\\b", "\\bquick\\b", "\\bptt\\b", "aptt", "gerinnung", "thrombozytenzahl", "platelet count"], "source": "TODO-cite"},
+    {"id": "haemoglobin", "category": ["haemoglobin"], "label_en": "Haemoglobin", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["hämoglobin", "haemoglobin", "hemoglobin", "\\bhb\\b", "anämie", "anaemi", "anemi"], "source": "TODO-cite"},
+    {"id": "diabetes_meds", "category": ["glucose_lowering"], "label_en": "Glucose-lowering drugs (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "oncology_staging",
+   "label_en": "Tumour staging and pathology",
+   "triggers": ["tumour board", "tumor board", "staging", "receptor", "histolog", "patholog", "cancer", "carcinoma", "oncolog", "tumour", "tumor", "malignan", "neoadjuvant", "chemotherap"],
+   "needs": [
+    {"id": "histology", "category": ["histology"], "label_en": "Tumour histology", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "tnm", "category": ["tnm"], "label_en": "TNM stage / grading", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "receptor_status", "category": ["receptor_status"], "label_en": "Receptor status (ER / PR / HER2)", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "ki67", "category": ["ki67"], "label_en": "Ki-67 proliferation rate", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "planned_procedure", "category": ["planned_procedure", "planned_admission"], "label_en": "Planned procedure / tumour board decision", "priority": "must", "compute": null, "applies_if": null, "search_terms": [], "source": "TODO-cite"},
+    {"id": "tumour_size", "category": ["tumour_size"], "label_en": "Tumour size", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "lymph_nodes", "category": ["lymph_nodes"], "label_en": "Axillary lymph nodes", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "biopsy", "category": ["biopsy"], "label_en": "Biopsy (date, technique)", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "birads", "category": ["birads", "breast_density"], "label_en": "BI-RADS / breast density", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "breast_imaging", "category": ["imaging", "procedure"], "label_en": "Breast imaging", "priority": "should", "compute": null, "applies_if": null, "match": "mammo|breast", "source": "TODO-cite"},
+    {"id": "menopausal_status", "category": ["menopausal_status"], "label_en": "Menopausal status", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["menopaus", "klimakter", "menarche", "letzte regel", "periode\\b", "zyklus"], "source": "TODO-cite"},
+    {"id": "family_history", "category": ["family_history"], "label_en": "Family history", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "genetic_testing", "category": ["genetic_testing"], "label_en": "Germline genetic testing (BRCA)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["brca", "genetisch", "gentest", "genetic", "keimbahn"], "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "endocrine_therapy",
+   "label_en": "Adjuvant endocrine therapy planning",
+   "triggers": ["endocrine therapy", "hormone therapy", "hormonal therapy", "antihormon", "anti-hormon", "tamoxifen", "aromatase", "letrozole", "anastrozole", "exemestane", "adjuvant"],
+   "needs": [
+    {"id": "receptor_status", "category": ["receptor_status"], "label_en": "Receptor status (ER / PR / HER2)", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "menopausal_status", "category": ["menopausal_status"], "label_en": "Menopausal status", "priority": "must", "compute": "latest", "applies_if": null, "search_terms": ["menopaus", "klimakter", "menarche", "letzte regel", "periode\\b", "zyklus"], "source": "TODO-cite"},
+    {"id": "histology", "category": ["histology"], "label_en": "Tumour histology", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "ki67", "category": ["ki67"], "label_en": "Ki-67 proliferation rate", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "tnm", "category": ["tnm"], "label_en": "TNM stage / grading", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "osteoporosis", "category": ["diagnosis"], "label_en": "Osteoporosis / vitamin D deficiency", "priority": "must", "compute": null, "applies_if": null, "match": "osteopor|vitamin d", "source": "TODO-cite"},
+    {"id": "bone_agent", "category": ["bone_agent"], "label_en": "Bone-protective drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "vitamin_d", "category": ["vitamin"], "label_en": "Vitamin D supplementation (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "bone_density", "category": ["bone_density"], "label_en": "Bone density (DXA)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\bdx?a\\b", "dexa", "knochendichte", "t-score", "bone density", "osteodensit"], "source": "TODO-cite"},
+    {"id": "vte_history", "category": ["diagnosis"], "label_en": "Venous thromboembolism history", "priority": "must", "compute": null, "applies_if": null, "match": "thromboembol|venous thromb|\\bdvt\\b|pulmonary embol", "search_terms": ["thrombose", "embolie", "\\btvt\\b", "\\blae\\b", "thrombosis", "embolism"], "source": "TODO-cite"},
+    {"id": "antithrombotic", "category": ["antithrombotic", "anticoagulant_oral"], "label_en": "Antithrombotic / anticoagulant drugs (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "lipid_lowering", "category": ["lipid_lowering"], "label_en": "Lipid-lowering drugs (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "lipid_panel", "category": ["lipid_panel"], "label_en": "Lipid panel (LDL)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\bldl\\b", "\\bhdl\\b", "triglycerid", "cholesterin\\s*\\d", "lipid panel"], "source": "TODO-cite"},
+    {"id": "planned_procedure", "category": ["planned_procedure", "planned_admission"], "label_en": "Planned procedure / tumour board decision", "priority": "must", "compute": null, "applies_if": null, "search_terms": [], "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "diabetes_review",
+   "label_en": "Diabetes review",
+   "triggers": ["diabet", "glucose", "hba1c", "blood sugar", "insulin", "metformin", "glycaem", "glycem"],
+   "needs": [
+    {"id": "diabetes_meds", "category": ["glucose_lowering"], "label_en": "Glucose-lowering drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "hba1c", "category": ["hba1c"], "label_en": "HbA1c (latest)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "weight_change", "category": ["weight"], "label_en": "Body weight over time", "priority": "must", "compute": "series_change", "applies_if": null, "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "must", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"},
+    {"id": "bmi", "category": ["bmi"], "label_en": "BMI as written (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_glucose", "category": ["blood_glucose"], "label_en": "Blood glucose (point of care)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["blutzucker", "glukose", "glucose", "\\bbz\\b", "nüchtern"], "source": "TODO-cite"},
+    {"id": "hypoglycaemia", "category": ["diagnosis"], "label_en": "Hypoglycaemia episodes", "priority": "should", "compute": null, "applies_if": null, "match": "hypoglyc", "search_terms": ["hypoglyk", "unterzucker", "hypoglyc"], "source": "TODO-cite"},
+    {"id": "urine_albumin", "category": ["urine_albumin"], "label_en": "Urine albumin / proteinuria", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["albumin", "proteinurie", "urinstatus", "harnstreifen"], "source": "TODO-cite"},
+    {"id": "lipid_panel", "category": ["lipid_panel"], "label_en": "Lipid panel (LDL)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\bldl\\b", "\\bhdl\\b", "triglycerid", "cholesterin\\s*\\d", "lipid panel"], "source": "TODO-cite"},
+    {"id": "lipid_lowering", "category": ["lipid_lowering"], "label_en": "Lipid-lowering drugs (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "antihypertensives", "category": ["antihypertensive"], "label_en": "Antihypertensive drugs (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "eye_findings", "category": ["diagnosis", "followup"], "label_en": "Eye findings (retinopathy, fundus)", "priority": "should", "compute": null, "applies_if": null, "match": "retinopath|fundus|hollenhorst|retina|papill|ophthalm", "source": "TODO-cite"},
+    {"id": "foot_exam", "category": ["foot_exam"], "label_en": "Diabetic foot examination", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\bfuß", "\\bfuss", "\\bfoot\\b", "monofilament", "fußpuls", "polyneuropath"], "source": "TODO-cite"},
+    {"id": "diabetes_diagnosis", "category": ["diagnosis"], "label_en": "Diabetes diagnosis", "priority": "should", "compute": null, "applies_if": null, "match": "diabetes", "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "hypertension_review",
+   "label_en": "Hypertension review",
+   "triggers": ["hypertens", "blood pressure", "antihypertens", " bp "],
+   "needs": [
+    {"id": "antihypertensives", "category": ["antihypertensive"], "label_en": "Antihypertensive drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_pressure_history", "category": ["blood_pressure"], "label_en": "Blood pressure readings (all)", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"},
+    {"id": "potassium", "category": ["potassium"], "label_en": "Potassium", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["kalium", "potassium"], "source": "TODO-cite"},
+    {"id": "lvef", "category": ["lv_function"], "label_en": "Left-ventricular ejection fraction (last measured)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "echo_other", "category": ["echo"], "label_en": "Other echocardiography findings", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "eye_findings", "category": ["diagnosis", "followup"], "label_en": "Eye findings (retinopathy, fundus)", "priority": "should", "compute": null, "applies_if": null, "match": "retinopath|fundus|hollenhorst|retina|papill|ophthalm", "source": "TODO-cite"},
+    {"id": "carotid", "category": ["carotid_stenosis", "carotid_bruit"], "label_en": "Carotid stenosis (side, degree)", "priority": "should", "compute": null, "applies_if": null, "max_age_days": 183, "source": "TODO-cite"},
+    {"id": "hypertensive_crisis", "category": ["diagnosis"], "label_en": "Hypertensive crises", "priority": "should", "compute": null, "applies_if": null, "match": "hypertensive crisis", "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "emergency_neuro_visual",
+   "label_en": "Acute neurological / visual symptoms",
+   "triggers": ["dizz", "vertigo", "vision", "visual", "blurred", "eye", "amaurosis", "stroke", "tia", "transient isch", "weakness", "numb", "speech", "aphasi", "syncope", "faint", "headache", "confus", "neurolog"],
+   "needs": [
+    {"id": "previous_episodes", "category": ["presenting_event", "attributed_cause", "diagnosis"], "label_en": "Previous similar episodes and their documented cause", "priority": "must", "compute": null, "applies_if": null, "match": "amaurosis|vision|visual|hypertensive crisis|retinal|dizz|vertigo|eye symptom", "source": "TODO-cite"},
+    {"id": "carotid", "category": ["carotid_stenosis", "carotid_bruit"], "label_en": "Carotid stenosis (side, degree)", "priority": "must", "compute": null, "applies_if": null, "max_age_days": 183, "source": "TODO-cite"},
+    {"id": "antithrombotic", "category": ["antithrombotic", "anticoagulant_oral"], "label_en": "Antithrombotic / anticoagulant drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "antihypertensives", "category": ["antihypertensive"], "label_en": "Antihypertensive drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "contrast_history", "category": ["imaging"], "label_en": "Previous contrast exposure / non-contrast imaging", "priority": "must", "compute": null, "applies_if": null, "match": "contrast|native", "source": "TODO-cite"},
+    {"id": "metformin", "category": ["glucose_lowering"], "label_en": "Metformin (relevant before iodinated contrast)", "priority": "must", "compute": "current_meds", "applies_if": null, "match": "metformin|glucophage", "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "must", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"},
+    {"id": "anticoagulant_oral", "category": ["anticoagulant_oral"], "label_en": "Oral anticoagulant or heparin (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "search_terms": ["marcumar", "phenprocoumon", "warfarin", "rivaroxaban", "xarelto", "apixaban", "eliquis", "edoxaban", "dabigatran", "pradaxa", "heparin", "enoxaparin", "lovenox", "fragmin", "clopidogrel", "plavix", "ticagrelor", "prasugrel"], "source": "TODO-cite"},
+    {"id": "rhythm", "category": ["heart_rate", "diagnosis"], "label_en": "Heart rhythm / arrhythmia findings", "priority": "should", "compute": null, "applies_if": null, "match": "holter|sinus|rhythm|atrial|arrhythm|extrasystol|fibrillation|ventricular", "source": "TODO-cite"},
+    {"id": "neuro_imaging", "category": ["imaging", "procedure"], "label_en": "Previous head / vessel imaging", "priority": "should", "compute": null, "applies_if": null, "match": "\\bct\\b|mri|head|cranial|brain", "source": "TODO-cite"},
+    {"id": "blood_glucose", "category": ["blood_glucose"], "label_en": "Blood glucose (point of care)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["blutzucker", "glukose", "glucose", "\\bbz\\b", "nüchtern"], "source": "TODO-cite"},
+    {"id": "neuro_exam", "category": ["neurological_exam"], "label_en": "Neurological examination (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "eye_findings", "category": ["diagnosis", "followup"], "label_en": "Eye findings (retinopathy, fundus)", "priority": "should", "compute": null, "applies_if": null, "match": "retinopath|fundus|hollenhorst|retina|papill|ophthalm", "source": "TODO-cite"},
+    {"id": "carotid_duplex_done", "category": ["procedure", "imaging", "carotid_stenosis", "carotid_plaque"], "label_en": "Follow-up carotid duplex performed after it was recommended", "priority": "should", "compute": "absent_after:recommendation", "applies_if": null, "recommendation_match": "carotid|duplex", "match_all": ["carotid|neck arter|brain-supplying", "duplex|doppler|ultrasound"], "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "contrast_imaging",
+   "label_en": "Imaging with iodinated contrast",
+   "triggers": ["contrast", "angiograph", "cta", "ct angio", "ct scan", "computed tomograph", "iodinated", "enhanced ct", "contrast-enhanced", "x-ray dye", "dye"],
+   "needs": [
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "contrast_history", "category": ["imaging"], "label_en": "Previous contrast exposure / non-contrast imaging", "priority": "must", "compute": null, "applies_if": null, "match": "contrast|native", "source": "TODO-cite"},
+    {"id": "metformin", "category": ["glucose_lowering"], "label_en": "Metformin (relevant before iodinated contrast)", "priority": "must", "compute": "current_meds", "applies_if": null, "match": "metformin|glucophage", "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "must", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"},
+    {"id": "thyroid_function", "category": ["thyroid_function"], "label_en": "Thyroid function / hyperthyroidism", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\btsh\\b", "schilddrüs", "thyreo", "thyroid", "\\bft[34]\\b", "struma"], "source": "TODO-cite"},
+    {"id": "diabetes_diagnosis", "category": ["diagnosis"], "label_en": "Diabetes diagnosis", "priority": "should", "compute": null, "applies_if": null, "match": "diabetes", "source": "TODO-cite"},
+    {"id": "neuro_imaging", "category": ["imaging", "procedure"], "label_en": "Previous head / vessel imaging", "priority": "should", "compute": null, "applies_if": null, "match": "\\bct\\b|mri|head|cranial|brain", "source": "TODO-cite"},
+    {"id": "breast_imaging", "category": ["imaging", "procedure"], "label_en": "Breast imaging", "priority": "should", "compute": null, "applies_if": null, "match": "mammo|breast", "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "followup_review",
+   "label_en": "Open follow-ups after discharge",
+   "triggers": ["follow-up", "follow up", "followup", "follow-ups", "still open", "open item", "open points", "recommended at discharge", "after discharge", "outstanding", "pending", "overdue"],
+   "needs": [
+    {"id": "followups", "category": ["followup"], "label_en": "Follow-ups recommended at discharge", "priority": "must", "compute": null, "applies_if": null, "status_in": ["recommended"], "source": "TODO-cite"},
+    {"id": "carotid_duplex_done", "category": ["procedure", "imaging", "carotid_stenosis", "carotid_plaque"], "label_en": "Follow-up carotid duplex performed after it was recommended", "priority": "must", "compute": "absent_after:recommendation", "applies_if": null, "recommendation_match": "carotid|duplex", "match_all": ["carotid|neck arter|brain-supplying", "duplex|doppler|ultrasound"], "source": "TODO-cite"},
+    {"id": "eye_check_done", "category": ["procedure", "diagnosis", "imaging"], "label_en": "Eye check-up performed after it was recommended", "priority": "must", "compute": "absent_after:recommendation", "applies_if": null, "recommendation_match": "eye|ophthalm", "match": "ophthalm|eye|fundus|retin|visual acuity", "source": "TODO-cite"},
+    {"id": "bp_check_done", "category": ["blood_pressure"], "label_en": "Blood pressure recorded after the recommendation", "priority": "should", "compute": "absent_after:recommendation", "applies_if": null, "recommendation_match": "blood pressure", "source": "TODO-cite"},
+    {"id": "carotid", "category": ["carotid_stenosis", "carotid_bruit"], "label_en": "Carotid stenosis (side, degree)", "priority": "must", "compute": null, "applies_if": null, "max_age_days": 183, "source": "TODO-cite"},
+    {"id": "antihypertensives", "category": ["antihypertensive"], "label_en": "Antihypertensive drugs (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "hospital_stay", "category": ["encounter"], "label_en": "Hospital stays", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "med_review",
+   "label_en": "Medication review / reconciliation",
+   "triggers": ["medication review", "med review", "medication reconciliation", "reconcil", "drug interaction", "interaction", "polypharmacy", "dosing", "dose check", "drug review", "discharge medication", "medication list", "medications"],
+   "needs": [
+    {"id": "current_meds", "category": ["medications:*"], "label_en": "Current medication list", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "must", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"},
+    {"id": "liver_function", "category": ["liver_function"], "label_en": "Liver function tests", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\bgot\\b", "\\bgpt\\b", "bilirubin", "leberwert", "transaminas", "liver function", "\\bggt\\b"], "source": "TODO-cite"},
+    {"id": "potassium", "category": ["potassium"], "label_en": "Potassium", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["kalium", "potassium"], "source": "TODO-cite"},
+    {"id": "weight", "category": ["weight"], "label_en": "Body weight (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "problems", "category": ["diagnosis"], "label_en": "Active problems", "priority": "should", "compute": null, "applies_if": null, "status_in": ["current"], "source": "TODO-cite"},
+    {"id": "antithrombotic", "category": ["antithrombotic", "anticoagulant_oral"], "label_en": "Antithrombotic / anticoagulant drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "cardiac_risk",
+   "label_en": "Cardiac risk assessment",
+   "triggers": ["cardiac risk", "cardiovascular risk", "heart", "cardiac", "cardio", "chest pain", "palpitation", "echocardiog", "ecg", "ekg", "arrhythm"],
+   "needs": [
+    {"id": "lvef", "category": ["lv_function"], "label_en": "Left-ventricular ejection fraction (last measured)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "echo_other", "category": ["echo"], "label_en": "Other echocardiography findings", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "ecg", "category": ["heart_rate"], "label_en": "ECG / heart rate (latest)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "rhythm", "category": ["heart_rate", "diagnosis"], "label_en": "Heart rhythm / arrhythmia findings", "priority": "must", "compute": null, "applies_if": null, "match": "holter|sinus|rhythm|atrial|arrhythm|extrasystol|fibrillation|ventricular", "source": "TODO-cite"},
+    {"id": "cardiac_diagnoses", "category": ["diagnosis"], "label_en": "Cardiac diagnoses", "priority": "should", "compute": null, "applies_if": null, "match": "heart|cardi|coronar|angina|infarct|atrial|arrhythm|extrasystol|ventric|pericard|pulmonary hypert", "source": "TODO-cite"},
+    {"id": "functional_capacity", "category": ["functional_capacity"], "label_en": "Functional capacity (METs / exercise tolerance)", "priority": "must", "compute": "latest", "applies_if": null, "search_terms": ["\\bmets?\\b", "belastbar", "stockwerk", "treppe", "exercise tolerance", "\\bnyha\\b", "ergometr"], "source": "TODO-cite"},
+    {"id": "antithrombotic", "category": ["antithrombotic", "anticoagulant_oral"], "label_en": "Antithrombotic / anticoagulant drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "antihypertensives", "category": ["antihypertensive"], "label_en": "Antihypertensive drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "lipid_lowering", "category": ["lipid_lowering"], "label_en": "Lipid-lowering drugs (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "nitrate", "category": ["nitrate"], "label_en": "Nitrates (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "troponin", "category": ["troponin"], "label_en": "Cardiac biomarkers (troponin / BNP)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["troponin", "\\btn[ti]\\b", "ck-mb", "\\bbnp\\b", "probnp"], "source": "TODO-cite"},
+    {"id": "diabetes_diagnosis", "category": ["diagnosis"], "label_en": "Diabetes diagnosis", "priority": "should", "compute": null, "applies_if": null, "match": "diabetes", "source": "TODO-cite"},
+    {"id": "carotid", "category": ["carotid_stenosis", "carotid_bruit"], "label_en": "Carotid stenosis (side, degree)", "priority": "should", "compute": null, "applies_if": null, "max_age_days": 183, "source": "TODO-cite"},
+    {"id": "sleep_apnoea", "category": ["diagnosis"], "label_en": "Sleep apnoea", "priority": "should", "compute": null, "applies_if": null, "match": "sleep apn", "search_terms": ["schlafapnoe", "\\bosas?\\b", "cpap"], "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"},
+    {"id": "planned_procedure", "category": ["planned_procedure", "planned_admission"], "label_en": "Planned procedure / tumour board decision", "priority": "must", "compute": null, "applies_if": null, "search_terms": [], "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "nursing_admission",
+   "label_en": "Nursing admission assessment",
+   "triggers": ["nursing admission", "admission assessment", "admitting her", "admit her", "admission", "nursing", "care plan", "ward admission"],
+   "needs": [
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "current_meds", "category": ["medications:*"], "label_en": "Current medication list", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "weight", "category": ["weight"], "label_en": "Body weight (latest)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "height", "category": ["height"], "label_en": "Height (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "bmi", "category": ["bmi"], "label_en": "BMI as written (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "heart_rate", "category": ["heart_rate"], "label_en": "Heart rate (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "temperature", "category": ["temperature"], "label_en": "Body temperature (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "general_condition", "category": ["general_condition"], "label_en": "General condition (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "social_support", "category": ["social_support", "family_history"], "label_en": "Social situation", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "cognition", "category": ["mmse"], "label_en": "Cognition (MMSE)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "mobility", "category": ["mobility"], "label_en": "Mobility / walking aids", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["mobilis", "gehhilfe", "rollator", "rollstuhl", "bettlägerig", "mobility", "walking aid"], "source": "TODO-cite"},
+    {"id": "fall_risk", "category": ["fall_risk"], "label_en": "Fall risk", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["sturz", "gestürzt", "fall risk"], "source": "TODO-cite"},
+    {"id": "pressure_ulcer_risk", "category": ["pressure_ulcer_risk"], "label_en": "Pressure ulcer risk (Braden)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["dekubitus", "braden", "pressure ulcer"], "source": "TODO-cite"},
+    {"id": "pain", "category": ["pain_score"], "label_en": "Pain score", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["schmerz", "\\bnrs\\b", "\\bvas\\b", "\\bpain\\b"], "source": "TODO-cite"},
+    {"id": "oxygen_saturation", "category": ["oxygen_saturation"], "label_en": "Oxygen saturation", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["spo2", "sättigung", "saturation", "\\bsao2\\b"], "source": "TODO-cite"},
+    {"id": "diabetes_meds", "category": ["glucose_lowering"], "label_en": "Glucose-lowering drugs (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "planned_procedure", "category": ["planned_procedure", "planned_admission"], "label_en": "Planned procedure / tumour board decision", "priority": "should", "compute": null, "applies_if": null, "search_terms": [], "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "bone_metabolism",
+   "label_en": "Bone metabolism / osteoporosis",
+   "triggers": ["osteopor", "bone", "vitamin d", "fracture", "bisphosphon", "alendron", "calcium"],
+   "needs": [
+    {"id": "osteoporosis", "category": ["diagnosis"], "label_en": "Osteoporosis / vitamin D deficiency", "priority": "must", "compute": null, "applies_if": null, "match": "osteopor|vitamin d", "source": "TODO-cite"},
+    {"id": "bone_agent", "category": ["bone_agent"], "label_en": "Bone-protective drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "vitamin_d", "category": ["vitamin"], "label_en": "Vitamin D supplementation (current)", "priority": "should", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "bone_density", "category": ["bone_density"], "label_en": "Bone density (DXA)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\bdx?a\\b", "dexa", "knochendichte", "t-score", "bone density", "osteodensit"], "source": "TODO-cite"},
+    {"id": "vitamin_d_level", "category": ["vitamin_d_level"], "label_en": "Vitamin D level", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["25-?oh", "vitamin.?d.?spiegel", "calcidiol", "vitamin d level"], "source": "TODO-cite"},
+    {"id": "calcium", "category": ["calcium"], "label_en": "Serum calcium", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\bcalcium\\b", "\\bkalzium\\b", "\\bca\\s*\\d"], "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "carotid_review",
+   "label_en": "Carotid artery disease assessment",
+   "triggers": ["carotid", "neck arter", "endarterectom", "stent", "vascular", "stenosis", "duplex"],
+   "needs": [
+    {"id": "carotid", "category": ["carotid_stenosis", "carotid_bruit"], "label_en": "Carotid stenosis (side, degree)", "priority": "must", "compute": null, "applies_if": null, "max_age_days": 183, "source": "TODO-cite"},
+    {"id": "attributed_cause", "category": ["attributed_cause", "presenting_event"], "label_en": "Documented symptoms and attributed cause", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "previous_episodes", "category": ["presenting_event", "attributed_cause", "diagnosis"], "label_en": "Previous similar episodes and their documented cause", "priority": "must", "compute": null, "applies_if": null, "match": "amaurosis|vision|visual|hypertensive crisis|retinal|dizz|vertigo|eye symptom", "source": "TODO-cite"},
+    {"id": "carotid_duplex_done", "category": ["procedure", "imaging", "carotid_stenosis", "carotid_plaque"], "label_en": "Follow-up carotid duplex performed after it was recommended", "priority": "must", "compute": "absent_after:recommendation", "applies_if": null, "recommendation_match": "carotid|duplex", "match_all": ["carotid|neck arter|brain-supplying", "duplex|doppler|ultrasound"], "source": "TODO-cite"},
+    {"id": "carotid_plaque", "category": ["carotid_plaque", "carotid_bruit"], "label_en": "Carotid plaques / bruit", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "antithrombotic", "category": ["antithrombotic", "anticoagulant_oral"], "label_en": "Antithrombotic / anticoagulant drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "lipid_lowering", "category": ["lipid_lowering"], "label_en": "Lipid-lowering drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "lipid_panel", "category": ["lipid_panel"], "label_en": "Lipid panel (LDL)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["\\bldl\\b", "\\bhdl\\b", "triglycerid", "cholesterin\\s*\\d", "lipid panel"], "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "smoking", "category": ["smoking_status"], "label_en": "Smoking status", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["nikotin", "raucher", "rauchen", "pack.?years", "smok", "tabak"], "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"},
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "lvef", "category": ["lv_function"], "label_en": "Left-ventricular ejection fraction (last measured)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "diabetes_diagnosis", "category": ["diagnosis"], "label_en": "Diabetes diagnosis", "priority": "should", "compute": null, "applies_if": null, "match": "diabetes", "source": "TODO-cite"},
+    {"id": "neuro_imaging", "category": ["imaging", "procedure"], "label_en": "Previous head / vessel imaging", "priority": "should", "compute": null, "applies_if": null, "match": "\\bct\\b|mri|head|cranial|brain", "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "prostate_screening",
+   "label_en": "Prostate examination / screening",
+   "suppress_tasks": ["oncology_staging"],
+   "triggers": ["prostat", "psa", "digital rectal", "dre"],
+   "needs": [
+    {"id": "psa", "category": ["psa"], "label_en": "PSA", "priority": "must", "compute": "latest", "applies_if": {"sex": "male"}, "search_terms": ["\\bpsa\\b", "prostata-spez", "prostate.specific"], "source": "TODO-cite"},
+    {"id": "prostate_exam", "category": ["prostate_exam"], "label_en": "Digital rectal examination of the prostate", "priority": "must", "compute": "latest", "applies_if": {"sex": "male"}, "search_terms": ["prostat"], "source": "TODO-cite"},
+    {"id": "family_history", "category": ["family_history"], "label_en": "Family history", "priority": "should", "compute": null, "applies_if": null, "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "gp_review",
+   "label_en": "General practice review",
+   "triggers": ["check-up", "checkup", "annual review", "general review", "routine review"],
+   "needs": [
+    {"id": "problems", "category": ["diagnosis"], "label_en": "Active problems", "priority": "must", "compute": null, "applies_if": null, "status_in": ["current"], "source": "TODO-cite"},
+    {"id": "current_meds", "category": ["medications:*"], "label_en": "Current medication list", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "weight_change", "category": ["weight"], "label_en": "Body weight over time", "priority": "must", "compute": "series_change", "applies_if": null, "source": "TODO-cite"},
+    {"id": "hba1c", "category": ["hba1c"], "label_en": "HbA1c (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "followups", "category": ["followup"], "label_en": "Follow-ups recommended at discharge", "priority": "should", "compute": null, "applies_if": null, "status_in": ["recommended"], "source": "TODO-cite"},
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "emergency_general",
+   "label_en": "Emergency assessment",
+   "triggers": [],
+   "needs": [
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "antithrombotic", "category": ["antithrombotic", "anticoagulant_oral"], "label_en": "Antithrombotic / anticoagulant drugs (current)", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "current_meds", "category": ["medications:*"], "label_en": "Current medication list", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "problems", "category": ["diagnosis"], "label_en": "Active problems", "priority": "must", "compute": null, "applies_if": null, "status_in": ["current"], "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "must", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "heart_rate", "category": ["heart_rate"], "label_en": "Heart rate (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "blood_glucose", "category": ["blood_glucose"], "label_en": "Blood glucose (point of care)", "priority": "should", "compute": "latest", "applies_if": null, "search_terms": ["blutzucker", "glukose", "glucose", "\\bbz\\b", "nüchtern"], "source": "TODO-cite"},
+    {"id": "renal_function", "category": ["renal_function"], "label_en": "Kidney function (creatinine / eGFR)", "priority": "must", "compute": "latest", "applies_if": null, "search_terms": ["kreatinin", "creatinin", "\\be?gfr\\b", "nierenfunktion", "niereninsuff", "harnstoff", "\\brenal\\b", "kidney", "cystatin"], "source": "TODO-cite"}
+   ]
+  },
+  {
+   "id": "general_overview",
+   "label_en": "General overview",
+   "triggers": [],
+   "needs": [
+    {"id": "allergy", "category": ["allergy"], "label_en": "Documented allergies / intolerances", "priority": "must", "compute": null, "applies_if": null, "source": "TODO-cite"},
+    {"id": "current_meds", "category": ["medications:*"], "label_en": "Current medication list", "priority": "must", "compute": "current_meds", "applies_if": null, "source": "TODO-cite"},
+    {"id": "problems", "category": ["diagnosis"], "label_en": "Active problems", "priority": "must", "compute": null, "applies_if": null, "status_in": ["current"], "source": "TODO-cite"},
+    {"id": "blood_pressure", "category": ["blood_pressure"], "label_en": "Blood pressure (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "weight", "category": ["weight"], "label_en": "Body weight (latest)", "priority": "should", "compute": "latest", "applies_if": null, "source": "TODO-cite"},
+    {"id": "planned_procedure", "category": ["planned_procedure", "planned_admission"], "label_en": "Planned procedure / tumour board decision", "priority": "must", "compute": null, "applies_if": null, "search_terms": [], "source": "TODO-cite"},
+    {"id": "followups", "category": ["followup"], "label_en": "Follow-ups recommended at discharge", "priority": "must", "compute": null, "applies_if": null, "status_in": ["recommended"], "source": "TODO-cite"}
+   ]
+  }
+ ]
 }

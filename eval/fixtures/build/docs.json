@@ -1,0 +1,14 @@
+{
+ "90000001": {
+  "title": "Entlassungsbrief",
+  "date": "2020-01-10",
+  "type": "Arztbrief",
+  "display_text": "Entlassungsbrief\nAufnahme am 03/01/2020 | Entlassen am 09/01/2020\n\nAllergien:\nPenicillin-Allergie (Exanthem)\n\nGröße: 180 cm\nGewicht: 90 kg\nBMI: 31,5\n\nEntlassungsmedikation:\nRamipril 5mg oral 1 0 0 0 ST\nMetoprolol 47,5mg oral 1 0 1/2 0 ST\n\nProcedere:\nKontrolle beim Hausarzt in 4 Wochen & Laborkontrolle."
+ },
+ "90000002": {
+  "title": "Ambulanzbrief",
+  "date": "2020-03-02",
+  "type": "Ambulanzbrief",
+  "display_text": "Ambulanzbrief\nGewicht: 85 kg\nMedikation: Metoprolol 47,5mg 1 0 1 0\nEcho: EF 55%, Befund > Vorbefund unverändert."
+ }
+}
