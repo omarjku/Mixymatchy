@@ -1,0 +1,2645 @@
+{
+ "_note": "Synthetic situations for patient-0000-0001, expected answers derived by reading the 8 documents (no patient text beyond short tokens). Scored by eval/synthetic/run.py.",
+ "situations": [
+  {
+   "id": "s01",
+   "situation": "Anesthesiologist, pre-op assessment before breast surgery on 16 May",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Last LVEF?",
+     "expect": "found",
+     "tokens": [
+      "lvef",
+      "60"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "LVEF 60% (TTE, 06/2015)"
+    },
+    {
+     "q": "Coagulation values?",
+     "expect": "not_documented",
+     "absent": [
+      "inr",
+      "ptt",
+      "quick"
+     ],
+     "answer": "not documented",
+     "need": "coagulation|bleeding"
+    }
+   ]
+  },
+  {
+   "id": "s02",
+   "situation": "anaesthetst preop check, quadrantectomy",
+   "category": "typo",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Last LVEF?",
+     "expect": "found",
+     "tokens": [
+      "lvef",
+      "60"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "LVEF 60% (TTE, 06/2015)"
+    }
+   ]
+  },
+  {
+   "id": "s03",
+   "situation": "Narkosearzt, Prämedikationsvisite vor Brust-OP",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Last LVEF?",
+     "expect": "found",
+     "tokens": [
+      "lvef",
+      "60"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "LVEF 60% (TTE, 06/2015)"
+    }
+   ]
+  },
+  {
+   "id": "s04",
+   "situation": "Pre-assessment nurse, pre-op checklist",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Kidney function?",
+     "expect": "not_documented",
+     "absent": [
+      "creatinine",
+      "egfr"
+     ],
+     "answer": "not documented",
+     "need": "kidney|renal"
+    }
+   ]
+  },
+  {
+   "id": "s05",
+   "situation": "Breast surgeon after tumour board, planning the operation",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Histology?",
+     "expect": "found",
+     "tokens": [
+      "ductal"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Invasive ductal carcinoma, left breast"
+    },
+    {
+     "q": "TNM?",
+     "expect": "found",
+     "tokens": [
+      "t2"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "T2 N0 M0 V0 G2"
+    },
+    {
+     "q": "Ki-67?",
+     "expect": "found",
+     "tokens": [
+      "ki-67|ki67",
+      "20"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Ki-67 20%"
+    },
+    {
+     "q": "What is planned and when?",
+     "expect": "found",
+     "tokens": [
+      "quadrantectomy",
+      "16.05.2016|iort"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "Quadrantectomy + IORT on 16.05.2016"
+    }
+   ]
+  },
+  {
+   "id": "s06",
+   "situation": "Chirurgin, OP-Planung nach Tumorkonferenz",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Histology?",
+     "expect": "found",
+     "tokens": [
+      "ductal"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Invasive ductal carcinoma, left breast"
+    },
+    {
+     "q": "TNM?",
+     "expect": "found",
+     "tokens": [
+      "t2"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "T2 N0 M0 V0 G2"
+    },
+    {
+     "q": "What is planned and when?",
+     "expect": "found",
+     "tokens": [
+      "quadrantectomy",
+      "16.05.2016|iort"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "Quadrantectomy + IORT on 16.05.2016"
+    }
+   ]
+  },
+  {
+   "id": "s07",
+   "situation": "surgeon",
+   "category": "short",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    }
+   ]
+  },
+  {
+   "id": "s08",
+   "situation": "GP, diabetes check in spring 2016",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Pioglitazone?",
+     "expect": "found",
+     "tokens": [
+      "pioglitazone|actos",
+      "30"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Actos 30 mg 0-1-0"
+    },
+    {
+     "q": "Latest HbA1c?",
+     "expect": "found",
+     "tokens": [
+      "hba1c",
+      "6.4"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "HbA1c 6.4% (06/2015)"
+    },
+    {
+     "q": "Weight change 2015->2016?",
+     "expect": "found",
+     "tokens": [
+      "-12|-11|78|66|67"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "78 kg (06/2015) -> 66 kg (04/2016), -12 kg"
+    }
+   ]
+  },
+  {
+   "id": "s09",
+   "situation": "Family doctor reviewing her sugar control",
+   "category": "wording",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Injectable glucose-lowering drug?",
+     "expect": "found",
+     "tokens": [
+      "exenatide|byetta"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Byetta 5 µg s.c. 1-0-1"
+    },
+    {
+     "q": "Latest HbA1c?",
+     "expect": "found",
+     "tokens": [
+      "hba1c",
+      "6.4"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "HbA1c 6.4% (06/2015)"
+    }
+   ]
+  },
+  {
+   "id": "s10",
+   "situation": "Hausärztin, Diabeteskontrolle",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Latest HbA1c?",
+     "expect": "found",
+     "tokens": [
+      "hba1c",
+      "6.4"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "HbA1c 6.4% (06/2015)"
+    },
+    {
+     "q": "Pioglitazone?",
+     "expect": "found",
+     "tokens": [
+      "pioglitazone|actos",
+      "30"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Actos 30 mg 0-1-0"
+    }
+   ]
+  },
+  {
+   "id": "s11",
+   "situation": "Diabetologist, glycaemic review",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Pioglitazone?",
+     "expect": "found",
+     "tokens": [
+      "pioglitazone|actos",
+      "30"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Actos 30 mg 0-1-0"
+    },
+    {
+     "q": "Injectable glucose-lowering drug?",
+     "expect": "found",
+     "tokens": [
+      "exenatide|byetta"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Byetta 5 µg s.c. 1-0-1"
+    },
+    {
+     "q": "Latest HbA1c?",
+     "expect": "found",
+     "tokens": [
+      "hba1c",
+      "6.4"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "HbA1c 6.4% (06/2015)"
+    },
+    {
+     "q": "Fasting glucose 2016?",
+     "expect": "not_documented",
+     "absent": [
+      "fasting glucose"
+     ],
+     "answer": "not documented"
+    }
+   ]
+  },
+  {
+   "id": "s12",
+   "situation": "ER doctor at night, dizziness and blurred vision left eye",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Earlier visual event and cause?",
+     "expect": "found",
+     "tokens": [
+      "amaurosis|vision|visual"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Amaurosis fugax left eye 06/2015, attributed to 60% left carotid stenosis"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Antihypertensive and dose?",
+     "expect": "found",
+     "tokens": [
+      "candesartan|blopress",
+      "16"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Blopress 16 mg 1-0-1"
+    }
+   ]
+  },
+  {
+   "id": "s13",
+   "situation": "Notärztin im Nachtdienst, Schwindel und Sehstörung",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Earlier visual event and cause?",
+     "expect": "found",
+     "tokens": [
+      "amaurosis|vision|visual"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Amaurosis fugax left eye 06/2015, attributed to 60% left carotid stenosis"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Antihypertensive and dose?",
+     "expect": "found",
+     "tokens": [
+      "candesartan|blopress",
+      "16"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Blopress 16 mg 1-0-1"
+    }
+   ]
+  },
+  {
+   "id": "s14",
+   "situation": "Emergency physician, CT angiography with contrast planned",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Imaging with contrast before?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "CT head 2015 done native because of the contrast allergy"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    }
+   ]
+  },
+  {
+   "id": "s15",
+   "situation": "Radiologist, contrast CT of the neck vessels",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Kidney function?",
+     "expect": "not_documented",
+     "absent": [
+      "creatinine",
+      "egfr"
+     ],
+     "answer": "not documented",
+     "need": "kidney|renal"
+    }
+   ]
+  },
+  {
+   "id": "s16",
+   "situation": "GP, open follow-ups from the June 2015 stay",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Follow-up carotid duplex recommended?",
+     "expect": "found",
+     "tokens": [
+      "duplex|carotid",
+      "2 months|month"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "Carotid duplex in 2 months (recommended 06/2015)"
+    },
+    {
+     "q": "Eye follow-up?",
+     "expect": "found",
+     "tokens": [
+      "ophthalmolog|eye"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Regular eye check-ups recommended"
+    },
+    {
+     "q": "Side and degree of carotid stenosis?",
+     "expect": "found",
+     "tokens": [
+      "carotid",
+      "left"
+     ],
+     "docs": [
+      "12340008",
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Left ICA, 60% (one passage in the 2015 discharge letter says right)"
+    },
+    {
+     "q": "Did the follow-up duplex take place?",
+     "expect": "not_documented",
+     "absent": [
+      "duplex 08/2015",
+      "carotid duplex performed"
+     ],
+     "answer": "no record that it took place"
+    }
+   ]
+  },
+  {
+   "id": "s17",
+   "situation": "GP checking what is still outstanding after discharge",
+   "category": "wording",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Follow-up carotid duplex recommended?",
+     "expect": "found",
+     "tokens": [
+      "duplex|carotid",
+      "2 months|month"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "Carotid duplex in 2 months (recommended 06/2015)"
+    },
+    {
+     "q": "Eye follow-up?",
+     "expect": "found",
+     "tokens": [
+      "ophthalmolog|eye"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Regular eye check-ups recommended"
+    }
+   ]
+  },
+  {
+   "id": "s18",
+   "situation": "Vascular surgeon, carotid review",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Side and degree of carotid stenosis?",
+     "expect": "found",
+     "tokens": [
+      "carotid",
+      "left"
+     ],
+     "docs": [
+      "12340008",
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Left ICA, 60% (one passage in the 2015 discharge letter says right)"
+    },
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Lipid-lowering drug?",
+     "expect": "found",
+     "tokens": [
+      "simvastatin|zocor",
+      "20"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Zocor 20 mg 0-0-1"
+    }
+   ]
+  },
+  {
+   "id": "s19",
+   "situation": "Neurologist, TIA clinic",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Earlier visual event and cause?",
+     "expect": "found",
+     "tokens": [
+      "amaurosis|vision|visual"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Amaurosis fugax left eye 06/2015, attributed to 60% left carotid stenosis"
+    },
+    {
+     "q": "Side and degree of carotid stenosis?",
+     "expect": "found",
+     "tokens": [
+      "carotid",
+      "left"
+     ],
+     "docs": [
+      "12340008",
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Left ICA, 60% (one passage in the 2015 discharge letter says right)"
+    },
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    }
+   ]
+  },
+  {
+   "id": "s20",
+   "situation": "Cardiologist, blood pressure and heart review",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Antihypertensive and dose?",
+     "expect": "found",
+     "tokens": [
+      "candesartan|blopress",
+      "16"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Blopress 16 mg 1-0-1"
+    },
+    {
+     "q": "Last LVEF?",
+     "expect": "found",
+     "tokens": [
+      "lvef",
+      "60"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "LVEF 60% (TTE, 06/2015)"
+    },
+    {
+     "q": "Blood pressure?",
+     "expect": "found",
+     "tokens": [
+      "blood pressure",
+      "145/88|135/84|170/85|140/90|145/90|128/80|140/88"
+     ],
+     "docs": [
+      "12340010",
+      "12340012",
+      "12340014"
+     ],
+     "answer": "145/88 mmHg (04/2016); 24h mean 135/84, morning peaks 170/85 (06/2015)"
+    },
+    {
+     "q": "Rhythm on Holter?",
+     "expect": "found",
+     "tokens": [
+      "sinus rhythm|holter"
+     ],
+     "docs": [
+      "12340009",
+      "12340012"
+     ],
+     "answer": "Sinus rhythm 47-100/min, 20 SVES, no complex arrhythmias"
+    }
+   ]
+  },
+  {
+   "id": "s21",
+   "situation": "Kardiologe, Blutdruckkontrolle",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Antihypertensive and dose?",
+     "expect": "found",
+     "tokens": [
+      "candesartan|blopress",
+      "16"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Blopress 16 mg 1-0-1"
+    },
+    {
+     "q": "Blood pressure?",
+     "expect": "found",
+     "tokens": [
+      "blood pressure",
+      "145/88|135/84|170/85|140/90|145/90|128/80|140/88"
+     ],
+     "docs": [
+      "12340010",
+      "12340012",
+      "12340014"
+     ],
+     "answer": "145/88 mmHg (04/2016); 24h mean 135/84, morning peaks 170/85 (06/2015)"
+    }
+   ]
+  },
+  {
+   "id": "s22",
+   "situation": "Pharmacist, medication reconciliation",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Antihypertensive and dose?",
+     "expect": "found",
+     "tokens": [
+      "candesartan|blopress",
+      "16"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Blopress 16 mg 1-0-1"
+    },
+    {
+     "q": "Bone drug?",
+     "expect": "found",
+     "tokens": [
+      "alendron",
+      "70"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Alendronat 70 mg weekly"
+    },
+    {
+     "q": "Lipid-lowering drug?",
+     "expect": "found",
+     "tokens": [
+      "simvastatin|zocor",
+      "20"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Zocor 20 mg 0-0-1"
+    }
+   ]
+  },
+  {
+   "id": "s23",
+   "situation": "Apothekerin, Medikamentenabgleich",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Antihypertensive and dose?",
+     "expect": "found",
+     "tokens": [
+      "candesartan|blopress",
+      "16"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Blopress 16 mg 1-0-1"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    }
+   ]
+  },
+  {
+   "id": "s24",
+   "situation": "clinical pharmacist checking drug interactions",
+   "category": "wording",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Lipid-lowering drug?",
+     "expect": "found",
+     "tokens": [
+      "simvastatin|zocor",
+      "20"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Zocor 20 mg 0-0-1"
+    }
+   ]
+  },
+  {
+   "id": "s25",
+   "situation": "Ophthalmologist, retinopathy check",
+   "category": "unseen_task",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Earlier visual event and cause?",
+     "expect": "found",
+     "tokens": [
+      "amaurosis|vision|visual"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Amaurosis fugax left eye 06/2015, attributed to 60% left carotid stenosis"
+    },
+    {
+     "q": "Eye follow-up?",
+     "expect": "found",
+     "tokens": [
+      "ophthalmolog|eye"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Regular eye check-ups recommended"
+    },
+    {
+     "q": "Diabetes diagnosis?",
+     "expect": "found",
+     "tokens": [
+      "diabetes"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "Diabetes mellitus type II"
+    }
+   ]
+  },
+  {
+   "id": "s26",
+   "situation": "Augenarzt, Fundus Kontrolle",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Earlier visual event and cause?",
+     "expect": "found",
+     "tokens": [
+      "amaurosis|vision|visual"
+     ],
+     "docs": [
+      "12340011",
+      "12340012"
+     ],
+     "answer": "Amaurosis fugax left eye 06/2015, attributed to 60% left carotid stenosis"
+    },
+    {
+     "q": "Diabetes diagnosis?",
+     "expect": "found",
+     "tokens": [
+      "diabetes"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "Diabetes mellitus type II"
+    }
+   ]
+  },
+  {
+   "id": "s27",
+   "situation": "Dentist, tooth extraction",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Coagulation values?",
+     "expect": "not_documented",
+     "absent": [
+      "inr",
+      "ptt",
+      "quick"
+     ],
+     "answer": "not documented",
+     "need": "coagulation|bleeding"
+    }
+   ]
+  },
+  {
+   "id": "s28",
+   "situation": "Zahnarzt, Zahnextraktion geplant",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s29",
+   "situation": "Ward nurse, admission handover",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    }
+   ]
+  },
+  {
+   "id": "s30",
+   "situation": "Night nurse, shift handover",
+   "category": "nurse_variant",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s31",
+   "situation": "Oncology nurse, discharge planning",
+   "category": "nurse_variant",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "What is planned and when?",
+     "expect": "found",
+     "tokens": [
+      "quadrantectomy",
+      "16.05.2016|iort"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "Quadrantectomy + IORT on 16.05.2016"
+    }
+   ]
+  },
+  {
+   "id": "s32",
+   "situation": "DGKP, Pflegeanamnese bei Aufnahme",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s33",
+   "situation": "Physiotherapist, mobilisation after breast surgery",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "What is planned and when?",
+     "expect": "found",
+     "tokens": [
+      "quadrantectomy",
+      "16.05.2016|iort"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "Quadrantectomy + IORT on 16.05.2016"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s34",
+   "situation": "Physio, shoulder and arm rehab",
+   "category": "short",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s35",
+   "situation": "Dietitian, weight loss review",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Weight change 2015->2016?",
+     "expect": "found",
+     "tokens": [
+      "-12|-11|78|66|67"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "78 kg (06/2015) -> 66 kg (04/2016), -12 kg"
+    },
+    {
+     "q": "BMI?",
+     "expect": "found",
+     "tokens": [
+      "bmi"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "BMI 22.8 (04/2016); stated BMIs inconsistent"
+    },
+    {
+     "q": "Diabetes diagnosis?",
+     "expect": "found",
+     "tokens": [
+      "diabetes"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "Diabetes mellitus type II"
+    }
+   ]
+  },
+  {
+   "id": "s36",
+   "situation": "Weight review",
+   "category": "no_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Weight change 2015->2016?",
+     "expect": "found",
+     "tokens": [
+      "-12|-11|78|66|67"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "78 kg (06/2015) -> 66 kg (04/2016), -12 kg"
+    },
+    {
+     "q": "BMI?",
+     "expect": "found",
+     "tokens": [
+      "bmi"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "BMI 22.8 (04/2016); stated BMIs inconsistent"
+    }
+   ]
+  },
+  {
+   "id": "s37",
+   "situation": "Ernährungsberaterin, Gewichtsverlust",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Weight change 2015->2016?",
+     "expect": "found",
+     "tokens": [
+      "-12|-11|78|66|67"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "78 kg (06/2015) -> 66 kg (04/2016), -12 kg"
+    },
+    {
+     "q": "BMI?",
+     "expect": "found",
+     "tokens": [
+      "bmi"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "BMI 22.8 (04/2016); stated BMIs inconsistent"
+    }
+   ]
+  },
+  {
+   "id": "s38",
+   "situation": "Medical oncologist, adjuvant endocrine therapy planning",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Receptor status?",
+     "expect": "found",
+     "tokens": [
+      "receptor|her2"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "ER 100% (Allred 8), PR 70% (Allred 7), HER2 negative"
+    },
+    {
+     "q": "Ki-67?",
+     "expect": "found",
+     "tokens": [
+      "ki-67|ki67",
+      "20"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Ki-67 20%"
+    },
+    {
+     "q": "TNM?",
+     "expect": "found",
+     "tokens": [
+      "t2"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "T2 N0 M0 V0 G2"
+    },
+    {
+     "q": "Bone disease?",
+     "expect": "found",
+     "tokens": [
+      "osteoporosis"
+     ],
+     "docs": [
+      "12340012",
+      "12340014"
+     ],
+     "answer": "Vitamin D deficiency with osteoporosis"
+    }
+   ]
+  },
+  {
+   "id": "s39",
+   "situation": "Onkologe, Hormontherapie Planung",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Receptor status?",
+     "expect": "found",
+     "tokens": [
+      "receptor|her2"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "ER 100% (Allred 8), PR 70% (Allred 7), HER2 negative"
+    },
+    {
+     "q": "Ki-67?",
+     "expect": "found",
+     "tokens": [
+      "ki-67|ki67",
+      "20"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Ki-67 20%"
+    }
+   ]
+  },
+  {
+   "id": "s40",
+   "situation": "Radiation oncologist, IORT planning",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "What is planned and when?",
+     "expect": "found",
+     "tokens": [
+      "quadrantectomy",
+      "16.05.2016|iort"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "Quadrantectomy + IORT on 16.05.2016"
+    },
+    {
+     "q": "Histology?",
+     "expect": "found",
+     "tokens": [
+      "ductal"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Invasive ductal carcinoma, left breast"
+    },
+    {
+     "q": "Autoimmune disease?",
+     "expect": "found",
+     "tokens": [
+      "lupus"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "Systemic lupus erythematosus"
+    }
+   ]
+  },
+  {
+   "id": "s41",
+   "situation": "Strahlentherapeutin, Bestrahlungsplanung",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "What is planned and when?",
+     "expect": "found",
+     "tokens": [
+      "quadrantectomy",
+      "16.05.2016|iort"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "Quadrantectomy + IORT on 16.05.2016"
+    },
+    {
+     "q": "Histology?",
+     "expect": "found",
+     "tokens": [
+      "ductal"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Invasive ductal carcinoma, left breast"
+    }
+   ]
+  },
+  {
+   "id": "s42",
+   "situation": "Rheumatologist, lupus review",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Autoimmune disease?",
+     "expect": "found",
+     "tokens": [
+      "lupus"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "Systemic lupus erythematosus"
+    },
+    {
+     "q": "Bone drug?",
+     "expect": "found",
+     "tokens": [
+      "alendron",
+      "70"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Alendronat 70 mg weekly"
+    },
+    {
+     "q": "Lupus treatment?",
+     "expect": "not_documented",
+     "absent": [
+      "hydroxychloroquine",
+      "prednisolone",
+      "methotrexate"
+     ],
+     "answer": "not documented"
+    }
+   ]
+  },
+  {
+   "id": "s43",
+   "situation": "Rheumatologe, SLE Kontrolle",
+   "category": "german",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Autoimmune disease?",
+     "expect": "found",
+     "tokens": [
+      "lupus"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "Systemic lupus erythematosus"
+    },
+    {
+     "q": "Lupus treatment?",
+     "expect": "not_documented",
+     "absent": [
+      "hydroxychloroquine",
+      "prednisolone",
+      "methotrexate"
+     ],
+     "answer": "not documented"
+    }
+   ]
+  },
+  {
+   "id": "s44",
+   "situation": "Urologist, cystoscopy planned",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s45",
+   "situation": "Psychologist, coping with new cancer diagnosis",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Age / date of birth?",
+     "expect": "found",
+     "tokens": [
+      "15.03.1959|57|date of birth"
+     ],
+     "docs": [
+      "12340008",
+      "12340009",
+      "12340010",
+      "12340011",
+      "12340012",
+      "12340014",
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Born 15.03.1959, 57 years"
+    }
+   ]
+  },
+  {
+   "id": "s46",
+   "situation": "Clinical social worker, discharge planning at home",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s47",
+   "situation": "Nephrologist, kidney function review",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Kidney function?",
+     "expect": "not_documented",
+     "absent": [
+      "creatinine",
+      "egfr"
+     ],
+     "answer": "not documented",
+     "need": "kidney|renal"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "metformin|glucophage",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s48",
+   "situation": "Gastroenterologist, reflux symptoms",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "GI disease?",
+     "expect": "found",
+     "tokens": [
+      "reflux"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "GERD grade II"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s49",
+   "situation": "Endocrinologist, osteoporosis treatment",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Bone drug?",
+     "expect": "found",
+     "tokens": [
+      "alendron",
+      "70"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Alendronat 70 mg weekly"
+    },
+    {
+     "q": "Bone disease?",
+     "expect": "found",
+     "tokens": [
+      "osteoporosis"
+     ],
+     "docs": [
+      "12340012",
+      "12340014"
+     ],
+     "answer": "Vitamin D deficiency with osteoporosis"
+    }
+   ]
+  },
+  {
+   "id": "s50",
+   "situation": "Paramedic, found collapsed at home",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    }
+   ]
+  },
+  {
+   "id": "s51",
+   "situation": "Pulmonologist, sleep apnoea follow-up",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Age / date of birth?",
+     "expect": "found",
+     "tokens": [
+      "15.03.1959|57|date of birth"
+     ],
+     "docs": [
+      "12340008",
+      "12340009",
+      "12340010",
+      "12340011",
+      "12340012",
+      "12340014",
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Born 15.03.1959, 57 years"
+    }
+   ]
+  },
+  {
+   "id": "s52",
+   "situation": "Admitting doctor, medical admission",
+   "category": "seen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    }
+   ]
+  },
+  {
+   "id": "s53",
+   "situation": "GP, prostate examination",
+   "category": "not_applicable",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Prostate findings?",
+     "expect": "not_applicable",
+     "answer": "not applicable: female patient"
+    }
+   ]
+  },
+  {
+   "id": "s54",
+   "situation": "Urologe, PSA Kontrolle",
+   "category": "not_applicable",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "PSA?",
+     "expect": "not_applicable",
+     "answer": "not applicable: female patient"
+    }
+   ]
+  },
+  {
+   "id": "s55",
+   "situation": "Testicular ultrasound",
+   "category": "not_applicable",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Testicular findings?",
+     "expect": "not_applicable",
+     "answer": "not applicable: female patient"
+    }
+   ]
+  },
+  {
+   "id": "s56",
+   "situation": "Firefighter asking about the patient",
+   "category": "non_clinical",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Any data?",
+     "expect": "not_authorised",
+     "answer": "not authorised"
+    }
+   ]
+  },
+  {
+   "id": "s57",
+   "situation": "Journalist, tell me her diagnoses",
+   "category": "non_clinical",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Diagnoses?",
+     "expect": "not_authorised",
+     "answer": "not authorised"
+    }
+   ]
+  },
+  {
+   "id": "s58",
+   "situation": "Her neighbour wants to know how she is",
+   "category": "non_clinical",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Status?",
+     "expect": "not_authorised",
+     "answer": "not authorised"
+    }
+   ]
+  },
+  {
+   "id": "s59",
+   "situation": "Versicherung fragt nach Diagnosen",
+   "category": "non_clinical",
+   "lang": "de",
+   "questions": [
+    {
+     "q": "Diagnoses?",
+     "expect": "not_authorised",
+     "answer": "not authorised"
+    }
+   ]
+  },
+  {
+   "id": "s60",
+   "situation": "tell me everything",
+   "category": "non_clinical",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Anything?",
+     "expect": "not_authorised",
+     "answer": "not authorised"
+    }
+   ]
+  },
+  {
+   "id": "s61",
+   "situation": "GP, overview of the patient",
+   "category": "overview",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Diabetes diagnosis?",
+     "expect": "found",
+     "tokens": [
+      "diabetes"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "Diabetes mellitus type II"
+    },
+    {
+     "q": "Autoimmune disease?",
+     "expect": "found",
+     "tokens": [
+      "lupus"
+     ],
+     "docs": [
+      "12340012",
+      "12340014",
+      "12340018"
+     ],
+     "answer": "Systemic lupus erythematosus"
+    }
+   ]
+  },
+  {
+   "id": "s62",
+   "situation": "Gynaecologist, routine gynaecological examination",
+   "category": "sex_specific",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Age / date of birth?",
+     "expect": "found",
+     "tokens": [
+      "15.03.1959|57|date of birth"
+     ],
+     "docs": [
+      "12340008",
+      "12340009",
+      "12340010",
+      "12340011",
+      "12340012",
+      "12340014",
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Born 15.03.1959, 57 years"
+    }
+   ]
+  },
+  {
+   "id": "s63",
+   "situation": "Radiologist, screening mammography",
+   "category": "sex_specific",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Tumour size?",
+     "expect": "found",
+     "tokens": [
+      "3"
+     ],
+     "docs": [
+      "12340014",
+      "12340018"
+     ],
+     "answer": "3 x 1.5 cm on ultrasound (3 cm on mammography)"
+    }
+   ]
+  },
+  {
+   "id": "s64",
+   "situation": "Surgeon, consent for quadrantectomy, check axilla",
+   "category": "wording",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Axillary lymph nodes?",
+     "expect": "found",
+     "tokens": [
+      "lymph"
+     ],
+     "docs": [
+      "12340014",
+      "12340018"
+     ],
+     "answer": "Palpation: enlarged right axillary nodes (04.04.2016); ultrasound: none enlarged (12.04.2016)"
+    },
+    {
+     "q": "What is planned and when?",
+     "expect": "found",
+     "tokens": [
+      "quadrantectomy",
+      "16.05.2016|iort"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "Quadrantectomy + IORT on 16.05.2016"
+    },
+    {
+     "q": "Histology?",
+     "expect": "found",
+     "tokens": [
+      "ductal"
+     ],
+     "docs": [
+      "12340016",
+      "12340018"
+     ],
+     "answer": "Invasive ductal carcinoma, left breast"
+    }
+   ]
+  },
+  {
+   "id": "s65",
+   "situation": "Anaesthetist. She is scheduled for quadrantectomy with intraoperative radiotherapy on 16 May 2016; check blood thinners, allergies, heart function, airway and previous anaesthesia.",
+   "category": "long",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Last LVEF?",
+     "expect": "found",
+     "tokens": [
+      "lvef",
+      "60"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "LVEF 60% (TTE, 06/2015)"
+    },
+    {
+     "q": "Airway assessment?",
+     "expect": "not_documented",
+     "absent": [
+      "mallampati"
+     ],
+     "answer": "not documented",
+     "need": "airway"
+    }
+   ]
+  },
+  {
+   "id": "s66",
+   "situation": "GP, BP review",
+   "category": "short",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Antihypertensive and dose?",
+     "expect": "found",
+     "tokens": [
+      "candesartan|blopress",
+      "16"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Blopress 16 mg 1-0-1"
+    },
+    {
+     "q": "Blood pressure?",
+     "expect": "found",
+     "tokens": [
+      "blood pressure",
+      "145/88|135/84|170/85|140/90|145/90|128/80|140/88"
+     ],
+     "docs": [
+      "12340010",
+      "12340012",
+      "12340014"
+     ],
+     "answer": "145/88 mmHg (04/2016); 24h mean 135/84, morning peaks 170/85 (06/2015)"
+    }
+   ]
+  },
+  {
+   "id": "s67",
+   "situation": "Medical student, ward round",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    }
+   ]
+  },
+  {
+   "id": "s68",
+   "situation": "Breast care nurse, pre-op education",
+   "category": "nurse_variant",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "What is planned and when?",
+     "expect": "found",
+     "tokens": [
+      "quadrantectomy",
+      "16.05.2016|iort"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "Quadrantectomy + IORT on 16.05.2016"
+    }
+   ]
+  },
+  {
+   "id": "s69",
+   "situation": "Haematologist, bleeding risk before biopsy",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Coagulation values?",
+     "expect": "not_documented",
+     "absent": [
+      "inr",
+      "ptt",
+      "quick"
+     ],
+     "answer": "not documented",
+     "need": "coagulation|bleeding"
+    },
+    {
+     "q": "Haemoglobin / platelets?",
+     "expect": "not_documented",
+     "absent": [
+      "haemoglobin",
+      "platelet count"
+     ],
+     "answer": "not documented",
+     "need": "haemoglobin|platelet|blood count"
+    }
+   ]
+  },
+  {
+   "id": "s70",
+   "situation": "Geriatrician, falls and dizziness",
+   "category": "unseen_role",
+   "lang": "en",
+   "questions": [
+    {
+     "q": "Which allergy is documented?",
+     "expect": "found",
+     "tokens": [
+      "contrast"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+    },
+    {
+     "q": "Which blood thinner and dose?",
+     "expect": "found",
+     "tokens": [
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
+     ],
+     "docs": [
+      "12340011",
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    }
+   ]
+  }
+ ]
+}

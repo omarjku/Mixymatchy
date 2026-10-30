@@ -148,7 +148,8 @@ def _proof_and_contradictions(st, cards, contras):
 
 
 SAFETY_CORE = ("age_sex", "allergies")  # decision 7: on every clinical screen, short view too
-MAX_ALSO_RELEVANT = 5  # P2 cards in the short view's 'also relevant' group (the rest: long view)
+MAX_ALSO_RELEVANT = 6  # P2 cards in the short view's 'also relevant' group (the rest: long view), KB order
+MAX_SHORT_TOTAL = 16   # short view never shows more cards than this (P1 + also relevant)
 MAX_SUMMARY_CARDS = 6  # safety summary (unrecognised task / not applicable): never a dump
 OVERVIEW_RX = re.compile(r"(?<![a-zäöüß])(overview|summary|summarise|summarize|über(blick|sicht)|zusammenfassung)")
 
@@ -309,11 +310,12 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     cards = front + [build_card(st, k, s, ctx, contras) for s in slots] + back
     also = []
     if detail == "short" and mode == "task":  # P2 'also relevant' group, shown without a second request
-        p2 = [x["slot"] for x in u["slots"] if x["priority"] == "P2" and x["slot"] not in slots]
-        built = [build_card(st, k, s, ctx, contras) for s in p2]
-        built = [c for c in built if c.get("status") != "not_documented"] + \
-                [c for c in built if c.get("status") == "not_documented"]
-        also = built[:MAX_ALSO_RELEVANT]
+        p2_all = {x["slot"] for x in u["slots"] if x["priority"] == "P2" and x["slot"] not in slots}
+        in_bundles = [x for b_ in u["bundle_ids"] for x in (k.bundle_by_id[b_].get("slots") or {}).get("P2") or []]
+        p2 = [x for x in dict.fromkeys(in_bundles + [x["slot"] for x in u["slots"]]) if x in p2_all]  # KB order
+        room = max(0, min(MAX_ALSO_RELEVANT, MAX_SHORT_TOTAL - len(cards)))
+        also = [build_card(st, k, s, ctx, contras) for s in p2[:room]]
+        built = p2
         for c in also:
             c["group"] = "also_relevant"
         u["also_relevant"] = [c["slot"] for c in also]

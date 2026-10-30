@@ -105,13 +105,23 @@
     "drug interactions",
     "interaction check",
     "medicines reconciliation",
-    "med review"
+    "med review",
+    "osteoporosis",
+    "bone health",
+    "lupus",
+    "sle",
+    "kidney function",
+    "renal function",
+    "renal dosing"
    ],
    "de": [
     "Medikation",
     "Medikamentenabgleich",
     "Wechselwirkungen",
-    "Medikationsabgleich"
+    "Medikationsabgleich",
+    "Osteoporose",
+    "Nierenfunktion",
+    "Lupus"
    ]
   },
   "B08": {

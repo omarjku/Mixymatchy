@@ -6,7 +6,7 @@ No second request is needed to show the "Also relevant" section.
 | Field | Meaning |
 |---|---|
 | `needs[]` with `priority: "P1"` | main screen. The first two are always the **safety core**: `slot: "age_sex"` and `slot: "allergies"` (every clinical screen, short and long). |
-| `needs[]` with `priority: "P2"` | the **Also relevant** group (decision 4). Ordered after all P1 needs; at most 5, documented ones first. |
+| `needs[]` with `priority: "P2"` | the **Also relevant** group (decision 4). Ordered after all P1 needs; at most 6, in the knowledge base's P2 order; the whole short screen never exceeds 16 cards. |
 | `routing.also_relevant` | the `need` ids of that group, in display order (same as the P2 needs). |
 | `routing.also_relevant_more` | how many further P2 needs exist (shown with `detail: "long"`). |
 | `routing.role_label` | role as recognised. Unknown clinical roles keep their own word (e.g. "Nephrologist"), never "GP". |
