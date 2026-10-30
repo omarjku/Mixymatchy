@@ -16,6 +16,23 @@ export const ROLE = {
 } as const;
 export type RoleKey = keyof typeof ROLE;
 
+// Demo user (security/README.md): every page load needs a sign-in, the API needs the Bearer token.
+export const DEMO_USER = { staff_id: "dr.demo", password: "SecondLook-demo-2026" };
+
+export async function signIn(page: Page): Promise<void> {
+  await page.locator("#sl-staff").fill(DEMO_USER.staff_id);
+  await page.locator("#sl-pass").fill(DEMO_USER.password);
+  await page.locator("#sl-pass").press("Enter");
+  await expect(page.locator(".sl-shell")).toBeHidden();
+}
+
+async function apiToken(): Promise<string> {
+  const r = await fetch(`${BACKEND_URL}/auth/login`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(DEMO_USER),
+  });
+  return ((await r.json()) as { token: string }).token;
+}
+
 export const FACTS_HEADING = /What you need|Erforderliche Angaben/;
 export const SOURCE_BUTTON = /^(Source|Quelle)$/;
 
@@ -79,6 +96,7 @@ export function trackErrors(page: Page): string[] {
 // Returns the time from submit to the facts heading in ms.
 export async function submitSituation(page: Page, role: RoleKey, text: string): Promise<number> {
   await page.goto("/", { waitUntil: "networkidle" });
+  await signIn(page);
   await page.getByRole("button", { name: ROLE[role] }).click();
   const box = page.locator("textarea, input").first();
   await box.fill(text);
@@ -90,9 +108,10 @@ export async function submitSituation(page: Page, role: RoleKey, text: string): 
 
 // All document texts from the backend (the source of truth for every quote on screen).
 export async function documentTexts(): Promise<string[]> {
-  const list: { id: string }[] = await (await fetch(`${BACKEND_URL}/documents`)).json();
+  const init = { headers: { Authorization: `Bearer ${await apiToken()}` } };
+  const list: { id: string }[] = await (await fetch(`${BACKEND_URL}/documents`, init)).json();
   return Promise.all(
-    list.map(async (d) => ((await (await fetch(`${BACKEND_URL}/documents/${d.id}`)).json()) as { text: string }).text),
+    list.map(async (d) => ((await (await fetch(`${BACKEND_URL}/documents/${d.id}`, init)).json()) as { text: string }).text),
   );
 }
 

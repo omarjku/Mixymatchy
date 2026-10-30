@@ -1,4 +1,5 @@
 import { t } from "@/i18n/strings";
+import { secureFetch } from "@/second-look";
 import type { Contradiction, Fact, FactTrust, PatientBrief, RecordGap, SourceCitation } from "@/types/fact";
 
 // Backend contract (backend/app/schema.py, docs/INTEGRATION.md) and the mapping into the app's PatientBrief.
@@ -93,7 +94,7 @@ interface BackendDocument {
 }
 
 async function getJson<T>(path: string, init: RequestInit | undefined, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`${API}${path}`, { ...init, signal });
+  const response = await secureFetch(`${API}${path}`, { ...init, signal });
   if (!response.ok) throw new Error(`${path} failed: ${response.status}`);
   return (await response.json()) as T;
 }

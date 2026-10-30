@@ -1,20 +1,22 @@
-# One service: FastAPI serves the API and the statically exported Next.js frontend.
+# One service: FastAPI serves the API, sign-in/PIN lock (/auth) and the built mobile app (docs/DECISIONS.md, 11-12).
+# The legacy Next.js frontend (frontend/) is no longer part of the image; run it locally with `make frontend`.
 FROM node:22-slim AS web
 WORKDIR /web
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
-COPY frontend/ ./
+COPY mobile/package.json mobile/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY mobile/ ./
 # Empty API URL = same origin as the page.
-ENV STATIC_EXPORT=1 NEXT_PUBLIC_API_URL=""
+ENV VITE_API_URL=""
 RUN npm run build
 
 FROM python:3.12-slim
 WORKDIR /app
 RUN pip install --no-cache-dir "fastapi>=0.115" "uvicorn[standard]>=0.30" "pydantic>=2.7" "python-dotenv>=1.0"
 COPY . .
-COPY --from=web /web/out /app/static
+RUN rm -rf frontend mobile
+COPY --from=web /web/dist /app/static
 ENV STATIC_DIR=/app/static
-# Hugging Face Spaces runs containers as uid 1000; the app writes data/ at start-up.
+# Hugging Face Spaces runs containers as uid 1000; the app writes data/ (build, audit log) at start-up.
 RUN useradd -m -u 1000 user && chown -R user /app
 USER user
 EXPOSE 8000

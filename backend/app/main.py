@@ -10,14 +10,17 @@ import base64
 import hmac
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
-from fastapi.staticfiles import StaticFiles
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from . import store
+from .auth import AuthHTTPError, auth_error_handler, require_unlocked, router as auth_router, service as auth_service
 from .schema import Briefing, BriefingRequest
+from security.auth import Session
+
+PATIENT_ID = os.environ.get("PATIENT_ID", "patient-0000-0001")
 
 
 @asynccontextmanager
@@ -30,22 +33,33 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Second Look API", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# No CORS middleware: the app is served from the same origin (STATIC_DIR, or the Vite dev proxy).
+app.add_exception_handler(AuthHTTPError, auth_error_handler)
+app.include_router(auth_router)
 
-# Deployment gate: the patient data must not be public, so a hosted instance sets SITE_USER and
-# SITE_PASSWORD and every request (page, API, documents) needs them. Unset locally = no gate.
+# Optional legacy gate (off by default): SITE_GATE=basic plus SITE_USER/SITE_PASSWORD puts HTTP Basic auth in
+# front of everything except /health. Sign-in and the PIN lock (app/auth.py) replace it (docs/DECISIONS.md, 11).
+SITE_GATE = os.environ.get("SITE_GATE", "").lower() == "basic"
 SITE_USER = os.environ.get("SITE_USER", "")
 SITE_PASSWORD = os.environ.get("SITE_PASSWORD", "")
 
 
 @app.middleware("http")
-async def site_gate(request, call_next):
-    if not SITE_PASSWORD or request.url.path == "/health":
-        return await call_next(request)
-    expected = "Basic " + base64.b64encode(f"{SITE_USER}:{SITE_PASSWORD}".encode()).decode()
-    if hmac.compare_digest(request.headers.get("authorization", ""), expected):
-        return await call_next(request)
-    return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Second Look"'})
+async def headers_and_gate(request: Request, call_next):
+    if SITE_GATE and SITE_PASSWORD and request.url.path != "/health":
+        expected = "Basic " + base64.b64encode(f"{SITE_USER}:{SITE_PASSWORD}".encode()).decode()
+        if not hmac.compare_digest(request.headers.get("authorization", ""), expected):
+            return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Second Look"'})
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    return response
+
+
+def audit_access(session: Session, resource: str, task: str = "", **extra) -> None:
+    """data_access audit line: who, which patient, which resource; the task only as a SHA-256 hash."""
+    auth_service.record_data_access(session, PATIENT_ID, task, resource=resource, **extra)
 
 
 @app.get("/health")
@@ -55,12 +69,14 @@ def health() -> dict:
 
 
 @app.get("/documents")
-def documents() -> list[dict]:
+def documents(session: Session = Depends(require_unlocked)) -> list[dict]:
+    audit_access(session, "documents")
     return [d.model_dump(exclude={"text"}) for d in store.documents()]
 
 
 @app.get("/documents/{doc_id}")
-def document(doc_id: str) -> dict:
+def document(doc_id: str, session: Session = Depends(require_unlocked)) -> dict:
+    audit_access(session, "document", doc_id=doc_id[:64])
     doc = next((d for d in store.documents() if d.id == doc_id), None)
     if not doc:
         raise HTTPException(404, "unknown document")
@@ -69,7 +85,8 @@ def document(doc_id: str) -> dict:
 
 
 @app.get("/segments/{segment_id}")
-def segment(segment_id: str) -> dict:
+def segment(segment_id: str, session: Session = Depends(require_unlocked)) -> dict:
+    audit_access(session, "segment", segment_id=segment_id[:64])
     seg = next((s for s in store.segments() if s.id == segment_id), None)
     if not seg:
         raise HTTPException(404, "unknown segment")
@@ -77,10 +94,27 @@ def segment(segment_id: str) -> dict:
 
 
 @app.post("/briefing", response_model=Briefing)
-def briefing(req: BriefingRequest) -> Briefing:
+def briefing(req: BriefingRequest, session: Session = Depends(require_unlocked)) -> Briefing:
+    audit_access(session, "briefing", req.situation, detail=req.detail)
     return store.briefing(req.situation, req.detail)
 
 
-# Deployment: serve the exported frontend from the same origin (registered last, so API routes win).
-if os.environ.get("STATIC_DIR"):
-    app.mount("/", StaticFiles(directory=os.environ["STATIC_DIR"], html=True), name="frontend")
+# Deployment: serve the built mobile app (mobile/dist) from the same origin, registered last so API routes win.
+# SPA fallback: an unknown GET path that is not an API path returns index.html, so deep links (/results) work.
+API_PREFIXES = ("auth", "briefing", "documents", "segments", "health", "docs", "redoc", "openapi.json")
+STATIC_DIR = Path(os.environ["STATIC_DIR"]).resolve() if os.environ.get("STATIC_DIR") else None
+
+if STATIC_DIR:
+    @app.get("/{path:path}", include_in_schema=False)
+    def frontend(path: str):
+        first = path.split("/", 1)[0]
+        if first in API_PREFIXES:
+            return JSONResponse({"detail": "Not Found"}, status_code=404)
+        candidate = (STATIC_DIR / path).resolve()
+        if path and candidate.is_file() and candidate.is_relative_to(STATIC_DIR):
+            # Hashed bundles can be cached for good; everything else is revalidated.
+            cache = "public, max-age=31536000, immutable" if path.startswith("assets/") else "no-cache"
+            return FileResponse(candidate, headers={"Cache-Control": cache})
+        if "." in path.rsplit("/", 1)[-1]:
+            return JSONResponse({"detail": "Not Found"}, status_code=404)  # missing file, not a page route
+        return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-cache"})

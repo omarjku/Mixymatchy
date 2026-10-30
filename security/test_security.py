@@ -349,5 +349,15 @@ class HttpTests(Base):
             self.assertIn(b"SecondLook", resp.read())
 
 
+class MobileCopyTests(unittest.TestCase):
+    def test_mobile_app_bundles_the_current_lock_module(self):
+        """mobile/src/second-look/ holds verbatim copies; re-copy after editing security/web/."""
+        root = Path(__file__).resolve().parents[1]
+        for name in ("second-look-lock.js", "lock.css"):
+            copy = root / "mobile" / "src" / "second-look" / name
+            if copy.exists():
+                self.assertEqual((root / "security" / "web" / name).read_bytes(), copy.read_bytes(), name)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -6,3 +6,4 @@ frontend/out
 **/__pycache__
 *.zip
 .env
+mobile/dist
