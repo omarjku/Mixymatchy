@@ -1,7 +1,7 @@
 # Frontend plan: Second Look (mobile app)
 
 > **For Zoha and her Claude Code session.** Open Claude in the repo root and say:
-> *"Read docs/FRONTEND.md, docs/CHALLENGE.md, docs/design/prototype.html and backend/app/schema.py. Then do Phase 1. Follow the Rules exactly."*
+> *"Read docs/FRONTEND.md, docs/INTEGRATION.md, docs/CHALLENGE.md, docs/design/prototype.html and docs/contract/briefing.example.json. Then do Phase 1. Follow the Rules exactly."*
 > Work phase by phase; each phase ends with its checks green.
 
 **Decision (30.10.2026):** the demo frontend is Zoha's phone-first app in `mobile/` (Vite, React 19, Tailwind 4).
@@ -23,7 +23,7 @@ The backend already answers all 15 test questions correctly in ~20 ms. **The fro
 ### How the jury scores it (docs/CHALLENGE.md)
 | Scoring rule | What it means for the UI |
 |---|---|
-| Expected answer visible **without clicking** (scrolling OK), **with a link** to a source document | Facts from `must` needs are never inside a closed accordion, tab or sheet. |
+| Expected answer visible **without clicking** (scrolling OK), **with a link** to a source document | Facts from P1 needs are never inside a closed accordion, tab or sheet, in short or full mode. |
 | Traceability: the link shows the **right passage** | Every fact shows its quote inline; tapping opens the letter with that passage highlighted. |
 | Invented facts = 0 | The UI renders only API strings. Nothing from `mockFacts.ts` may reach the demo. |
 | Contradictions minus false alarms, each linking **all** passages | Counted contradictions and documentation notes look different; every passage of a conflict is shown. |
@@ -43,7 +43,10 @@ The backend already answers all 15 test questions correctly in ~20 ms. **The fro
 5. **Never colour alone** (WCAG 1.4.1): every status is text, optionally with an icon.
 6. **Wording:** "Possible copy error" (never "copied wrong"); "Documentation note" (never called a contradiction); "Not documented" (never "unknown").
 7. **Footer on every result screen:** "Decision support only. A clinician reviews every fact before acting."
-8. **No advice.** Remove guideline excerpts that read as instructions (e.g. "pause anticoagulants...") from the result screen. If guideline links stay, they open a sheet titled "Why this is on your checklist" with the citation from `rulebook/` only.
+8. **No advice, and knowledge stays apart from facts.** The current guideline excerpts that read as instructions (e.g. "pause anticoagulants...") go. Two kinds of non-patient text are allowed, each only in its own sheet and never styled like a patient fact:
+   - **"Why this is shown"**: `need.why[]` (guideline title, body, link from Mani's knowledge base). Explains why the need is on the list; never a recommendation for this patient.
+   - **"From the drug label"**: `label_panels[]`, **long mode only**, each listed item beside the related patient fact status (found with source, ruled out, not documented). Never "contraindicated", never "fit".
+   Neither appears on the default (short) screen of the five demo situations, so the jury cannot count them as invented facts.
 9. Dates as `DD.MM.YYYY`; months as "Jun 2015".
 
 ---
@@ -116,7 +119,30 @@ Remove one accessory. If a new element is a card, a badge or a coloured block, a
 
 ## 4. Connecting to the backend
 
+**The contract is `docs/INTEGRATION.md` §3 (API v2).** Build against `docs/contract/briefing.example.json` and `docs/contract/document.example.json` (invented data) in mock mode (`VITE_MOCK=1`); switching to the real backend is then only `VITE_API_URL`. v2 fields are optional: hide a feature when its field is missing, so the app works against today's backend too.
+
 Today `mobile/src/lib/api.ts → fetchPatientBrief(role, task)` returns mock data. Replace it with a mapping layer; keep `PatientBrief` only if it still fits, otherwise adopt the backend types directly.
+
+### New in v2 (from Mani's routing knowledge base, `docs/knowledge-base/`)
+| Field | UI |
+|---|---|
+| `detail: short / long` (request) | toggle "Short / Full" in the header. Short = P1 needs; Full adds P2, P3 and label panels. Default short. |
+| `need.priority` P1 / P2 / P3 | P1 always expanded; P2 under "More context"; P3 under "On request" (Full only) |
+| `route.role_label`, `route.bundle_titles` | subtitle under the user's sentence, e.g. "Pre-procedure check (anaesthesia)" |
+| `route.layer` ≠ `kb`, `route.note` | quiet note above the list: "No exact match for this request. Showing a composed selection." / "Answered by searching the letters." Never hide which layer answered. |
+| `need.status: ruled_out` | "Ruled out" with its quote (a documented negative), visually different from "Not documented" |
+| `need.searched` | "Not documented. Searched 6 letters for Mallampati, Atemweg, …" and, if set, a link to the empty lab table |
+| `need.added_by_rule` | small note "Added because a blood thinner is listed" (text from the rule title) |
+| `need.why[]` | "Why this is shown" link opening the guideline sheet (Rule 8) |
+| `computed[].from / to / delta / delta_pct / note` | change row: "72 kg to 64 kg, −8 kg (−11.1%)", both inputs linked, note in muted text |
+| `finding.check_id` | check name in the conflict details (X01 "BMI recomputation", X03 "Laterality conflict", …) |
+| `label_panels[]` | "From the drug label" sheet beside a medication (Full only) |
+| `POST /segments {ids}` | one request for all inline quotes |
+
+### Computed values: what to show (Mani's statistics review, `docs/INTEGRATION.md` §4)
+- Changes, always with both inputs linked: weight (absolute + percent of the earlier value), BMI **recorded vs calculated** per letter (keep the written value, flag the difference), prescribed daily dose of the same drug, blood-pressure comparisons only when the task needs them.
+- Dated facts, never trend lines: single HbA1c, LVEF, sparse heart rate/temperature, height, tumour markers. No sparkline for fewer than 3 comparable values.
+- Never: p-values, baseline bands, predictions, anomaly scores, per-day rates, or any cause/intent wording.
 
 | Backend | Endpoint / field | Notes |
 |---|---|---|
@@ -133,15 +159,12 @@ Fetch all segments for one briefing in parallel (≈ 60 small requests) or ask O
 
 Base URL from `VITE_API_URL` (default `http://127.0.0.1:8000`; not `localhost`, which adds ~2 s on Windows). Run the backend from the repo root: `python -m uvicorn --app-dir backend app.main:app --port 8000` (needs `data/` locally).
 
-### Ask Omar for (build against mocks meanwhile, hide the feature if absent)
+### Still to request from Omar (not yet in the v2 contract)
 | Field | For |
 |---|---|
-| `priority: must | should` on each need | collapse only `should` needs |
 | safety-strip flag (allergies, blood thinners, current meds, problems) | sticky strip under the patient line |
 | propagation / fact families from `compare.json` | "how this fact travelled" timeline |
 | English translation per segment | translation under the German quote |
-| batch `POST /segments` | fewer requests |
-| `SECOND_LOOK_LLM=1` parser on the server | unseen roles and phrasing |
 
 ---
 
@@ -149,15 +172,18 @@ Base URL from `VITE_API_URL` (default `http://127.0.0.1:8000`; not `localhost`, 
 
 Branch per phase from `mobile-frontend`; small PRs. Before merging: `npm run build` and the e2e tests green; `python -m pytest -q` in `backend/` unaffected.
 
-### Phase 1: Real data (½ day)
-- Mapping layer in `src/lib/api.ts`; one free-text input (role chips become example sentences); English default, DE toggle kept.
+### Phase 1: Contract and real data (½ day)
+- Types for API v2 (`docs/INTEGRATION.md` §3); mock mode on `docs/contract/*.example.json`; mapping layer in `src/lib/api.ts`.
+- One free-text input (role chips become example sentences); English default, DE toggle kept.
+- Short / Full toggle wired to `detail`; route subtitle and fallback note.
 - Delete the guideline-advice excerpts from the result screen (Rule 8).
-- ✅ The 5 situations from `cases/situations.md` render real facts from the API.
+- ✅ The example JSON renders end to end; the 5 situations from `cases/situations.md` render real facts from the API.
 
 ### Phase 2: Evidence first (1 day), most points
 - Apply tokens and type rules (§3). Facts as one grouped list with hairline rows (replace the card stack).
 - Inline serif quote under every fact with the cited words highlighted; source link opens the letter sheet with the highlighter sweep.
-- Trust as text ("Consistent in 3 letters", "Outdated, 10 months old", "Single letter"); "Not documented"; "Not applicable" with its evidence link; computed values with formula ("78 kg to 66 kg") linking every input; superseded values behind "Older values (2)".
+- Trust as text ("Consistent in 3 letters", "Outdated, 10 months old", "Single letter"); "Not documented" with what was searched; "Ruled out" with its quote; "Not applicable" with its evidence link; change rows with both inputs linked (§4 rules); superseded values behind "Older values (2)".
+- "Why this is shown" sheet from `need.why` (Rule 8).
 - Patient line + the user's sentence as title; proof sentence; footer.
 - ✅ For all 15 questions the answer and its quote are visible without clicking.
 
@@ -170,8 +196,10 @@ Branch per phase from `mobile-frontend`; small PRs. Before merging: `npm run bui
 
 ### Phase 4: Lens and any role (½ day)
 - Lens tabs re-run the briefing with the role swapped and the task kept; layout animation ≤ 250 ms (`motion/react`, `layout`).
-- Example sentences: the 5 cases + 5 from `eval/unseen_situations.json`. Unknown roles get "General overview for <role>".
-- ✅ Anaesthetist to Surgeon to Emergency re-arranges in < 1 s; all 15 unseen situations render without errors.
+- Lens tabs send `role_override`; "Other role" opens the free-text field. Mani's knowledge base has 20 roles (`docs/knowledge-base/routing_knowledge_base.json → roles`); use their `name` for labels.
+- Example sentences: the 5 cases + 5 from `eval/unseen_situations.json`. A `route.layer` other than `kb` shows its note.
+- "From the drug label" panels in Full mode (Rule 8).
+- ✅ Anaesthetist to Surgeon to Emergency re-arranges in < 1 s; all 15 unseen situations and the 22 hold-out situations in the knowledge base (`validation.extra_tests`) render without errors.
 
 ### Phase 5: Polish and demo (½ day)
 - Loading skeleton in the final layout shape; errors say what failed and offer "Try again".

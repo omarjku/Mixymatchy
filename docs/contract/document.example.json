@@ -1,0 +1,71 @@
+{
+ "_about": "API contract example for GET /documents/{id}. INVENTED letter; no IBM data.",
+ "id": "DA",
+ "title": "Entlassungsbrief (example)",
+ "date": "2025-01-20",
+ "type": "Arztbrief",
+ "department": "Innere Medizin",
+ "text": "Entlassungsbrief Innere Medizin\nAufnahme am 14/01/2025 | Entlassen am 20/01/20255\nPatientin, geb. 02.07.1961\nLatexallergie (Exanthem)\nPlavix 75mg oral 1 0 0 0 ST\nLaborbefund: Parameter Ausgangswert Kontrollwert Einheit\n",
+ "segments": [
+  {
+   "id": "DA:p0001",
+   "doc_id": "DA",
+   "kind": "sentence",
+   "section": null,
+   "text": "Entlassungsbrief Innere Medizin",
+   "start": 0,
+   "end": 31,
+   "doc_date": "2025-01-20"
+  },
+  {
+   "id": "DA:p0002",
+   "doc_id": "DA",
+   "kind": "sentence",
+   "section": null,
+   "text": "Aufnahme am 14/01/2025 | Entlassen am 20/01/20255",
+   "start": 32,
+   "end": 81,
+   "doc_date": "2025-01-20"
+  },
+  {
+   "id": "DA:p0003",
+   "doc_id": "DA",
+   "kind": "sentence",
+   "section": null,
+   "text": "Patientin, geb. 02.07.1961",
+   "start": 82,
+   "end": 108,
+   "doc_date": "2025-01-20"
+  },
+  {
+   "id": "DA:p0012",
+   "doc_id": "DA",
+   "kind": "sentence",
+   "section": null,
+   "text": "Latexallergie (Exanthem)",
+   "start": 109,
+   "end": 133,
+   "doc_date": "2025-01-20"
+  },
+  {
+   "id": "DA:p0071",
+   "doc_id": "DA",
+   "kind": "sentence",
+   "section": null,
+   "text": "Plavix 75mg oral 1 0 0 0 ST",
+   "start": 134,
+   "end": 161,
+   "doc_date": "2025-01-20"
+  },
+  {
+   "id": "DA:p0090",
+   "doc_id": "DA",
+   "kind": "sentence",
+   "section": null,
+   "text": "Laborbefund: Parameter Ausgangswert Kontrollwert Einheit",
+   "start": 162,
+   "end": 218,
+   "doc_date": "2025-01-20"
+  }
+ ]
+}

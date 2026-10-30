@@ -1,0 +1,127 @@
+{
+  "_about": "API contract v2 example (docs/INTEGRATION.md). INVENTED patient and documents; no IBM data. Use for frontend mock mode and adapter shape tests.",
+  "situation": "Anaesthetist, pre-op check before hip replacement on 12 Feb 2025",
+  "role": "anaesthetist",
+  "task": "Anaesthetist, pre-op check before hip replacement on 12 Feb 2025",
+  "as_of": "2025-01-20",
+  "detail": "short",
+  "route": {
+    "role_id": "anaesthetist",
+    "role_label": "Anaesthetist",
+    "bundle_ids": ["B01", "B05"],
+    "bundle_titles": ["Pre-procedure check (anaesthesia)", "Safety check before iodinated contrast"],
+    "layer": "kb",
+    "note": null,
+    "parser": "both"
+  },
+  "needs": [
+    {
+      "need": "med_antithrombotic", "slot_id": "med_antithrombotic", "label": "Blood thinners",
+      "shape": "current_list", "priority": "P1", "added_by_rule": null, "status": "documented",
+      "facts": [
+        {"id": "f0101", "type": "medication", "concept": "drug:clopidogrel", "classes": ["antiplatelet"],
+         "label_en": "Clopidogrel (Plavix) 75 mg", "value": "1-0-0", "unit": null, "date": "2025-01-20",
+         "side": null, "status": "positive", "segment_ids": ["DA:p0071", "DB:p0040"], "trust": "consistent"}
+      ],
+      "computed": [], "superseded": [], "reason": null, "reason_segment_ids": [],
+      "why": [{"guideline_id": "G00", "title": "Example perioperative antithrombotic guideline", "body": "Example society", "url": "https://example.org/guideline"}],
+      "searched": null
+    },
+    {
+      "need": "allergies", "slot_id": "allergies", "label": "Allergies",
+      "shape": "list_all", "priority": "P1", "added_by_rule": null, "status": "documented",
+      "facts": [
+        {"id": "f0102", "type": "allergy", "concept": "latex_allergy", "classes": [],
+         "label_en": "Latex allergy (skin rash)", "value": null, "unit": null, "date": "2025-01-20",
+         "side": null, "status": "positive", "segment_ids": ["DA:p0012"], "trust": "consistent"}
+      ],
+      "computed": [], "superseded": [], "reason": null, "reason_segment_ids": [], "why": [], "searched": null
+    },
+    {
+      "need": "lvef", "slot_id": "lvef", "label": "Heart pumping function (LVEF)",
+      "shape": "latest_value", "priority": "P1", "added_by_rule": null, "status": "documented",
+      "facts": [
+        {"id": "f0103", "type": "measurement", "concept": "lvef", "classes": [],
+         "label_en": "LVEF, normal systolic function", "value": "55", "unit": "%", "date": "2024-03-18",
+         "side": null, "status": "positive", "segment_ids": ["DC:p0033"], "trust": "stale"}
+      ],
+      "computed": [], "superseded": [], "reason": null, "reason_segment_ids": [], "why": [], "searched": null
+    },
+    {
+      "need": "weight", "slot_id": "weight", "label": "Body weight",
+      "shape": "trend", "priority": "P2", "added_by_rule": null, "status": "documented",
+      "facts": [
+        {"id": "f0104", "type": "measurement", "concept": "weight", "classes": [], "label_en": "Weight",
+         "value": "72", "unit": "kg", "date": "2024-03-14", "side": null, "status": "positive",
+         "segment_ids": ["DD:p0021"], "trust": "single"},
+        {"id": "f0105", "type": "measurement", "concept": "weight", "classes": [], "label_en": "Weight",
+         "value": "64", "unit": "kg", "date": "2025-01-08", "side": null, "status": "positive",
+         "segment_ids": ["DB:p0018"], "trust": "single"}
+      ],
+      "computed": [
+        {"label": "Weight change", "kind": "change", "value": "-8 kg (-11.1%)",
+         "formula": "64 kg (08.01.2025) - 72 kg (14.03.2024); percent of the earlier value",
+         "segment_ids": ["DD:p0021", "DB:p0018"],
+         "from": {"value": "72", "unit": "kg", "date": "2024-03-14", "segment_ids": ["DD:p0021"]},
+         "to": {"value": "64", "unit": "kg", "date": "2025-01-08", "segment_ids": ["DB:p0018"]},
+         "delta": "-8", "delta_pct": "-11.1",
+         "note": "Cause and intent are not documented."}
+      ],
+      "superseded": [], "reason": null, "reason_segment_ids": [], "why": [], "searched": null
+    },
+    {
+      "need": "airway", "slot_id": "airway", "label": "Airway assessment",
+      "shape": "status_check", "priority": "P1", "added_by_rule": null, "status": "not_documented",
+      "facts": [], "computed": [], "superseded": [], "reason": null, "reason_segment_ids": [], "why": [],
+      "searched": {"documents": 6, "terms": ["Mallampati", "Atemweg", "Intubation", "Mundöffnung"], "empty_lab_table_segment_id": null}
+    },
+    {
+      "need": "coagulation", "slot_id": "coagulation", "label": "Coagulation (INR, aPTT, platelets)",
+      "shape": "latest_value", "priority": "P1", "added_by_rule": "R01", "status": "not_documented",
+      "facts": [], "computed": [], "superseded": [], "reason": null, "reason_segment_ids": [], "why": [],
+      "searched": {"documents": 6, "terms": ["INR", "Quick", "aPTT", "Thrombozyten"], "empty_lab_table_segment_id": "DA:p0090"}
+    },
+    {
+      "need": "pregnancy", "slot_id": "pregnancy", "label": "Pregnancy status",
+      "shape": "status_check", "priority": "P2", "added_by_rule": null, "status": "not_applicable",
+      "facts": [], "computed": [], "superseded": [],
+      "reason": "Patient is 63 years old and postmenopausal", "reason_segment_ids": ["DA:p0003"], "why": [], "searched": null
+    },
+    {
+      "need": "prior_anaesthesia", "slot_id": "prior_anaesthesia", "label": "Previous anaesthesia problems",
+      "shape": "event_history", "priority": "P1", "added_by_rule": null, "status": "ruled_out",
+      "facts": [
+        {"id": "f0106", "type": "history", "concept": "anaesthesia_history", "classes": [],
+         "label_en": "No complications in previous anaesthesia", "value": null, "unit": null, "date": "2024-03-14",
+         "side": null, "status": "negative", "segment_ids": ["DD:p0044"], "trust": "single"}
+      ],
+      "computed": [], "superseded": [], "reason": null, "reason_segment_ids": [], "why": [], "searched": null
+    }
+  ],
+  "blind_spot": [
+    {"id": "f0107", "type": "diagnosis", "concept": "sleep_apnoea", "classes": [], "label_en": "Sleep apnoea",
+     "value": null, "unit": null, "date": "2024-03-14", "side": null, "status": "positive",
+     "segment_ids": ["DD:p0009"], "trust": "single"}
+  ],
+  "findings": [
+    {"id": "c01", "kind": "conflict", "tier": "contradiction", "check_id": "X01", "slot_ids": ["height_bmi", "weight"],
+     "title": "BMI does not match height and weight",
+     "explanation": "BMI 28 written, but 64 kg at 168 cm gives 22.7 (difference +5.3, tolerance 0.5).",
+     "segment_ids": ["DB:p0017", "DB:p0018", "DB:p0019"], "fact_ids": [], "concepts": ["bmi", "weight"],
+     "severity": "medium", "source": "rule"},
+    {"id": "c02", "kind": "conflict", "tier": "documentation_note", "check_id": "X04", "slot_ids": ["hospital_stays"],
+     "title": "Discharge date is not a valid date",
+     "explanation": "Written as '20/01/20255'; elsewhere in the letter: 20.01.2025.",
+     "segment_ids": ["DA:p0002"], "fact_ids": [], "concepts": [], "severity": "low", "source": "rule"},
+    {"id": "fu01", "kind": "followup", "tier": null, "check_id": null, "slot_ids": ["discharge_followups", "followup_done"],
+     "title": "Follow-up echocardiography in 6 months",
+     "explanation": "No record that this took place after 18.03.2024.",
+     "segment_ids": ["DC:p0040"], "fact_ids": [], "concepts": [], "severity": "medium", "source": "rule"}
+  ],
+  "label_panels": [],
+  "stats": {
+    "facts_shown": 6, "facts_verified": 6, "facts_dropped": 0, "computed_values": 1,
+    "not_documented": 2, "not_applicable": 1, "ruled_out": 1, "blind_spot": 1, "task_concepts": 9,
+    "contradictions": 1, "documentation_notes": 1, "followups_open": 1, "engine_ms": 24.0
+  }
+}
