@@ -367,6 +367,71 @@ class TestPipeline(Base):
         self.assertIn("left", a["text"])
         self.assertTrue(any("Carotid stenosis" in f for f in a["flags"]), a["flags"])
 
+    def test_minority_side_never_alone(self):
+        """v3.1 (live: 'Internal carotid artery stenosis, right, 60%' next to 'left'): the minority side is replaced
+        by the majority side's fact, shown with its flag."""
+        self.fake(reply(facts=["F0102"], sentence="{F0102}."))
+        a = build_screen("Neurologist, carotid follow-up", use_llm=True, rulebook="kb")["answer"]
+        self.assertIn("left (one letter says right)", a["text"])
+        self.assertNotIn("stenosis, right", a["text"])
+        self.assertTrue(a["flags"])
+
+    def test_must_include_ids_after_the_cached_prefix(self):
+        """v3.1: a matched bundle's P1 facts and the drug-safety map's facts go to the call as 'Must include' ids,
+        in the user turn (the cached system block stays byte-identical)."""
+        f = self.fake(reply(sentence=""))
+        build_screen(CASE1, use_llm=True, rulebook="kb")
+        build_screen("Emergency doctor, I'm about to give IV gentamicin.", use_llm=True, rulebook="kb")
+        u1, u2 = (kw["messages"][0]["content"] for kw in f.calls)
+        self.assertIn("\nMust include: F", u1)
+        self.assertIn("Must include: F0248, F0209", u2)  # metformin, diabetes (drug-safety map)
+        self.assertEqual(f.calls[0]["system"], f.calls[1]["system"])
+        asa = self.fid("Thrombo ASS", "dose")
+        self.assertIn(asa, u1)
+
+    def test_model_sentence_with_required_facts_is_used(self):
+        """v3.1: when the model places the required facts, its sentence is the answer (no appended template)."""
+        asa, lv = self.fid("Thrombo ASS", "dose"), self.fid("LVEF 60%")
+        al = self.fid("Contrast media allergy (nausea, dizziness, vomiting)")
+        plan = self.fid("quadrantectomy + intraoperative", category="planned_procedure")
+        sent = "She takes {%s.name} {%s.dose} {%s.schedule} and has {%s}, with {%s} and {%s}." % (
+            asa, asa, asa, al, lv, plan)
+        self.fake(reply(facts=[asa, al, lv, plan], sentence=sent))
+        s = build_screen(CASE1, use_llm=True, rulebook="kb")
+        a, st = s["answer"], s["understood"]["answer_v2"]
+        self.assertEqual(a["origin"], "llm")
+        self.assertEqual(st["required_appended"], 0, a["text"])
+        self.assertTrue(a["text"].startswith("She takes Acetylsalicylic acid (Thrombo ASS) 100 mg 1-0-0 and has"))
+        self.assertEqual(len(W.sentences(a["text"])), 1)
+
+    def test_warm_up_matches_real_traffic(self):
+        """v3.1: one tiny call at start-up with the same model, thinking, effort, format and system block."""
+        f = self.fake(reply(sentence=""))
+        O.warm(self.st, background=False)
+        self.assertEqual(len(f.calls), 1)
+        w = f.calls[0]
+        self.assertEqual(w["max_tokens"], 1)
+        real = O.request_params("GP, diabetes review", self.st)
+        for k in ("model", "system", "thinking", "output_config"):
+            self.assertEqual(w[k], real[k], k)
+        os.environ["SECOND_LOOK_LLM"] = "0"
+        self.assertIsNone(O.warm(self.st, background=False))  # no key / layer off: no call
+        self.assertEqual(len(f.calls), 1)
+
+    def test_role_without_bundle_falls_back_to_its_topic(self):
+        """v3.1 (live: a Kardiologe timeout got the 2015 follow-ups): the request's own topic, not a loose card."""
+        os.environ.pop("SECOND_LOOK_LLM", None)
+        a = build_screen("Kardiologe, Herzinsuffizienz Verlaufskontrolle", use_llm=False, rulebook="kb")["answer"]
+        self.assertTrue(a["text"].startswith("Not documented in the letters: Herzinsuffizienz"), a["text"])
+        a = build_screen("Notärztin, gleich Gentamicin i.v.", use_llm=False, rulebook="kb")["answer"]
+        self.assertIn("Not documented in the letters: kidney function", a["text"])
+        self.assertNotIn("Nothing specific", a["text"])
+
+    def test_answer_quality_fixtures(self):
+        """eval/answers_quality.py: the live v3 picks of every v3.1 defect, rendered by code."""
+        from eval import answers_quality
+        self.assertEqual(answers_quality.run(out=lambda *_: None), {})
+
     def test_sex_mismatch_is_a_note_not_a_block(self):
         s = build_screen("Urologist, prostate exam", use_llm=False, rulebook="kb")
         self.assertNotIn(s["screen_mode"], ("not_applicable", "needs_task", "not_authorised"))
