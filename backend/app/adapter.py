@@ -37,7 +37,7 @@ Mapping rules (documented once, applied everywhere)
   key_facts (engine/keyfacts.py) -> Briefing.key_facts (layout "answer_first"): one line per P1 need with the
                           chosen card items as Facts (+ since = first letter), the safety core, the not-documented
                           needs and the first contradiction; every NeedResult stays as the details view
-  answer_lines (engine/answers.py) -> Briefing.answer_lines (DECISIONS 21): header (age · sex · allergies) + 3-4
+  answer_lines (engine/answers.py) -> Briefing.answer_lines (DECISIONS 22): header (age · sex · allergies) + 3-4
                           one-sentence answers (rules pick, optional LLM writes, code verifies; origin, verified,
                           fact ids, passages); key_facts and the cards become 'Show more'; routing.answer_lines_llm
 
@@ -469,7 +469,7 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
         keyed = {x for ln in b.key_facts if ln.kind in ("need", "safety") for x in ln.needs}
         for n in b.needs:
             n.key = n.need in keyed
-    if not gated and screen.get("answer_lines"):  # DECISIONS 21: header + one-sentence answers by default
+    if not gated and screen.get("answer_lines"):  # DECISIONS 22: header + one-sentence answers by default
         b.answer_lines = [AnswerLine(kind=ln["kind"], needs=ln.get("needs") or [], label=ln.get("label") or "",
                                      text=ln["text"], fact_ids=ln.get("fact_ids") or [],
                                      segment_ids=list(ln.get("passages") or []), origin=ln.get("origin") or "template",

@@ -378,7 +378,7 @@ export async function toPatientBrief(
     facts: briefing.needs.filter((n) => !isAlso(n)).flatMap((n) => needToFacts(n, cite)),
     alsoRelevant: alsoNeeds.flatMap((n) => needToFacts(n, cite)),
     keyFacts: briefing.layout === "answer_first" ? keyFactLines(briefing, cite) : [],
-    // answer lines (DECISIONS 21): the backend's sentences as they are, each with its passages
+    // answer lines (DECISIONS 22): the backend's sentences as they are, each with its passages
     answerLines: (briefing.answer_lines ?? []).map((a, i) => ({
       id: `answer:${i}:${a.needs.join("+") || a.kind}`, kind: a.kind, label: a.label, text: a.text,
       sources: cite(a.segment_ids), origin: a.origin, trust: a.trust ?? null,

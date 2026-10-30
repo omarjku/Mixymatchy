@@ -59,7 +59,7 @@ def official(use_llm=True):
 
 
 def answers():
-    """Answer lines (docs/DECISIONS.md 21) of the 5 official situations with the LLM writer (templates without it)."""
+    """Answer lines (docs/DECISIONS.md 22) of the 5 official situations with the LLM writer (templates without it)."""
     from engine import llm
     from eval import answers as ans
     r = ans.official(use_llm=True, out=lambda *_: None)

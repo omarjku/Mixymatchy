@@ -11,7 +11,7 @@ from .kb import expand_codes
 
 STATUS_DISPLAY = {  # KB status_vocabulary (IBM statuses) -> on-screen word
     "negative": "ruled out", "suspected": "suspected", "statuspost": "past",
-    "recommended": "recommended, not done", "planned": "planned",
+    "recommended": "recommended", "planned": "planned",
 }
 
 _RX_CACHE = {}
@@ -98,6 +98,14 @@ def _in_time(f, as_of):
     return f.get("status") in ("planned", "recommended") or str(f.get("date") or "")[:10] <= as_of
 
 
+def _written_by(store, f, as_of):
+    """A plan's date is when it will happen; it is known only from a letter written by the as-of date."""
+    if f.get("status") not in ("planned", "recommended"):
+        return True
+    dates = [str(store.doc_date(d) or "")[:10] for d in store.fact_docs(f)]
+    return not dates or any(d and d <= str(as_of)[:10] for d in dates)
+
+
 def select_slot(store, kb, slot_id, as_of, situation_text=""):
     """-> (primary facts, context facts) for one slot, as of a date."""
     spec = kb.slot_spec(slot_id)
@@ -110,7 +118,7 @@ def select_slot(store, kb, slot_id, as_of, situation_text=""):
         if t and rx(st["when"]).search(t):
             sels.append({"categories": spec.get("situation_categories") or ["diagnosis"], "match": st["match"]})
     for f in store.facts:
-        if not _in_time(f, as_of):
+        if not _in_time(f, as_of) or not _written_by(store, f, as_of):
             continue
         for sel in sels:
             if selector_match(kb, f, sel, slot_id):
@@ -121,8 +129,31 @@ def select_slot(store, kb, slot_id, as_of, situation_text=""):
     if pos and len(pos) < len(primary) and spec.get("compute") not in ("status_check",) and \
             kb.slot_by_id[slot_id].get("shape") in ("latest_value", "laterality_finding"):
         primary = pos
+    if slot_id == "planned_procedure":
+        primary = [f for f in primary if not past_plan(store, f, as_of)]
     ids = {f["id"] for f in primary}
     return primary, [f for f in context if f["id"] not in ids]
+
+
+HISTORY_SECTION = re.compile(r"anamnese|vorgeschichte|history", re.I)
+
+
+def past_plan(store, f, as_of):
+    """A plan that is no longer ahead:
+    - its own date (later than the letter: 'admission on 10.04.2016') lies before the as-of date;
+    - it has no date of its own (fact date = letter date) and a newer letter exists by the as-of date, which
+      records what happened ('biopsy during the stay' in the 05.04 letter, read on 15.04);
+    - it is only the reason for an admission told in the history section ('comes for ultrasound work-up')."""
+    as_of = str(as_of)[:10]
+    date = str(f.get("date") or "")[:10]
+    written = max((str(store.doc_date(d) or "")[:10] for d in store.fact_docs(f)), default="")
+    if date and date > written:
+        if date < as_of:
+            return True
+    elif written and any(written < str(store.doc_date(d) or "")[:10] <= as_of for d in store.docs):
+        return True
+    secs = [(store.passage_by_id.get(p) or {}).get("section") or "" for p in f.get("passage_ids") or []]
+    return bool(secs) and all(HISTORY_SECTION.search(s) for s in secs)
 
 
 def found(store, kb, slot_id, as_of, situation_text=""):

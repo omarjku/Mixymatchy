@@ -42,10 +42,15 @@ def veto(gate, req, aliases=()):
     return None
 
 
-def decide(u, gate, req, aliases=()):
-    """-> None (no LLM reading: rules decide) or (verdict, reason, vetoed_by).
+def decide(u, gate, req, aliases=(), rules_task=False, app_items=()):
+    """-> None (no LLM reading, or the rules decide) or (verdict, reason, vetoed_by).
     verdict: 'veto' (rules refuse; the rules path produces the refusal screen), 'refuse', 'spam', 'no_task',
-    'no_role' or 'data'."""
+    'no_role' or 'data'.
+
+    The model RESTRICTS freely (non_clinical_requester, spam_or_abuse, other_patient); it can say 'no task' only
+    when the rules found no task either; and where the rules found both a role and a task, the rules route the
+    request (the model may add one bundle in engine/route.py).  Its own role and task open the record only where
+    the rules found none."""
     kind = u.get("llm_kind")
     if not kind:
         return None
@@ -53,12 +58,23 @@ def decide(u, gate, req, aliases=()):
     v = veto(gate, req, aliases)
     if v:
         return "veto", why, v
-    if kind in ("non_clinical_requester", "other_patient"):
+    rules_role = gate.get("decision") in ("kb_role", "clinical_term")
+    if kind == "non_clinical_requester":
+        return "refuse", why, None
+    if kind == "other_patient":
+        if app_items:  # a sex- or age-specific item ('PSA' for a woman) is 'not applicable', not another patient
+            return None
         return "refuse", why, None
     if kind == "spam_or_abuse":
         return "spam", why, None
+    if rules_role and rules_task:  # the rules found who asks and what for: they route (the model only restricts)
+        return None
     if kind == "no_task":
-        return ("no_task" if u.get("llm_role") else "no_role"), why, None
+        if rules_task:
+            return None
+        return ("no_task" if (u.get("llm_role") or rules_role) else "no_role"), why, None
     if kind == "clinical_task":
-        return ("data" if u.get("llm_role") else "no_role"), why, None
+        if u.get("llm_role") or rules_role:
+            return "data", why, None
+        return "no_role", why, None
     return None

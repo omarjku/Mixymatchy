@@ -1,4 +1,4 @@
-"""Answer lines (docs/DECISIONS.md 21): a thin header + 3-4 one-sentence answers, the rest behind 'Show more'.
+"""Answer lines (docs/DECISIONS.md 22): a thin header + 3-4 one-sentence answers, the rest behind 'Show more'.
 
 The RULES pick, the LLM only writes, CODE verifies:
 
@@ -337,11 +337,29 @@ def _covered(need, lines, shown_facts) -> bool:
     return bool(need["items"])
 
 
+def _question_need(c) -> dict:
+    """A 'Your question: X' card (engine/ask.py): its facts, or its verbatim passages, or 'Nothing found'."""
+    if c.get("status") == "not_documented":  # 'Nothing found for X ...': kept as written, never sent to the LLM
+        n = _need("nothing", [c["need"]], c.get("label_en") or c["need"], "nothing", None, reserved=True,
+                  missing=[c.get("label_en") or c["need"]])
+        n["fixed_text"] = c.get("value_en") or "Nothing found."
+        return n
+    items = [it for it in c.get("items") or [] if not it.get("collapsed")][:MAX_LIST]
+    quotes = [{"label": q["label"], "value": q["value"], "passages": list(q.get("passages") or [])}
+              for q in (c.get("computed_lines") or [])[:2]]
+    n = _need("need", [c["need"]], c.get("label_en") or c["need"], "question", None, items, reserved=True)
+    n["quotes"] = quotes
+    return n
+
+
 def pick_lines(st, k, cards: list, u: dict, contras: list, terms_text: str, as_of: str | None,
-               mode: str = "task") -> list[dict]:
-    """-> ordered answer needs (<= MAX_LINES), each with its chosen items.  Deterministic."""
+               mode: str = "task", focus=()) -> list[dict]:
+    """-> ordered answer needs (<= MAX_LINES), each with its chosen items.  Deterministic.  The user's own
+    question comes first (question cards of engine/ask.py, then the KB slots a question named); a question-only
+    screen shows nothing else."""
     if mode in ("not_applicable", "not_authorised", "needs_task") or not cards:
         return []
+    questions = [_question_need(c) for c in focus or () if c.get("group") == "question"]
     terms = K._words(terms_text)
     groups = {s["id"]: s.get("group") for s in (k.data.get("slots") if k is not None else []) or []}
     by_slot = {}
@@ -350,7 +368,12 @@ def pick_lines(st, k, cards: list, u: dict, contras: list, terms_text: str, as_o
             by_slot.setdefault(c.get("slot") or c.get("need"), c)
     comps = _composites(k)
     order, used = [], set(HEADER_NEEDS)
-    for bid in u.get("bundle_ids") or []:
+    for slot in u.get("asked_slots") or []:  # a KB slot answering the question (pacemaker -> cardiac_device)
+        if slot in by_slot and slot not in used:
+            order.append(("slot", slot, True))
+            used.add(slot)
+    q_only = bool(u.get("question_only"))
+    for bid in ([] if q_only else u.get("bundle_ids") or []):
         b = k.bundle_by_id.get(bid) or {}
         first = True
         if bid in comps:
@@ -368,13 +391,14 @@ def pick_lines(st, k, cards: list, u: dict, contras: list, terms_text: str, as_o
             order.append(("slot", slot, first))
             used.add(slot)
             first = False
-    for slot in by_slot:
+    for slot in ([] if q_only else by_slot):
         if slot not in used:
             order.append(("slot", slot, False))
             used.add(slot)
 
     head = K.safety_line(cards, {})
-    lines, shown = [], {f for it in (head or {}).get("items") or [] for f in it.get("facts") or []}
+    lines, shown = list(questions), {f for it in (head or {}).get("items") or [] for f in it.get("facts") or []}
+    shown |= {f for q in questions for it in q["items"] for f in it.get("facts") or []}
     for kind, key, reserved in order:
         if kind == "composite":
             n = _composite_need(st, k, key, comps[key], by_slot, terms, as_of, contras, reserved, shown)
@@ -530,6 +554,14 @@ def _short_followup(st, label) -> str:
 
 
 def template(st, k, n) -> str:
+    if n["kind"] == "nothing":
+        return n["fixed_text"]
+    if n["shape"] == "question":
+        if n["items"]:
+            return "%s: %s." % (n["label"], _join([_with_date(_low(it.get("label_en") or ""), it) for it in n["items"]]))
+        q = n.get("quotes") or []
+        return "%s: mentioned in %s%s." % (n["label"], " and ".join(x["label"].lower() for x in q) or "the letters",
+                                           " (quoted under 'Show more')" if q else "")
     if n["kind"] == "merged":
         a, b = n["parts"][0], n["parts"][-1]
         if a["shape"] == b["shape"] == "current_list":  # one regimen, one 'as of'
@@ -600,6 +632,8 @@ def payload(st, k, n, lid) -> dict:
         p["contradiction"] = n["note"]
     if n.get("side"):
         p["majority_side"] = n["side"]
+    if n.get("quotes"):
+        p["verbatim_passages"] = [{"letter": q["label"], "text": q["value"]} for q in n["quotes"]]
     return p
 
 
@@ -623,6 +657,8 @@ def allowed_text(st, k, n) -> str:
         out.append(n["note"])
     if n.get("side"):
         out.append(n["side"])
+    for q in n.get("quotes") or []:
+        out += [q["label"], q["value"]]
     return " ".join(out)
 
 
@@ -700,7 +736,7 @@ def verify(st, k, n, text) -> tuple[bool, str]:
     if not isinstance(text, str) or not text.strip():
         return False, "empty"
     text = " ".join(text.split())
-    if len(text) > MAX_CHARS:
+    if len(text) > max(MAX_CHARS, 70 * len(n["items"])):
         return False, "too long"
     if len(re.findall(r"[.!?](?:\s|$)", text)) > 2:
         return False, "more than two sentences"
@@ -871,6 +907,8 @@ def start(st, k, needs: list[dict], use_llm: bool) -> Pending:
     b = llm_budget.budget()
     batch = []
     for i, n in enumerate(needs):
+        if n["kind"] == "nothing":  # 'Nothing found for X' stays as written
+            continue
         hit = b.cache_get(_cache_key(n))
         if hit is not None:
             info["cached_text"]["L%d" % (i + 1)] = hit
@@ -897,7 +935,7 @@ def finish(st, k, needs: list[dict], pending: Pending) -> tuple[list[dict], dict
     for i, n in enumerate(needs):
         lid = "L%d" % (i + 1)
         text, origin, verified = template(st, k, n), "template", True
-        cand = written.get(lid)
+        cand = written.get(lid) if n["kind"] != "nothing" else None
         if cand is not None:
             ok, why = verify(st, k, n, cand)
             if ok:
@@ -916,16 +954,18 @@ def line_out(n, text, origin, verified) -> dict:
     passages += [p for c in n["computed"] for p in c.get("passages") or []]
     passages += [p for r in n["rows"] for p in r.get("passages") or []]
     passages += n.get("note_passages") or []
+    passages += [p for q in n.get("quotes") or [] for p in q.get("passages") or []]
     trust = "conflicting" if n.get("note") else "not_documented" if n["kind"] == "not_documented" else None
-    return {"kind": "not_documented" if n["kind"] == "not_documented" else "answer", "needs": n["needs"],
+    return {"kind": "not_documented" if n["kind"] in ("not_documented", "nothing") else "answer", "needs": n["needs"],
             "label": n["label"], "text": text, "fact_ids": [f for it in n["items"] for f in it.get("facts") or []],
             "passages": list(dict.fromkeys(passages)), "origin": origin, "verified": verified, "trust": trust,
             "missing": list(n["missing"])}
 
 
-def answer_lines(st, k, cards, u, contras, patient, terms_text, as_of, mode, use_llm) -> tuple[list[dict], dict]:
+def answer_lines(st, k, cards, u, contras, patient, terms_text, as_of, mode, use_llm,
+                 focus=()) -> tuple[list[dict], dict]:
     """Header + answer lines for one screen -> (lines, routing.answer_lines_llm stats)."""
-    needs = pick_lines(st, k, cards, u, contras, terms_text, as_of, mode)
+    needs = pick_lines(st, k, cards, u, contras, terms_text, as_of, mode, focus)
     if not needs:
         return [], {"called": False, "skipped": "no lines", "llm": 0, "template": 0, "rejected": 0}
     lines, stats = finish(st, k, needs, start(st, k, needs, use_llm))

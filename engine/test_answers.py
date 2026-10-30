@@ -1,4 +1,4 @@
-"""Answer lines (engine/answers.py, docs/DECISIONS.md 21) with a mocked LLM writer (no key, no network).
+"""Answer lines (engine/answers.py, docs/DECISIONS.md 22) with a mocked LLM writer (no key, no network).
 
     python3 -m unittest engine.test_answers
 """
@@ -72,6 +72,46 @@ class Picking(unittest.TestCase):
 
     def test_gated_screen_has_no_answer_lines(self):
         self.assertEqual(build_screen("hi", use_llm=False).get("answer_lines") or [], [])
+
+
+class Questions(unittest.TestCase):
+    """engine/ask.py question cards: the TOP picked need; 'Nothing found' stays as written."""
+
+    def test_question_only_screen_is_header_plus_answer(self):
+        s = build_screen("GP, did she ever have a fall?", use_llm=False)
+        self.assertTrue(s["understood"]["question_only"])
+        kinds = [ln["kind"] for ln in s["answer_lines"]]
+        self.assertEqual(kinds, ["header", "not_documented"])
+        self.assertTrue(s["answer_lines"][1]["text"].startswith("Nothing found for fall"))
+
+    def test_question_slot_comes_first_on_a_task_screen(self):
+        s = build_screen("Anaesthetist, pre-op check before quadrantectomy. Does she smoke?", use_llm=False)
+        self.assertEqual(s["answer_lines"][1]["needs"], ["smoking_alcohol"])
+        self.assertLessEqual(len(s["answer_lines"]) - 1, A.MAX_LINES)
+
+    def test_found_question_is_written_and_verified_like_the_others(self):
+        st, k = store(), kb()
+        s = build_screen(CASE3, use_llm=False)
+        it = next(c for c in s["cards"] if c.get("slot") == "hba1c")["items"][0]
+        card = {"need": "ask_hba1c", "label_en": "Your question: HbA1c", "group": "question", "status": "consistent",
+                "items": [it]}
+        needs = A.pick_lines(st, k, s["cards"], s["understood"], s["contradictions"], CASE3, "2016-04-15", focus=[card])
+        self.assertEqual(needs[0]["needs"], ["ask_hba1c"])
+        when = A.fmt_date(it["date"])
+        self.assertTrue(A.verify(st, k, needs[0], "HbA1c 6.4%% on %s." % when)[0])
+        self.assertFalse(A.verify(st, k, needs[0], "HbA1c 7.1%% on %s." % when)[0])
+
+    def test_nothing_found_never_goes_to_the_llm(self):
+        st, k = store(), kb()
+        s = build_screen("GP, did she ever have a fall?", use_llm=False)
+        card = next(c for c in s["focus"] if c.get("group") == "question")
+        needs = A.pick_lines(st, k, s["cards"], s["understood"], s["contradictions"], "", "2016-04-15", focus=[card])
+        self.assertEqual(needs[0]["kind"], "nothing")
+        lines, stats = A.finish(st, k, needs, A.Pending(None, 0.0, {"called": True, "cached": 0, "skipped": None,
+                                                                    "cost_eur": 0.0, "ms": 0.0,
+                                                                    "cached_text": {"L1": "Yes, she fell."}}))
+        self.assertEqual(lines[0]["origin"], "template")
+        self.assertEqual(lines[0]["text"], card["value_en"])
 
 
 class Verify(unittest.TestCase):

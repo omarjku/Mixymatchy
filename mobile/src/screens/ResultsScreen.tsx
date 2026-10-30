@@ -115,7 +115,7 @@ export function ResultsScreen() {
   const otherIssues = stats.other_record_issues ?? 0;
   const keyFacts = brief.keyFacts ?? [];
   const answerLines = brief.answerLines ?? [];
-  const answersFirst = !gated && answerLines.length > 0;  // DECISIONS 21: header + 3-4 sentences, key facts behind "Show more"
+  const answersFirst = !gated && answerLines.length > 0;  // DECISIONS 22: header + 3-4 sentences, key facts behind "Show more"
   const answerFirst = !gated && (answersFirst || keyFacts.length > 0);
   const overview = !gated && view === "overview";
   const showDetails = overview && (!answerFirst || expanded);

@@ -458,7 +458,7 @@ SHAPE_COMPUTE = {
 
 STATUS_DISPLAY = {  # KB status_vocabulary: IBM status -> on-screen word (positive = shown as a fact)
     "negative": "ruled out", "suspected": "suspected", "statuspost": "past",
-    "recommended": "recommended, not done", "planned": "planned",
+    "recommended": "recommended", "planned": "planned",
 }
 STALE_MONTHS = 12  # KB rule R21
 
@@ -486,7 +486,12 @@ def annotate_status(store, items):
 
 def shown(it):
     s = _with_date(it) if it.get("date") else it["label_en"]
-    return s + (" [%s]" % it["status_display"] if it.get("status_display") else "")
+    word = it.get("status_display")
+    if word == "ruled out" and re.match(r"(no|not|without)\b", str(it["label_en"] or ""), re.I):
+        word = None  # 'No complex ventricular arrhythmias' already says it
+    if word and word.lower() in str(it["label_en"] or "").lower():
+        word = None  # 'check-ups recommended' needs no '[recommended]'
+    return s + (" [%s]" % word if word else "")
 
 
 def _attr_key(f, key):
@@ -509,6 +514,11 @@ def latest_by_key(store, card, facts, context, anchor, key="category"):
         earlier += [{"label_en": it["label_en"], "date": it["date"], "facts": it["facts"],
                      "passages": it["passages"]} for it in items[1:4]]
     ctx_items = annotate_status(store, group_items(store, context))
+    # an open question or suspicion ('Atrial fibrillation?', 'Question: arrhythmias') adds nothing beside the
+    # findings that answered it; it stays only when the card has nothing else
+    answered = [it for it in ctx_items if not _is_question(store, it)]
+    if tops or answered:
+        ctx_items = answered
     for it in ctx_items:
         it["context"] = True
     card["items"] = tops + ctx_items
@@ -534,6 +544,13 @@ def latest_by_key(store, card, facts, context, anchor, key="category"):
     return card
 
 
+def _is_question(store, it):
+    lab = str(it.get("label_en") or "").strip()
+    fs = [store.fact_by_id[x] for x in it.get("facts") or [] if x in store.fact_by_id]
+    return lab.lower().startswith("question:") or lab.endswith("?") or \
+        bool(fs) and all((f.get("attrs") or {}).get("assertion") == "suspected" for f in fs)
+
+
 def trend(store, card, facts, calculate_change=True):
     """Every dated value; a change is calculated (last minus first) only for one numeric series."""
     cats = {f.get("category") for f in facts}
@@ -546,7 +563,10 @@ def trend(store, card, facts, calculate_change=True):
     collapse_series(items, _measure_of)
     card["items"] = items
     card["collapsed"] = sum(1 for it in items if it.get("collapsed"))
-    card["value_en"] = " -> ".join(shown(it) for it in items[-12:])
+    # '->' only for one measure over time; different measures (24h / day / night mean) are listed
+    sep = " -> " if len({_measure_of(it) for it in items}) <= 1 and \
+        len({str(it.get("date") or "")[:10] for it in items}) == len(items) else "; "
+    card["value_en"] = sep.join(shown(it) for it in items[-12:])
     card["date"] = items[-1]["date"] if items else None
     card["status"] = "consistent"
     return card

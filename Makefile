@@ -29,5 +29,5 @@ redteam:
 test:
 	python3 -m engine.kb > /dev/null
 	python3 -m unittest security.test_security
-	python3 -m unittest engine.test_engine engine.test_kb engine.test_relevance engine.test_clinical_gate engine.test_llm engine.test_request engine.test_intent engine.test_keyfacts engine.test_answers compare.test_compare eval.test_eval
+	python3 -m unittest engine.test_engine engine.test_kb engine.test_relevance engine.test_clinical_gate engine.test_llm engine.test_request engine.test_intent engine.test_keyfacts engine.test_ask engine.test_answers compare.test_compare eval.test_eval
 	cd backend && python3 -m pytest -q

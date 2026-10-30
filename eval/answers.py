@@ -1,4 +1,4 @@
-"""Answer-line measurement (docs/DECISIONS.md 21): are the expected answers in the header + 3-4 answer lines?
+"""Answer-line measurement (docs/DECISIONS.md 22): are the expected answers in the header + 3-4 answer lines?
 
     python3 -m eval.answers              # 5 official situations + v1 synthetic (templates unless the LLM is on)
     python3 -m eval.answers --strict     # exit 1 unless 15/15 in the answer lines and <= 4 lines per official case
