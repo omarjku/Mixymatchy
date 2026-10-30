@@ -1,3 +1,4 @@
+import { intlLocale } from "@/i18n/locale";
 import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Alert02Icon, Calculator01Icon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
 import { Panel, SourcesButton } from "@/components/dashboard/Panel";
@@ -12,7 +13,7 @@ import type { SourceCitation } from "@/types/fact";
 // Bars start at 0 so the gap is not exaggerated.
 
 const axisTick = { fill: "var(--color-ink-muted)", fontSize: 11 };
-const monthYear = new Intl.DateTimeFormat("de-DE", { month: "short", year: "numeric" });
+const monthYear = { format: (date: Date) => new Intl.DateTimeFormat(intlLocale(), { month: "short", year: "numeric" }).format(date) };
 
 export function BmiChart({
   checks,

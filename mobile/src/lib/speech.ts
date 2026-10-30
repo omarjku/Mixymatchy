@@ -7,26 +7,27 @@
 // (e.g. the send button) so speech triggered later, when results arrive, is allowed to play.
 
 import { useEffect, useState } from "react";
-
-const LANG = "de-DE";
+import { getLocale, intlLocale } from "@/i18n/locale";
 
 export function isSpeechSupported(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 }
 
-function pickGermanVoice(): SpeechSynthesisVoice | undefined {
-  const german = window.speechSynthesis.getVoices().filter((v) => v.lang.replace("_", "-").startsWith("de"));
-  return german.find((v) => v.localService) ?? german[0];
+// A voice in the UI language (German voice for DE, English voice for EN), on-device first.
+function pickVoice(): SpeechSynthesisVoice | undefined {
+  const prefix = getLocale();
+  const matching = window.speechSynthesis.getVoices().filter((v) => v.lang.replace("_", "-").startsWith(prefix));
+  return matching.find((v) => v.localService) ?? matching[0];
 }
 
-// A non-German voice would mispronounce drug names and values, so read-aloud is only offered when a
-// German voice exists. Voice lists load asynchronously in Chrome; this reports once they arrive.
-export function useGermanVoiceAvailable(): boolean {
-  const [available, setAvailable] = useState(() => isSpeechSupported() && pickGermanVoice() !== undefined);
+// A voice in another language would mispronounce drug names and values, so read-aloud is only offered
+// when a voice in the UI language exists. Voice lists load asynchronously in Chrome.
+export function useVoiceAvailable(): boolean {
+  const [available, setAvailable] = useState(() => isSpeechSupported() && pickVoice() !== undefined);
 
   useEffect(() => {
     if (!isSpeechSupported()) return;
-    const update = () => setAvailable(pickGermanVoice() !== undefined);
+    const update = () => setAvailable(pickVoice() !== undefined);
     update();
     window.speechSynthesis.addEventListener("voiceschanged", update);
     return () => window.speechSynthesis.removeEventListener("voiceschanged", update);
@@ -47,8 +48,8 @@ export function speak(text: string, events: { onStart?: () => void; onEnd?: () =
   if (!isSpeechSupported() || !text.trim()) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = LANG;
-  const voice = pickGermanVoice();
+  utterance.lang = intlLocale();
+  const voice = pickVoice();
   if (voice) utterance.voice = voice;
   if (events.onStart) utterance.onstart = events.onStart;
   if (events.onEnd) {

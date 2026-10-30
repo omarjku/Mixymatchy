@@ -29,14 +29,14 @@ const icons: Partial<Record<BadgeVariant, IconGlyph>> = {
   contradiction: Alert02Icon,
 };
 
-const defaultLabels: Partial<Record<BadgeVariant, string>> = {
+const defaultLabels = (): Partial<Record<BadgeVariant, string>> => ({
   verified: t("trust.verified"),
   ai_inferred: t("trust.ai_inferred"),
   conflicting: t("trust.conflicting"),
   outdated: t("trust.outdated"),
   not_documented: t("trust.not_documented"),
   contradiction: t("label.contradiction"),
-};
+});
 
 export interface BadgeProps {
   variant: BadgeVariant;
@@ -55,7 +55,7 @@ export function Badge({ variant, children, className }: BadgeProps) {
       )}
     >
       {glyph && <Icon icon={glyph} size={14} />}
-      {children ?? defaultLabels[variant]}
+      {children ?? defaultLabels()[variant]}
     </PrimitiveBadge>
   );
 }
