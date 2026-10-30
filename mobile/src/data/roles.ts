@@ -1,6 +1,7 @@
 import type { StringKey } from "@/i18n/strings";
 
-export type RoleId = "anaesthetist" | "pharmacist" | "surgeon" | "gp";
+// "other": the typed text is sent as the whole situation (any role the jury tries, e.g. "Dietitian reviewing her weight").
+export type RoleId = "anaesthetist" | "pharmacist" | "surgeon" | "gp" | "emergency" | "other";
 
 export interface RoleConfig {
   id: RoleId;
@@ -33,5 +34,17 @@ export const roles: RoleConfig[] = [
     nameKey: "role.gp.name",
     descriptionKey: "role.gp.description",
     taskPresetKeys: ["task.gp.discharge", "task.gp.chronic", "task.gp.medication"],
+  },
+  {
+    id: "emergency",
+    nameKey: "role.emergency.name",
+    descriptionKey: "role.emergency.description",
+    taskPresetKeys: ["task.emergency.neuro", "task.emergency.contrast"],
+  },
+  {
+    id: "other",
+    nameKey: "role.other.name",
+    descriptionKey: "role.other.description",
+    taskPresetKeys: [],
   },
 ];

@@ -22,6 +22,8 @@ export interface FactCardProps {
 const tones: Record<FactTrust, CardTone> = {
   verified: "verified",
   ai_inferred: "inferred",
+  conflicting: "contradiction",
+  outdated: "inferred",
   not_documented: "undocumented",
 };
 
@@ -36,6 +38,13 @@ export function FactCard({ fact, showHistory = false, onPressSource, onPressGuid
           <p className="mt-1 text-[17px] font-semibold leading-snug text-ink">{fact.value}</p>
         ) : (
           <p className="mt-1 text-[17px] font-medium leading-snug text-undocumented">{t("trust.not_documented")}</p>
+        )}
+        {/* computed values show their formula; other notes say e.g. "no later value documented" */}
+        {fact.note && (
+          <p className="mt-1 text-[13px] leading-snug text-ink-muted">
+            {fact.computed ? `${t("results.computed")}: ` : ""}
+            {fact.note}
+          </p>
         )}
       </div>
 

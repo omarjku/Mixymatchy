@@ -14,5 +14,13 @@ export default defineConfig({
   server: {
     // expose on LAN so the app can be opened on a phone
     host: true,
+    // Same-origin calls to the FastAPI backend (also from a phone on the LAN, where 127.0.0.1 is the phone).
+    // Production serves the built app from FastAPI, so the same relative paths work there.
+    proxy: Object.fromEntries(
+      ['/briefing', '/documents', '/segments', '/health'].map((path) => [
+        path,
+        { target: process.env.BACKEND_URL ?? 'http://127.0.0.1:8000', changeOrigin: true },
+      ]),
+    ),
   },
 })

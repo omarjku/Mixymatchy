@@ -49,7 +49,9 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
   const counts = tiers.map(({ trust, marker }) => ({
     trust,
     marker,
-    count: brief.facts.filter((f) => f.trust === trust).length,
+    count: brief.facts.filter((f) =>
+      trust === "ai_inferred" ? ["ai_inferred", "conflicting", "outdated"].includes(f.trust) : f.trust === trust,
+    ).length,
   }));
   const series = brief.facts.filter(hasHistory);
   const documents = collectDocuments(brief);

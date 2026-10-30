@@ -289,7 +289,7 @@ const gpBrief: PatientBrief = {
   contradictions: [],
 };
 
-export const mockBriefs: Record<RoleId, PatientBrief> = {
+export const mockBriefs: Partial<Record<RoleId, PatientBrief>> = {
   anaesthetist: anaesthetistBrief,
   pharmacist: pharmacistBrief,
   surgeon: surgeonBrief,

@@ -26,7 +26,11 @@ export function ContradictionCard({ contradiction, onPressSource }: Contradictio
   return (
     <Card tone="contradiction">
       <div className="flex items-center justify-between gap-2">
-        <Badge variant="contradiction" />
+        {contradiction.tier === "documentation_note" ? (
+          <Badge variant="neutral">{t("label.documentationNote")}</Badge>
+        ) : (
+          <Badge variant="contradiction" />
+        )}
         {severity && (
           <span className="flex items-center gap-1.5 text-xs font-medium text-contradiction-deep">
             <span aria-hidden className={cn("size-2 rounded-full", severityStyles[severity])} />
@@ -36,6 +40,9 @@ export function ContradictionCard({ contradiction, onPressSource }: Contradictio
       </div>
 
       <h3 className="mt-3 text-[17px] font-semibold text-ink">{contradiction.factLabel}</h3>
+      {contradiction.explanation && (
+        <p className="mt-1 text-[14px] leading-snug text-ink-muted">{contradiction.explanation}</p>
+      )}
 
       {/* stacked on phones, side by side from tablet width so the passages can be compared directly */}
       <ul className="mt-3 grid gap-2 md:grid-cols-2">

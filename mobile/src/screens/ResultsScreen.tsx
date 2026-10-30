@@ -57,7 +57,7 @@ export function ResultsScreen() {
   if (!state || !brief) return <Navigate to="/" replace />;
 
   const roleName = t(roles.find((r) => r.id === brief.role)?.nameKey ?? "role.gp.name");
-  const generatedAt = new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" }).format(
+  const generatedAt = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(
     new Date(brief.generatedAt),
   );
 
@@ -144,22 +144,34 @@ export function ResultsScreen() {
         </aside>
 
         <div className="mt-6 space-y-6 lg:mt-2">
-          {brief.contradictions.length > 0 && (
-            <section aria-labelledby="contradictions-heading">
-              <h2 id="contradictions-heading" className="mb-3 text-sm font-semibold text-contradiction-deep">
-                {t("results.contradictionsHeading")} ({brief.contradictions.length})
-              </h2>
-              <div className="space-y-3">
-                {brief.contradictions.map((c) => (
-                  <ContradictionCard
-                    key={c.id}
-                    contradiction={c}
-                    onPressSource={(source) => setSheet({ kind: "source", source })}
-                  />
-                ))}
-              </div>
-            </section>
+          {brief.routeNote && (
+            <Notice tone="readonly" title={brief.routeNote}>
+              {null}
+            </Notice>
           )}
+
+          {(() => {
+            const items = brief.contradictions.filter((c) => (c.tier ?? "contradiction") === "contradiction");
+            if (items.length === 0) return null;
+            return (
+              <section aria-labelledby="contradictions-heading">
+                <h2 id="contradictions-heading" className="mb-3 text-sm font-semibold text-contradiction-deep">
+                  {t("results.contradictionsHeading")} ({items.length})
+                </h2>
+                <div className="space-y-3">
+                  {items.map((c) => (
+                    <ContradictionCard
+                      key={c.id}
+                      contradiction={c}
+                      onPressSource={(source) => setSheet({ kind: "source", source })}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
+
+
 
           {view === "dashboard" ? (
             <section id="facts-panel" aria-label={t("results.view.dashboard")}>
@@ -193,6 +205,53 @@ export function ResultsScreen() {
                   ))}
                 </div>
               )}
+            </section>
+          )}
+
+          {(() => {
+            const notes = brief.contradictions.filter((c) => c.tier === "documentation_note");
+            if (notes.length === 0) return null;
+            return (
+              <section aria-labelledby="notes-heading">
+                <h2 id="notes-heading" className="mb-3 text-sm font-semibold text-ink-muted">
+                  {t("results.notesHeading")} ({notes.length})
+                </h2>
+                <div className="space-y-3">
+                  {notes.map((c) => (
+                    <ContradictionCard
+                      key={c.id}
+                      contradiction={c}
+                      onPressSource={(source) => setSheet({ kind: "source", source })}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
+
+          {brief.gaps && brief.gaps.length > 0 && (
+            <section aria-labelledby="gaps-heading">
+              <h2 id="gaps-heading" className="mb-3 text-sm font-semibold text-ink-muted">
+                {t("results.gapsHeading")} ({brief.gaps.length})
+              </h2>
+              <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
+                {brief.gaps.map((gap) => (
+                  <li key={gap.id} className="p-4">
+                    <p className="text-xs font-medium text-ink-muted">{t(`results.gap.${gap.kind}`)}</p>
+                    <p className="mt-0.5 text-[15px] font-semibold text-ink">{gap.title}</p>
+                    {gap.explanation && <p className="mt-0.5 text-[14px] text-ink-muted">{gap.explanation}</p>}
+                    {gap.sources.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSheet({ kind: "sources", title: gap.title, sources: gap.sources })}
+                        className="mt-2 text-[13px] font-medium text-primary-deep underline underline-offset-2"
+                      >
+                        {t("results.sources")} ({gap.sources.length})
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
         </div>

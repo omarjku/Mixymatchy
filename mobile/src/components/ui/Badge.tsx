@@ -1,4 +1,4 @@
-import { Alert02Icon, CheckmarkBadge01Icon, DashedLineCircleIcon, SparklesIcon } from "@hugeicons/core-free-icons";
+import { Alert02Icon, CheckmarkBadge01Icon, Clock01Icon, DashedLineCircleIcon, SparklesIcon } from "@hugeicons/core-free-icons";
 import { Badge as PrimitiveBadge } from "@/components/primitives/badge";
 import { Icon, type IconGlyph } from "@/components/ui/Icon";
 import { t } from "@/i18n/strings";
@@ -13,6 +13,8 @@ export type BadgeVariant = FactTrust | "contradiction" | "neutral";
 const styles: Record<BadgeVariant, string> = {
   verified: "border-transparent bg-verified text-verified-ink",
   ai_inferred: "border-dashed border-inferred-border bg-inferred-soft text-inferred",
+  conflicting: "border-contradiction-border bg-surface text-contradiction-deep",
+  outdated: "border-dashed border-inferred-border bg-inferred-soft text-inferred",
   not_documented: "border-transparent bg-undocumented-soft text-undocumented",
   contradiction: "border-transparent bg-contradiction text-white",
   neutral: "border-line bg-surface text-ink-muted",
@@ -21,6 +23,8 @@ const styles: Record<BadgeVariant, string> = {
 const icons: Partial<Record<BadgeVariant, IconGlyph>> = {
   verified: CheckmarkBadge01Icon,
   ai_inferred: SparklesIcon,
+  conflicting: Alert02Icon,
+  outdated: Clock01Icon,
   not_documented: DashedLineCircleIcon,
   contradiction: Alert02Icon,
 };
@@ -28,6 +32,8 @@ const icons: Partial<Record<BadgeVariant, IconGlyph>> = {
 const defaultLabels: Partial<Record<BadgeVariant, string>> = {
   verified: t("trust.verified"),
   ai_inferred: t("trust.ai_inferred"),
+  conflicting: t("trust.conflicting"),
+  outdated: t("trust.outdated"),
   not_documented: t("trust.not_documented"),
   contradiction: t("label.contradiction"),
 };
