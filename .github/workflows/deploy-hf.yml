@@ -23,7 +23,10 @@ jobs:
           HF_SPACE: ${{ vars.HF_SPACE }}
         run: |
           set -e
-          test -n "$HF_TOKEN" && test -n "$HF_SPACE" || { echo "HF_TOKEN / HF_SPACE not configured"; exit 1; }
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_SPACE" ]; then
+            echo "::notice::HF_TOKEN / HF_SPACE not configured yet; skipping the Hugging Face deploy."
+            exit 0
+          fi
           HF_USER="${HF_SPACE%%/*}"
           rm -rf .git
           cp deploy/hf/README.md README.md
