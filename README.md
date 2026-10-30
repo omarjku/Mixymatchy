@@ -6,19 +6,19 @@
 
 **Other tools summarise the record. Second Eye checks it, for the task in front of you.**
 
-A clinician types one sentence: who they are and what they are about to do.<br>
-Second Eye answers with one screen: only the facts that task needs, each linked to the exact sentence it came from.
+A clinician types one sentence: who they are and what they need.<br>
+Second Eye answers first, in a sentence or two. Every value comes from the letters and opens the exact passage it came from.
 
 [![AIM Austria hackathon](https://img.shields.io/badge/AIM%20Austria%20hackathon-Track%201%20·%20Clinical%20documentation-4a5bef?style=flat-square)](docs/CHALLENGE.md)
 ![15/15 correct](https://img.shields.io/badge/official%20questions-15%2F15-0f766e?style=flat-square)
 ![0 invented facts](https://img.shields.io/badge/invented%20facts-0-0f766e?style=flat-square)
-![144 ms](https://img.shields.io/badge/slowest%20screen-144%20ms-6381fd?style=flat-square)
+![Claude Haiku 5.5](https://img.shields.io/badge/Claude%20Haiku%205.5-optional-d97757?style=flat-square&logo=anthropic&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-FastAPI-141831?style=flat-square&logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React%2019-Vite%20·%20Tailwind%204-141831?style=flat-square&logo=react&logoColor=61DAFB)
 
-<img src="docs/media/second-look.webp" alt="Animation: eight letters about one patient; an error copied from one letter to the next and a weight that vanishes. Second Eye's logo lands. On a phone, an anaesthetist picks a role and types a pre-operative task; one screen of facts appears, and a tap opens the cited sentence highlighted in the original letter. Overview, history and dashboard views follow, then a contradiction between two letters about a penicillin allergy. Results: 15 of 15 answers correct, 0 invented facts, 100 percent of facts linked to their source, the slowest screen in 144 milliseconds." width="100%">
+<img src="docs/media/second-eye.webp" alt="Animation: eight letters about one patient; an error copied from letter to letter and a weight that vanishes. The Second Eye logo lands. On a phone, an anaesthetist types one sentence; the answer appears first with numbered sources, and a tap opens the cited passage in the original German letter. Overview, Details in dark mode and History follow, then a contradiction between two letters about a penicillin allergy, and the results." width="100%">
 
-**[▶ Watch the film with sound](docs/media/second-look.mp4)** · <sub>Animated from the real app running on its invented demo patient. No patient data is shown.</sub>
+**[▶ Watch the film with sound](docs/media/second-eye.mp4)** · <sub>Every screen in it is the real app running on an invented patient. No patient data is shown.</sub>
 
 </div>
 
@@ -30,83 +30,83 @@ A patient's record is a pile of letters, and each letter copies the last one. Er
 
 ## What Second Eye does
 
-Type *"Anaesthetist, pre-operative check before breast surgery"* and get one screen with:
+Type *"Anaesthetist, pre-op check before breast surgery"* and the screen opens with:
 
-- **The facts that task needs, and nothing else.** Blood thinner and dose, allergies, heart function, each linked to the sentence or table row in the original German letter.
-- **What is missing, said out loud.** "Not documented" (with what was searched) or "not applicable" (with its evidence), decided by code, never by a model.
-- **Where the record disagrees with itself.** Contradictions between letters with every passage side by side, facts the latest letter dropped, and follow-ups that were never closed.
+- **The answer, first.** One or two sentences with numbered sources [1] [2]. Tap a number and the German letter opens with the passage highlighted.
+- **What is missing, said out loud.** "Not documented", or for a specific question "Nothing found" with the words that were searched, decided by code, never by a model.
+- **Where the record disagrees with itself.** Contradictions between letters with both passages side by side, facts the latest letter dropped, follow-ups that were never closed.
 
-Switch the doctor and keep the patient: the surgeon and the emergency physician each get a different screen, built for their task. Roles we never prepared for still get a screen instead of an error.
+Everything else is one tap away: **Show more** for key facts and the full fact list, **Details** for trends, medication changes and calculated values, **History** for every dated entry. Ask a specific question ("did she ever fall?") and it is answered first. The app runs in English or German, light or dark, and can read the answer aloud.
 
 ## Screens
 
 <table>
   <tr>
-    <td width="23%" align="center"><img src="docs/media/screenshots/01-sign-in.png" alt="Sign-in screen"><br><sub>Sign in, then a PIN lock</sub></td>
-    <td width="23%" align="center"><img src="docs/media/screenshots/02-start.png" alt="Start screen with role chips and task bar"><br><sub>One sentence: role and task</sub></td>
-    <td width="23%" align="center"><img src="docs/media/screenshots/03-results.png" alt="Results screen with fact cards"><br><sub>Only the facts the task needs</sub></td>
-    <td width="23%" align="center"><img src="docs/media/screenshots/04-source.png" alt="Source letter with the cited passage highlighted"><br><sub>Every fact opens its source</sub></td>
+    <td width="25%" align="center"><img src="docs/media/screenshots/01-start.png" alt="Start screen: one free-text field, 'Who are you and what do you need?'"><br><sub>One sentence, as typed</sub></td>
+    <td width="25%" align="center"><img src="docs/media/screenshots/02-answer.png" alt="Results: the answer sentence with numbered sources, then Show more"><br><sub>The answer first, with sources</sub></td>
+    <td width="25%" align="center"><img src="docs/media/screenshots/03-more.png" alt="Show more: key facts, contradiction and fact list"><br><sub>Show more: key facts and conflicts</sub></td>
+    <td width="25%" align="center"><img src="docs/media/screenshots/04-source.png" alt="Source viewer with the cited passage highlighted in the German letter"><br><sub>Every value opens its passage</sub></td>
   </tr>
   <tr>
-    <td width="23%" align="center"><img src="docs/media/screenshots/05-contradiction.png" alt="Two letters that disagree, side by side"><br><sub>Where the letters disagree</sub></td>
-    <td width="23%" align="center"><img src="docs/media/screenshots/06-history.png" alt="History view with earlier values"><br><sub>Earlier values, each with its source</sub></td>
-    <td width="23%" align="center"><img src="docs/media/screenshots/07-help.png" alt="Help and FAQ page"><br><sub>Help: what the labels mean</sub></td>
-    <td width="23%" align="center"><img src="docs/media/screenshots/08-not-authorised.png" alt="Not authorised screen for a non-clinical request"><br><sub>No clinical role, no patient data</sub></td>
+    <td width="25%" align="center"><img src="docs/media/screenshots/05-details-dark.png" alt="Details in dark mode: weight and creatinine trends with calculated changes"><br><sub>Details: trends and calculations</sub></td>
+    <td width="25%" align="center"><img src="docs/media/screenshots/06-history.png" alt="History: every dated entry, newest first, each with its source"><br><sub>History: every dated entry</sub></td>
+    <td width="25%" align="center"><img src="docs/media/screenshots/07-help-dark.png" alt="Help: questions and answers about the labels"><br><sub>Help: what the labels mean</sub></td>
+    <td width="25%" align="center"><img src="docs/media/screenshots/08-not-authorised.png" alt="Not authorised: a neighbour asking about the patient gets no data"><br><sub>No clinical role, no data (rules path)</sub></td>
   </tr>
 </table>
 
-<img src="docs/media/screenshots/10-results-desktop.png" alt="Results on a desktop screen: patient card, a contradiction between two letters, and the facts the task needs" width="100%">
+<img src="docs/media/screenshots/10-desktop.png" alt="Second Eye on a desktop screen: patient card, the answer with sources, and the facts the task needs" width="100%">
 
-Results screens use the invented demo patient; no organiser data is shown.
+<sub>The real app, fed a set of invented letters for an invented patient; no organiser data is shown.</sub>
 
 ## Results
 
-Measured on the organisers' five situations ([`docs/SUBMISSION.md`](docs/SUBMISSION.md), reproducible with the commands below).
+Measured on the organisers' five situations and 15 questions ([`docs/SUBMISSION.md`](docs/SUBMISSION.md), [`docs/DECISIONS.md`](docs/DECISIONS.md)); reproducible with the commands below.
 
 | Metric | Target | Second Eye |
 |---|:---:|:---:|
-| Correct answers | 15 / 15 | **15 / 15**, in both the short phone view and the long view |
+| Correct answers | 15 / 15 | **15 / 15**, also inside the key facts and the answer lines |
 | Traceability | 100 % | **100 %** by construction: every fact cites its passage, 0 invariant violations |
-| Invented facts | 0 | **0**: a fact whose quote is not verbatim in its passage never reaches the API |
+| Invented facts | 0 | **0**: a fact whose quote is not verbatim in its passage never reaches the API, and model-written sentences get every value substituted by code |
 | Contradictions, net of false alarms | ≥ 5 | **5 real, 0 known false alarms**, plus 3 documentation notes kept apart |
-| Slowest screen | < 10 s | **144 ms** at the API, **453 ms** on the phone from submit to rendered facts |
+| Slowest screen | < 10 s | rules path **144 ms** at the API, **453 ms** on the phone (measured 30 Oct, before the answer-first screen); with the AI answer a hard **5 s** deadline |
 
-Also: 15 unseen situations (new roles, a German request, a misspelling) all render without errors in ≤ 0.5 s each.
+### Beyond the official questions
 
-### Evaluation layers
-
-| Layer | What it checks | Status |
+| Test | What it checks | Result (rules only, no AI) |
 |---|---|---|
-| Official situations | The organisers' 15 questions on the fact store (`python3 -m eval.run --strict`) and over HTTP (`python3 -m eval.run_api`) | **15 / 15**, 0 invariant violations |
-| Synthetic set v1 | 70 situations, 170 questions: German, typos, unseen and non-clinical roles (`python3 -m eval.synthetic.run`) | 170 / 170. Rules were fitted on this set, so it is not a generalisation result ([`docs/TESTING.md`](docs/TESTING.md) §3) |
-| Adversarial hold-out v2 | 73 situations written by an independent author who never saw the engine (`python3 -m eval.synthetic.run --file eval/synthetic/holdout_v2.json`) | Work in progress, measured in [`docs/TESTING.md`](docs/TESTING.md) |
-| Phone app end to end | 39 Playwright cases against the real backend, including axe accessibility checks (`cd mobile && npm run e2e`) | Run before each merge |
+| Paraphrases ([`eval/paraphrase`](eval/paraphrase)) | 165 wordings: each official question asked 5 ways (terse, long, as a question, with a typo, German-English mix) plus 30 common questions 3 ways | **156 / 165**, official 74 / 75 |
+| Adversarial hold-out ([`eval/synthetic`](eval/synthetic)) | 73 situations, 234 questions, written by a team member who never saw the engine: unusual roles, other languages, injections, non-clinical requests | **136 / 234** (58 %) after the latest engine fix; the first run scored 78 / 227 |
+| Red team ([`eval/redteam`](eval/redteam)) | 604 requests: 383 that must get no data (neighbours, journalists, injections, other patients) and 221 that must | **10 of 383** leak, **5 of 221** wrongly blocked |
+| Synthetic set v1 | 70 situations, 170 questions | 170 / 170, but the rules were fitted on it, so it is a regression check, not a result |
 
 ## How it works
 
-Two phases. An offline build reads the eight letters once and freezes a verified fact store. Every request after that only looks things up, so a screen takes milliseconds, not seconds.
+An offline build reads the eight letters once and freezes a verified fact store. Every request after that only looks things up, so the rules path answers in milliseconds.
 
 ```mermaid
 flowchart LR
     subgraph OFF["Offline · make build · once"]
-        L["8 German letters<br/>organisers' data, git-ignored"] --> P["pipeline/<br/>passages with stable IDs<br/>rule extractors, IBM index<br/>quote must be verbatim"]
-        P --> C["compare/<br/>contradictions, blind spots<br/>open follow-ups"]
+        L["8 German letters<br/>organisers' data, git-ignored"] --> P["pipeline/<br/>passages with stable IDs<br/>rule extractors<br/>quote must be verbatim"]
+        P --> C["compare/<br/>contradictions, dropped facts<br/>open follow-ups"]
         P --> FS[("Verified fact store")]
         C --> FS
     end
     subgraph ON["Online · every request"]
-        Q["Anaesthetist, pre-op check<br/>before breast surgery"] --> U["Understand<br/>alias and tag matcher<br/>optional Claude Haiku 5.5:<br/>rulebook IDs only, budget guard, cache"]
-        U --> R["Route<br/>role, task bundles, slots P1–P3<br/>knowledge base + overlay"]
-        R --> G{"Clinical gate<br/>reads the text alone"}
-        G -- "no clinical role:<br/>zero patient facts" --> X["Not authorised"]
-        G --> FO["Task focus<br/>task terms, overlay relevance,<br/>optional LLM focus concepts"]
-        FO --> F["Fill<br/>safety core: allergies, age and sex<br/>latest value, not documented,<br/>not applicable, computed values"]
+        Q["Anaesthetist, pre-op check<br/>before breast surgery"] --> RQ["Request check<br/>injections blanked,<br/>other patient refused"]
+        RQ --> R["Rules route<br/>role, task bundles, KB slots"]
+        R --> G{"Gates<br/>clinical role · a task"}
+        G -- "no:<br/>zero patient facts" --> X["Not authorised /<br/>describe your task"]
+        G --> F["Fill<br/>latest value · not documented ·<br/>not applicable · computed values"]
         FS --> F
-        F --> V["Short view<br/>P1 cards + up to 6 'also relevant'<br/>16 cards at most"]
+        F --> A["Answer first<br/>answer lines or key facts,<br/>rest behind Show more"]
+        RQ -. "AI on" .-> V2["v2: Haiku picks slots,<br/>writes a sentence template;<br/>code fills every value"]
+        FS --> V2
+        V2 --> A
     end
     subgraph HOST["Hosting · Docker on Render"]
-        V --> API["FastAPI<br/>sign-in, PIN lock, audit log"]
-        API --> APP["Phone app, served by FastAPI<br/>every fact opens its source sentence"]
+        A --> API["FastAPI<br/>sign-in, PIN lock, audit log"]
+        API --> APP["Phone app<br/>every value opens its passage"]
     end
 ```
 
@@ -114,39 +114,35 @@ flowchart LR
 |---|---|---|
 | Fact store | `pipeline/` | Splits each letter into passages with stable IDs and offsets, extracts typed facts (medication, allergy, measurement, finding, plan), links IBM's extraction as an index only, and rejects any fact whose quote is not verbatim. |
 | Compare | `compare/` | Deterministic checks: BMI recomputed from height and weight, event dates, laterality. Counts only passages that cannot all be true; typos and method differences become documentation notes. |
-| Routing knowledge base | `rulebook/kb/` | Written by the medical team: 20 roles, 18 task bundles, 63 fact slots with priorities P1–P3, 22 rules and 21 guideline sources. Holds no patient facts. |
-| Knowledge base overlay | `rulebook/kb_overlay.json` | 5 more roles (rheumatologist, urologist, psychologist, social worker, nephrologist), extra aliases and tags, task terms and task relevance rules; each new rule is marked `TODO-cite` for the medical team. |
-| Query engine | `engine/` | Situation → role and task → needs → answer cards: consistent, conflicting, outdated, not documented, not applicable. Allergies and age/sex are on every clinical screen; the short view adds up to 6 "also relevant" P2 cards and caps a screen at 16 cards. |
-| Clinical gate | `engine/clinical.py` | Patient data only for a clinical requester, decided from the text by rules (`rulebook/clinical_roles.json`). Not authorised means zero patient facts. |
-| Task focus | `engine/focus.py` | Promotes record facts the task points at into one card after the P1 needs: task terms, overlay relevance, and with the LLM on, its `focus_concepts`. |
-| LLM layer | `engine/llm.py`, `engine/llm_budget.py` | Optional Claude Haiku 5.5 reading of the request, with a daily budget and call cap and an in-process cache. |
-| Security | `security/`, `backend/app/auth.py` | Sign-in with salted PBKDF2 hashes, PIN lock, idle and background lock, hash-chained audit log. |
-| API | `backend/app/` | FastAPI: the `Briefing` schema, documents and passages for the source view, sign-in and PIN lock, and serves the built app. |
-| Phone app | `mobile/` | React 19, Vite, Tailwind 4, Motion. Facts with their sources, contradictions, open items, value history and a source viewer that highlights the cited words. English and German. |
-| Evaluation | `eval/`, `eval/synthetic/` | Scores the 15 official answers on the fact store and over HTTP, and checks the invariants (quotes verbatim, every number inside its quote). `eval/synthetic/` holds the 70-situation set and the adversarial hold-out. |
+| Routing knowledge base | `rulebook/kb/`, `rulebook/kb_overlay.json` | Written by the medical team: 20 roles, 18 task bundles, 63 fact slots with priorities P1–P3, 22 rules, 21 guideline sources. The overlay adds 21 roles and 55 named topics, each marked `TODO-cite` for review. No patient facts. |
+| Request and gates | `engine/request.py`, `clinical.py`, `intent.py`, `llm_gate.py` | Blanks injected instructions and refuses requests about another patient. Patient data only for a clinical requester with a task; greetings and role-only requests get none. The model can narrow these decisions, never widen them. |
+| Answers | `engine/ask.py`, `keyfacts.py`, `answers.py` | Specific questions answered first, or "Nothing found" with the words searched. Up to 8 key-fact lines, or up to 4 answer lines whose every word is checked against an allowlist built from that line's own facts. |
+| v2 answer | `engine/screen_v2.py`, `understand_v2.py`, `evidence.py`, `cited.py` | With the AI on: Haiku chooses what the question needs and writes a sentence template; code substitutes every name, value, dose, schedule, date and side, checks the glue words and that every required fact is placed, and falls back to a compact template on any failure. |
+| API | `backend/app/` | FastAPI: the `Briefing` schema, documents and passages for the source viewer, sign-in and PIN lock, an optional start-up self-test (`EVAL_ON_START`), and it serves the built app. |
+| Phone app | `mobile/` | React 19, Vite, Tailwind 4, Motion. Answer first with numbered sources, Show more, Overview / Details / History, a source viewer that highlights the cited words, English and German, dark mode, read aloud. |
+| Evaluation | `eval/` | Official answers on the fact store and over HTTP, invariants (quotes verbatim, every number inside its quote), key facts, answer lines, v2 answers, paraphrases, hold-out and red team. |
 
 ## Where AI is used, and where it is not
 
-The core is deterministic, so every screen can be reproduced and checked.
+The core is deterministic. The AI layer is **off by default** and needs `SECOND_LOOK_LLM=1` and an `ANTHROPIC_API_KEY`. The model is Claude Haiku 5.5.
 
-| Step | How | Why |
+| Step | How | Guardrails |
 |---|---|---|
-| Extracting facts | Rules, plus IBM's extraction used as an index; every quote is validated in code | Eight short letters: rules are checkable and fast |
-| Understanding the request | Alias and tag matcher (English and German, fuzzy). **Optional:** with `SECOND_LOOK_LLM=1`, Claude Haiku 5.5 reads every request and proposes a role and task bundles through structured output limited to the knowledge base's own IDs | Unusual wording and unseen roles. Every pick is checked again in code. It may add one bundle when the rules matched (up to three when they did not) and set the role only when the rules found none or a fuzzy one. On a timeout (4 s), an error or a spent budget the rules answer alone. `engine/llm_budget.py` caps daily spend and calls; repeated requests hit a cache. `/health` shows the layer's state and every briefing records `routing.llm_used` |
-| Who may see patient data | Clinical gate, rules only | The model never authorises: the gate reads the request text alone |
-| Task focus | Task terms and overlay rules in code. **Optional:** the model returns up to five `focus_concepts` | The model can only pick from this record's own concept labels; code maps them back to existing facts, shown as "AI-highlighted for this task" |
-| "Not documented", contradictions, calculations, what to show | Code only | The model never writes patient facts, statuses, verdicts or numbers |
+| Extracting facts | Rules, with IBM's extraction as an index; every quote validated in code | No model |
+| Understanding the request | Rules always. With the AI on, Haiku also reads the request in parallel | Rules path: the model may refuse a request or add one task bundle; it never sets the role or opens the record. 2.5 s deadline, then the rules answer alone |
+| Writing the answer (v2, the default when the AI is on) | Haiku returns a sentence **template** with placeholders such as `{F3.dose}` | Code fills every value from the verified facts, checks that only allowlisted glue words remain, that every required fact is placed and that there are at most 2 sentences. Any failure, a timeout or the hard 5 s deadline gives a compact template instead |
+| Answer lines (rules path) | The rules pick the facts; Haiku may phrase them | Every token must come from that line's facts or a fixed connector list; units, value-date pairs, schedules and sides are checked; otherwise a template |
+| "Not documented", contradictions, calculations, who may see data | Code only | The model never decides any of these |
 
-No guideline text is processed by a model. Guidelines in the knowledge base only explain why a fact is on a checklist; they are never shown as patient facts.
+A budget guard caps spend at €4 and 3,000 calls a day by default (`/health` shows usage), and repeated requests hit a cache. **What is sent to Anthropic when the AI is on:** the request text, the record's concept labels, and for the answer the facts behind it, including each fact's verbatim German quote. No guideline text is sent to a model.
 
 ## What every screen guarantees
 
-- **Every fact is quoted and linked.** No verbatim quote in a known passage, no fact.
+- **Every value comes from the letters.** No verbatim quote in a known passage, no fact; a model-written sentence has its values substituted by code.
+- **Every fact is linked.** Each number opens the passage it came from.
 - **Missing is explicit.** A need with no fact says "not documented", decided by code.
 - **Computed values show their inputs.** Age, weight change and BMI link every passage they use.
 - **Contradictions are tiered.** Only passages that cannot all be true are counted; changes over time and small measurement differences are not flagged.
-- **No clinical role, no patient data.** A journalist or a neighbour gets a "not authorised" screen with zero facts.
-- **Locked by default.** Sign-in, a PIN after 3 minutes idle, and a tamper-evident audit log that stores the task only as a hash.
 - **Read only.** Second Eye never changes the record.
 
 ## Run it locally
@@ -161,43 +157,49 @@ make backend                                 # API on http://127.0.0.1:8000
 cd mobile && npm ci && npm run dev           # app on http://localhost:5173 (new terminal)
 ```
 
-Sign in with the demo user in [`security/README.md`](security/README.md) (replace it before any deployment). `VITE_MOCK=1 npm run dev` runs the app on an invented demo patient without a backend.
+Sign-in and the PIN lock are on by default; the demo user is in [`security/README.md`](security/README.md) (replace it before any deployment). `VITE_MOCK=1 npm run dev` runs the app on an invented demo patient without a backend.
+
+Environment variables keep the project's earlier internal prefix `SECOND_LOOK_`.
 
 | Variable | Effect |
 |---|---|
-| `SECOND_LOOK_LLM=1` + `ANTHROPIC_API_KEY` | Claude proposes role and task IDs for unusual wording (model: `SECOND_LOOK_LLM_MODEL`, default `claude-haiku-5-5`) |
-| `SECOND_LOOK_RULEBOOK=legacy` | Use the earlier hand-written role tables instead of the knowledge base |
+| `SECOND_LOOK_LLM=1` + `ANTHROPIC_API_KEY` | Turns the AI layer on (model: `SECOND_LOOK_LLM_MODEL`, default `claude-haiku-5-5`) |
+| `SECOND_LOOK_ROUTER=v1` / `v2` | Force the rules path or the v2 answer (default: v2 when the AI layer is on) |
+| `SECOND_LOOK_ANSWERS_LLM=0` | Keep the AI for understanding only; answers use templates |
+| `SECOND_LOOK_LLM_BUDGET_EUR`, `SECOND_LOOK_LLM_MAX_CALLS_PER_DAY` | Daily spend and call caps (defaults 4.0 and 3000) |
+| `SECOND_LOOK_AUTH=0` | Turns sign-in and the PIN lock off (demo only) |
 | `SECOND_LOOK_USERS` | Path to your own users file (salted PBKDF2 hashes) |
+| `EVAL_ON_START=1` / `probe` | Run the self-test at start-up and print `EVAL:` lines to the logs |
 
 Without the app: `python3 -m engine.query "Anaesthetist, pre-operative check before breast surgery" --brief`
 
 ### Tests and evaluation
 
 ```bash
-make test                          # 207 unit tests: engine, knowledge base, clinical gate, LLM layer, compare, eval, security, backend
+make test                          # 351 tests: engine, gates, answers, v2, knowledge base, compare, eval, security, backend
 python3 -m eval.run --strict       # 15 official answers; exits 1 unless 15/15 and 0 invariant violations
 python3 -m eval.run_api            # the same over HTTP, with latency
-cd mobile && npm run e2e           # 39 Playwright cases against the real backend, including axe accessibility checks
+python3 -m eval.paraphrase.run     # 165 paraphrased questions
+cd mobile && npm run e2e           # 47 Playwright cases against the real backend, incl. axe accessibility checks (+5 with E2E_V2=1)
 ```
 
-Most engine tests need the organisers' data. A further synthetic set of 70 situations and 170 questions (German, typos, unseen and non-clinical roles) is documented in [`docs/TESTING.md`](docs/TESTING.md); the engine was tuned on it, so its score is not quoted as a result.
+Most engine tests need the organisers' data. Test layers and every run are documented in [`docs/TESTING.md`](docs/TESTING.md).
 
 <details>
 <summary><b>Repository layout</b></summary>
 
 ```
 pipeline/     fact store build (passages, extractors, IBM linker)
-compare/      contradictions, blind spots, follow-ups
-engine/       understand → route → fill; clinical gate; optional LLM layer (llm.py, llm_budget.py)
-rulebook/     routing knowledge base (kb/), overlay, legacy role and task tables
+compare/      contradictions, dropped facts, follow-ups
+engine/       request check, gates, route, fill, questions, key facts, answer lines, v2 answer, AI layer
+rulebook/     routing knowledge base (kb/), overlay, question lexicon, clinical roles
 backend/      FastAPI app (app/), sign-in and PIN lock (auth.py), tests
 mobile/       the phone app (React 19 + Vite), Playwright e2e
 security/     sign-in, PIN lock, audit log (standard library only)
-eval/         scorers, answer keys, contradiction gold list, unseen and synthetic situations
+eval/         scorers, answer keys, synthetic, hold-out, paraphrase and red-team sets
 cases/        the organisers' five situations and expected answers
-video/        code-rendered submission video (Remotion) and its soundtrack
 deploy/       container entrypoint; data comes from a secret at start-up, never from git
-docs/         challenge, plan, contracts, integration, decisions, testing, submission
+docs/         challenge, plan, decisions, milestones, testing, submission
 ```
 
 </details>
@@ -205,15 +207,15 @@ docs/         challenge, plan, contracts, integration, decisions, testing, submi
 ## Limitations
 
 - **One record.** Built and measured on the challenge's single patient (eight letters). New patients need the offline build first.
-- **Unfamiliar requests are the weak spot.** On an adversarial holdout written independently of the engine (73 situations, [`holdout_v2_run1.md`](eval/synthetic/results/holdout_v2_run1.md), rules only, LLM layer not run), Second Eye answers 78 of 227 questions (34 %). Non-clinical requests are refused 9 of 9 times; unusual roles and requests in other languages fail most often.
-- **The knowledge base is a draft.** Some guideline citations are still placeholders (`TODO-cite`) and a full clinician review is pending.
-- **The clinical gate is a demo safeguard.** It reads the role from the request; a hospital deployment would take the role from the sign-in.
-- **The LLM layer is off by default.** When it is on, the record's diagnosis labels are sent to Anthropic to choose the task.
+- **The v2 answer does not check who is asking.** With the AI layer on, v2 refuses empty, greeting, spam and injection-only requests and other patients, but answers a clinical question from anyone. The clinical-role gate applies on the rules path (`SECOND_LOOK_ROUTER=v1`). In a hospital the role would come from the sign-in.
+- **Unfamiliar requests are the weak spot.** The independent hold-out is at 58 % without the AI; unusual roles and requests in other languages fail most often.
+- **The knowledge base is a draft.** Guideline citations marked `TODO-cite` and a full clinician review are pending.
+- **Latency was last measured before the answer-first screen.** The AI answer has a hard 5 s deadline; no live v2 timing is committed yet.
 - **No licence file yet.**
 
 ## Team
 
-Built at the AIM Austria hackathon by a team of developers and clinicians: [Omar](https://github.com/omarjku) (backend: fact store, compare, engine, API), Zoha (phone app), [Waji](https://github.com/syedwajiulhassan715-rgb) (product plan, API shell, app integration, end-to-end tests), and Mani with the medical team (routing knowledge base).
+Built at the AIM Austria hackathon by a team of developers and clinicians: [Omar](https://github.com/omarjku) (fact store, compare, engine, gates, AI layer, deployment), Zoha (phone app), [Waji](https://github.com/syedwajiulhassan715-rgb) (product plan, questions, key facts, topics, paraphrase eval, end-to-end tests), and Mani with the medical team (routing knowledge base).
 
 ## Data
 
