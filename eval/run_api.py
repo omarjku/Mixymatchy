@@ -1,7 +1,7 @@
 """Score the running app over HTTP on the 5 situations.
 
     uvicorn --app-dir backend app.main:app --port 8000 &     (from the repo root)
-    python3 -m eval.run_api [--api http://127.0.0.1:8000] [--runs 3]
+    python3 -m eval.run_api [--api http://127.0.0.1:8000] [--runs 3] [--detail short|long]
 
 Per question: the token logic of eval/answer_keys.json (eval.core.eval_question, the same check the
 engine and adapter tests use) applied only to the facts in the /briefing response, each linked to a
@@ -42,8 +42,12 @@ def get(path: str):
         return json.load(r)
 
 
+DETAIL = None  # None: the API default (short)
+
+
 def post(situation: str) -> tuple[dict, float]:
-    req = urllib.request.Request(f"{API}/briefing", data=json.dumps({"situation": situation}).encode(),
+    body = {"situation": situation, **({"detail": DETAIL} if DETAIL else {})}
+    req = urllib.request.Request(f"{API}/briefing", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"})
     t0 = time.perf_counter()
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -68,12 +72,14 @@ def source_build(facts: list[dict]) -> tuple[Build, dict]:
 
 
 def main() -> int:
-    global API
+    global API, DETAIL
     ap = argparse.ArgumentParser()
     ap.add_argument("--api", default=API)
+    ap.add_argument("--detail", choices=("short", "long"), default=None, help="default: the API default (short)")
     ap.add_argument("--runs", type=int, default=3, help="requests per situation for the latency figures")
     a = ap.parse_args()
     API = a.api.rstrip("/")
+    DETAIL = a.detail
     keys = json.loads((ROOT / "eval" / "answer_keys.json").read_text(encoding="utf-8"))
     rows, lat = [], []
     for i, (title, desc) in enumerate(situations(), start=1):

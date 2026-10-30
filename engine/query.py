@@ -2,7 +2,7 @@
                                 [--detail short|long] [--legacy-rulebook]
 
 Rulebook: the routing KB (rulebook/kb/ + rulebook/slot_map.json) by default; --legacy-rulebook or
-SECOND_LOOK_RULEBOOK=legacy uses rulebook/roles.json + tasks.json.  --detail short shows P1 slots only.
+SECOND_LOOK_RULEBOOK=legacy uses rulebook/roles.json + tasks.json.  --detail short (default) shows P1 slots only, --detail long P1-P3.
 
 Prints the JSON screen.  --brief prints a compact human-readable view instead.
 """
@@ -27,6 +27,8 @@ def brief(screen):
                       ", ".join(u["rules"]["fired"]) or "-", screen["detail"], len(screen["cards"])))
         if u.get("fallback_note"):
             out.append("NOTE: " + u["fallback_note"])
+        if u.get("applicability_note"):
+            out.append("APPLICABILITY: " + u["applicability_note"])
     out.append("-- safety strip")
     for c in screen["safety_strip"]:
         out.append("  [%s] %s: %s" % (MARK.get(c["status"], "?"), c["label_en"], c["value_en"][:160]))
@@ -36,9 +38,15 @@ def brief(screen):
                                                  c["value_en"][:200], ",".join(c["facts"][:6])))
     if screen.get("blind_spot"):
         out.append("-- blind spot: " + screen["blind_spot"]["summary_en"])
+        for i in screen["blind_spot"]["items"]:
+            out.append("     %s" % i["label_en"])
     out.append("-- contradictions (%s)" % screen["contradictions_source"])
     for c in screen["contradictions"]:
         out.append("  %s %s" % ("*" if c["relevant"] else " ", c["title_en"]))
+    for fu in screen.get("open_followups") or []:
+        out.append("-- open follow-up: %s" % fu.get("label_en"))
+    if screen.get("other_record_issues_en"):
+        out.append("-- " + screen["other_record_issues_en"])
     out.append("-- " + screen["proof_bar"]["summary_en"] + "   (%s ms)" % screen["timing_ms"])
     return "\n".join(out)
 
@@ -49,7 +57,7 @@ def main(argv=None):
     ap.add_argument("--as-of", default=None)
     ap.add_argument("--brief", action="store_true")
     ap.add_argument("--no-llm", action="store_true")
-    ap.add_argument("--detail", choices=("short", "long"), default="long",
+    ap.add_argument("--detail", choices=("short", "long"), default="short",
                     help="short = P1 slots only, long = P1-P3 (KB rulebook)")
     ap.add_argument("--legacy-rulebook", action="store_true",
                     help="use rulebook/roles.json + tasks.json instead of the routing KB")

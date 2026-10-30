@@ -123,8 +123,8 @@ def _annotate_followups(st, cards):
                     it["followup_open"] = fu.get("is_open")
 
 
-def build_screen(text, as_of=None, use_llm=True, detail="long", rulebook=None):
-    """detail: 'short' (P1 only) or 'long' (P1-P3); KB rulebook only.  rulebook: 'kb' | 'legacy' | None (env)."""
+def build_screen(text, as_of=None, use_llm=True, detail="short", rulebook=None):
+    """detail: 'short' (P1 only, the default) or 'long' (P1-P3); KB rulebook only.  rulebook: 'kb' | 'legacy' | None (env)."""
     if rulebook_mode(rulebook) == "kb":
         return build_screen_kb(text, as_of=as_of, use_llm=use_llm, detail=detail)
     return build_screen_legacy(text, as_of=as_of, use_llm=use_llm)
@@ -146,7 +146,72 @@ def _proof_and_contradictions(st, cards, contras):
     return contra_out, proof
 
 
-def build_screen_kb(text, as_of=None, use_llm=True, detail="long"):
+MAX_SUMMARY_CARDS = 6  # safety summary (unrecognised task / not applicable): never a dump
+OVERVIEW_RX = re.compile(r"(?<![a-zäöüß])(overview|summary|summarise|summarize|über(blick|sicht)|zusammenfassung)")
+
+
+def _suggest_bundles(k, task_text, role, n=3):
+    """Nearest bundle titles for an unrecognised task: fuzzy tag similarity, the role's own bundles first."""
+    import difflib
+    from .understand import norm_text
+    words = [w for w in re.findall(r"[a-zäöüß]{4,}", task_text or "")]
+    defaults = (role or {}).get("default_bundles") or []
+    scored = []
+    for b in k.bundles:
+        if b["id"] == k.fallback_bundle:
+            continue
+        best = 0.0
+        for tag in (b.get("tags_en") or []) + (b.get("tags_de") or []):
+            if tag.startswith("("):
+                continue
+            for tw in norm_text(tag).split():
+                for w in words:
+                    best = max(best, difflib.SequenceMatcher(None, w, tw).ratio())
+        bonus = 0.5 if b["id"] in defaults else 0.0
+        scored.append((best + bonus, -defaults.index(b["id"]) if b["id"] in defaults else -99, -int(b["id"][1:]),
+                       b["title"]))
+    scored.sort(reverse=True)
+    return [x[3] for x in scored[:n]]
+
+
+def _ensure_info(k, info, slot, origin):
+    if slot not in info:
+        info[slot] = {"priority": "P1", "origins": [origin], "why": k.slot_by_id[slot].get("why"),
+                      "sources": [], "rules": []}
+    elif origin not in info[slot]["origins"]:
+        info[slot]["origins"].append(origin)
+    info[slot]["priority"] = "P1"
+
+
+def _slot_domain(st, k, cards, as_of, text):
+    """Every fact a shown card's slot covers (selected facts, incl. context) plus the facts on the cards."""
+    from .slots import select_slot
+    dom = set()
+    for c in cards:
+        dom |= set(c.get("facts") or [])
+        if c.get("slot") in k.slot_by_id and c.get("status") != "not_documented":
+            p, ctxf = select_slot(st, k, c["slot"], as_of, text)
+            dom |= {f["id"] for f in p} | {f["id"] for f in ctxf}
+    return dom
+
+
+def _task_blind_spot(bs, domain):
+    """Blind-spot items that touch the screen's slots; None when nothing on the screen is affected."""
+    if not bs:
+        return None, []
+    keep = [i for i in bs["items"] if set(i.get("facts") or []) & domain]
+    other = [i for i in bs["items"] if i not in keep]
+    if not keep:
+        return None, other
+    out = dict(bs, items=keep, missed_if_only_latest=len(keep),
+               patient_wide_missed=bs.get("missed_if_only_latest"), scope="task")
+    out["summary_en"] = ("%d item(s) on this screen are not in the latest letter (%s); reading only that letter "
+                         "you would miss them." % (len(keep), fmt_date(bs.get("latest_document_date"))))
+    return out, other
+
+
+def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
+    from . import applicability as A
     from .fill import _dob, _d, age_years
     from .kb import kb as load_kb
     from .kbfill import build_card, label_panel, slot_status_fn
@@ -154,7 +219,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="long"):
     t0 = time.perf_counter()
     st = store()
     k = load_kb()
-    detail = "short" if str(detail).lower() == "short" else "long"
+    detail = "long" if str(detail).lower() == "long" else "short"
     anchor = st.anchor_date()
     m = re.search(r"\bas of (\d{4}-\d{2}-\d{2})\b", text or "")
     as_of = as_of or (m.group(1) if m else anchor)
@@ -164,37 +229,107 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="long"):
     sex, sex_pid = st.patient_sex()
     patient = {"sex": sex, "sex_passage": sex_pid}
     contras, csource = _contradictions(st)
-    ctx = {"as_of": as_of, "anchor": as_of, "patient": patient, "text": text, "slot_info": u.pop("slot_info"),
+    info = u.pop("slot_info")
+    role = k.role_by_id.get(u["role_id"])
+
+    # applicability (rulebook/applicability.json) and the safety summary for unrecognised tasks
+    app = A.check(u.get("task_text") or "", st)
+    safety = [x for x in A.table().get("safety_block") or [] if x in k.slot_by_id]
+    fallback = u["tasks_from"] == "fallback"
+    front, back, mode = [], [], "task"
+    slots = list(u["slots_shown"])
+    if app["not_applicable"]:
+        front = [A.not_applicable_card(st, r, app["sex"], app["passage"], app["word"]) for r in app["not_applicable"]]
+        u["applicability_note"] = "%s: not applicable, the record documents %s patient." % (
+            "; ".join(r["label"] for r in app["not_applicable"]), A.SEX_WORD.get(app["sex"], app["sex"]))
+        if fallback:
+            mode, slots = "not_applicable", list(safety)
+            u["fallback_note"] = None
+            u["task_labels"] = ["Not applicable: %s" % r["label"] for r in app["not_applicable"]]
+    elif fallback and app["applicable"]:
+        mode = "sex_specific"
+        slots = list(dict.fromkeys(safety + [x for r in app["applicable"] for x in r["slots"] if x in k.slot_by_id]))
+        u["fallback_note"] = None
+        u["task_labels"] = [r["label"] for r in app["applicable"]]
+    elif fallback and OVERVIEW_RX.search(u.get("task_text") or ""):
+        mode = "overview"  # an explicit request for a summary: the general core summary, deduplicated
+        b = k.bundle_by_id[k.fallback_bundle]
+        prs = ("P1",) if detail == "short" else ("P1", "P2", "P3")
+        slots = list(dict.fromkeys([x for p_ in prs for x in (b.get("slots") or {}).get(p_) or []] + safety))
+        u["fallback_note"] = "No specific task named: showing the general summary."
+    elif fallback:
+        mode = "fallback"
+        mods = [m_["slot"] for m_ in (role or {}).get("modifiers") or [] if m_.get("priority") == "P1"]
+        slots = list(dict.fromkeys(safety + mods))[:MAX_SUMMARY_CARDS]
+        u["suggestions"] = _suggest_bundles(k, u.get("task_text"), role)
+        u["fallback_note"] = ("Task not recognised%s: showing a safety summary. Try e.g. %s." % (
+            "" if role else " (role not recognised either)", ", ".join("'%s'" % x for x in u["suggestions"])))
+        u["task_labels"] = ["Safety summary (task not recognised)"]
+    if mode != "task" or app["applicable"]:
+        if mode != "task":
+            for x in slots:
+                _ensure_info(k, info, x, "safety summary" if x in safety else "applicability")
+        if app["sex"] is None and app["items"]:
+            u["applicability_note"] = "The record does not state the patient's sex; check applicability yourself."
+        back = [A.record_check_card(st, r, chk, as_of, contras) for r in app["applicable"] for chk in r["record_checks"]]
+    u["slots_shown"] = slots
+    u["screen_mode"] = mode
+    u["applicability"] = {k_: app[k_] for k_ in ("sex", "passage", "word")}
+    u["applicability"]["items"] = [{x: r[x] for x in ("id", "label", "applicable_sex", "term")} for r in app["items"]]
+
+    ctx = {"as_of": as_of, "anchor": as_of, "patient": patient, "text": text, "slot_info": info,
            "bundles": u["bundle_ids"], "detail": detail}
-    cards = [build_card(st, k, s, ctx, contras) for s in u["slots_shown"]]
+    cards = front + [build_card(st, k, s, ctx, contras) for s in slots] + back
     dob = next((_dob((f.get("attrs") or {}).get("value")) for f in st.facts if f.get("category") == "date_of_birth"), None)
     age = age_years(dob, _d(as_of)) if dob and _d(as_of) else None
     status = slot_status_fn(st, k, as_of, text)
-    for c in cards:  # rule R22: label panel for every shown medication
-        if c.get("shape") == "current_list" and c.get("items"):
-            c["label_panel"] = label_panel(st, k, c, status, u["bundle_ids"], detail, age)
+    if mode == "task":
+        for c in cards:  # rule R22: label panel for every shown medication
+            if c.get("shape") == "current_list" and c.get("items"):
+                c["label_panel"] = label_panel(st, k, c, status, u["bundle_ids"], detail, age)
     _annotate_followups(st, cards)
-    contra_out, proof = _proof_and_contradictions(st, cards, contras)
-    for c in contra_out:  # tag each contradiction with the slots it touches (guide step 8)
-        c["slots"] = [x["slot"] for x in cards if set(c["facts"]) & set(x["facts"])]
+
+    # only what touches this screen: contradictions, blind spot, open follow-ups
+    contra_all, proof = _proof_and_contradictions(st, cards, contras)
+    on_card = {x for c in cards for x in c.get("conflicts") or []}
+    for c in contra_all:
+        c["relevant"] = c["relevant"] or c["id"] in on_card
+        c["slots"] = [x["slot"] for x in cards if set(c["facts"]) & set(x["facts"]) or c["id"] in (x.get("conflicts") or [])]
+    contra_out = [c for c in contra_all if c["relevant"]]
+    contra_other = [c for c in contra_all if not c["relevant"]]
+    domain = _slot_domain(st, k, cards, as_of, text)
+    bs, bs_other = _task_blind_spot(compare_blind_spot(st) or blind_spot(st), domain)
+    comp = st.compare if isinstance(st.compare, dict) else {}
+    fus = [fu for fu in comp.get("open_followups") or [] if fu.get("is_open")]
+    fu_out = [fu for fu in fus if set(fu.get("fact_ids") or []) & domain]
+    fu_other = [fu for fu in fus if fu not in fu_out]
+    other_n = len(contra_other) + len(bs_other) + len(fu_other)
+
     counts = {}
     for c in cards:
         counts[c["status"]] = counts.get(c["status"], 0) + 1
     by_pr = {}
-    for s in u["slots"]:
-        by_pr[s["priority"]] = by_pr.get(s["priority"], 0) + 1
+    for s_ in u["slots"]:
+        by_pr[s_["priority"]] = by_pr.get(s_["priority"], 0) + 1
     return {
         "understood": u,
         "rulebook": "kb",
         "detail": detail,
+        "screen_mode": mode,
         "patient": patient,
         "safety_strip": [],
         "cards": cards,
         "card_status_counts": counts,
         "slot_counts": {"shown": len(cards), "by_priority": by_pr},
-        "blind_spot": compare_blind_spot(st) or blind_spot(st),
+        "blind_spot": bs,
+        "blind_spot_other": bs_other,
         "contradictions": contra_out,
+        "contradictions_other": contra_other,
         "contradictions_source": csource,
+        "open_followups": fu_out,
+        "open_followups_other": fu_other,
+        "other_record_issues": other_n,
+        "other_record_issues_en": ("%d other record issue(s) not related to this task" % other_n) if other_n else None,
         "proof_bar": proof,
         "timing_ms": round((time.perf_counter() - t0) * 1000, 1),
     }
