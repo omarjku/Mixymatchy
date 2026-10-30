@@ -316,6 +316,26 @@ def role_correction(t, kb):
     return t, []
 
 
+# ----------------------------------------------------------------- withdrawn clinical claims
+_NEG_BEFORE = re.compile(r"(?<![\w'])(?:not|no|nor|never|kein|keine|keiner|keinen|nicht|nie|ni|pas|non|ningun|nessun|"
+                         r"degil|ex|ex-|former|formerly|retired|ehemalig\w*|pensioniert\w*|frueher|früher)"
+                         r"(?:\s+(?:a|an|the|really|actually|ein|eine|un|une|el|la|il|un|una))?\s*$")
+_NEG_AFTER = re.compile(r"\s*\?\s*(?:no|nope|nein|non|not really|nah|well,? no|not quite|actually|eigentlich)(?![\w])")
+
+
+def withdrawn_roles(t, kb):
+    """Clinical role words whose claim is withdrawn: negated ('not a doctor', 'kein Arzt', 'ex-nurse') or
+    questioned and denied ('Nurse? no, I ...').  -> spans."""
+    from . import clinical as C
+    from .understand import fold
+    ft = fold(t)
+    lex = C.lexicon()
+    spans = [(s0, e0) for s0, e0, _t in C._hits(ft, lex["clinical"]) + C._pattern_hits(ft, lex)]
+    spans += [sp for sp in _role_spans(t, kb) if sp not in spans and not C._hits(ft[sp[0]:sp[1]], lex["non_clinical"])]
+    return [(s0, e0) for s0, e0 in sorted(set(spans))
+            if _NEG_BEFORE.search(ft[:s0]) or _NEG_AFTER.match(ft[e0:])]
+
+
 # ----------------------------------------------------------------- entry point
 
 def analyse(text, store):
@@ -326,8 +346,12 @@ def analyse(text, store):
     clean = blank(t, ins)
     from .kb import kb as load_kb
     clean, superseded = role_correction(clean, load_kb())
+    withdrawn = withdrawn_roles(clean, load_kb())
+    withdrawn_words = [clean[s0:e0] for s0, e0 in withdrawn]
+    clean = blank(clean, withdrawn)
     exc = exclusion_spans(clean)
     return {"clean": clean, "task": blank(clean, exc), "excluded_text": " | ".join(clean[s:e] for s, e in exc),
             "exclusion_spans": exc, "instructions": [t[s:e].strip() for s, e in ins],
-            "other_patient": other_patient(text, store), "superseded_roles": superseded}
+            "other_patient": other_patient(text, store), "superseded_roles": superseded,
+            "withdrawn_roles": withdrawn_words}
 

@@ -58,6 +58,20 @@ def official(use_llm=True):
     return ok, len(qids), fails
 
 
+def redteam(use_llm):
+    """Red-team inputs (eval/redteam/inputs.json): one model call per input when the layer is on."""
+    from eval.redteam import run as rt
+    res = rt.run(use_llm=use_llm, out=lambda *_: None)
+    say("redteam (%s): leaks %d/%d, false blocks %d/%d" % (
+        "llm" if use_llm else "rules only", len(res["leaks"]), res["block"], len(res["false_blocks"]), res["data"]))
+    for r in res["leaks"]:
+        say("  LEAK %s %s" % (r["id"], r["text"]))
+    for r in res["false_blocks"]:
+        say("  FALSE-BLOCK %s %s" % (r["id"], r["text"]))
+    if res.get("spend"):
+        say(res["spend"])
+
+
 def run():
     t0 = time.time()
     try:
@@ -74,6 +88,7 @@ def run():
             say(f)
         syn.run(use_llm=True, out=say)
         say(syn.spend_line(before))
+        redteam(llm.available())
     except Exception:
         say("self-test crashed:")
         say(traceback.format_exc())

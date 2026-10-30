@@ -98,6 +98,7 @@ export interface PatientBrief {
   roleLabel?: string | null;      // backend's own label for the role it read (never a "GP" fallback)
   taskLabel?: string | null;      // backend's reading of the task, e.g. "Pre-procedure check (anaesthesia)"
   screenMode?: string | null;     // task | fallback | overview | sex_specific | not_applicable | not_authorised | needs_task
+  roleMissing?: boolean;          // needs_task: no requester role stated (ask who is asking)
   message?: string | null;        // not_authorised / needs_task: what to type instead
   suggestions?: string[];         // tasks / situations to try (unrecognised task, not authorised)
   applicabilityNote?: string | null;

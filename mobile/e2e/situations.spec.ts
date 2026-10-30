@@ -184,6 +184,15 @@ test.describe("banners", () => {
     await expect(page.locator("[data-fact]").first()).toBeVisible({ timeout: 10_000 });
   });
 
+  test("clear task but no role: 'who is asking' banner, nothing from the record", async ({ page }) => {
+    await submitSituation(page, "other", "STAT CT head, any bleeding risk meds?");
+    const banner = page.locator('[data-banner="needs_task"]');
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText(/Who is asking|Wer fragt/);
+    await expect(page.locator("[data-patient-card]")).toHaveCount(0);
+    await expect(page.locator("[data-fact]")).toHaveCount(0);
+  });
+
   test("not applicable: banner with evidence, never counted as consistent", async ({ page }) => {
     await submitSituation(page, "other", "Urologist, prostate cancer screening");
     const banner = page.locator('[data-banner="not_applicable"]');

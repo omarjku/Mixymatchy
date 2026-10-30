@@ -1527,36 +1527,21 @@
   {
    "id": "s36",
    "situation": "Weight review",
-   "category": "no_role",
+   "category": "needs_task",
    "lang": "en",
    "questions": [
     {
      "q": "Weight change 2015->2016?",
-     "expect": "found",
-     "tokens": [
-      "-12|-11|78|66|67"
-     ],
-     "docs": [
-      "12340012",
-      "12340014",
-      "12340018"
-     ],
-     "answer": "78 kg (06/2015) -> 66 kg (04/2016), -12 kg"
+     "expect": "needs_task",
+     "answer": "needs_task: no role stated (owner policy 30 Oct)"
     },
     {
      "q": "BMI?",
-     "expect": "found",
-     "tokens": [
-      "bmi"
-     ],
-     "docs": [
-      "12340012",
-      "12340014",
-      "12340018"
-     ],
-     "answer": "BMI 22.8 (04/2016); stated BMIs inconsistent"
+     "expect": "needs_task",
+     "answer": "needs_task: no role stated (owner policy 30 Oct)"
     }
-   ]
+   ],
+   "_note": "owner policy 30 Oct: no requester role -> needs_task (0 facts)"
   },
   {
    "id": "s37",
@@ -1909,22 +1894,16 @@
   {
    "id": "s46",
    "situation": "Clinical social worker, discharge planning at home",
-   "category": "unseen_role",
+   "category": "not_authorised",
    "lang": "en",
    "questions": [
     {
      "q": "Which allergy is documented?",
-     "expect": "found",
-     "tokens": [
-      "contrast"
-     ],
-     "docs": [
-      "12340012",
-      "12340018"
-     ],
-     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+     "expect": "not_authorised",
+     "answer": "refused: role not authorised (owner policy 30 Oct)"
     }
-   ]
+   ],
+   "_note": "owner policy 30 Oct: refused (not_authorised, 0 facts)"
   },
   {
    "id": "s47",
@@ -2170,15 +2149,16 @@
   {
    "id": "s55",
    "situation": "Testicular ultrasound",
-   "category": "not_applicable",
+   "category": "needs_task",
    "lang": "en",
    "questions": [
     {
      "q": "Testicular findings?",
-     "expect": "not_applicable",
-     "answer": "not applicable: female patient"
+     "expect": "needs_task",
+     "answer": "needs_task: no role stated (owner policy 30 Oct)"
     }
-   ]
+   ],
+   "_note": "owner policy 30 Oct: no requester role -> needs_task (0 facts)"
   },
   {
    "id": "s56",
@@ -2499,22 +2479,16 @@
   {
    "id": "s67",
    "situation": "Medical student, ward round",
-   "category": "unseen_role",
+   "category": "not_authorised",
    "lang": "en",
    "questions": [
     {
      "q": "Which allergy is documented?",
-     "expect": "found",
-     "tokens": [
-      "contrast"
-     ],
-     "docs": [
-      "12340012",
-      "12340018"
-     ],
-     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+     "expect": "not_authorised",
+     "answer": "refused: role not authorised (owner policy 30 Oct)"
     }
-   ]
+   ],
+   "_note": "owner policy 30 Oct: refused (not_authorised, 0 facts)"
   },
   {
    "id": "s68",

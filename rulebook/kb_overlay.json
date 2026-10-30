@@ -208,7 +208,14 @@
     "pain control",
     "pain management",
     "symptom management",
-    "pain and symptom"
+    "pain and symptom",
+    "anticoagulation",
+    "anticoagulant",
+    "anticoagulants",
+    "blood thinner",
+    "blood thinners",
+    "bleeding risk",
+    "antiplatelet"
    ],
    "de": [
     "Medikation",
@@ -220,7 +227,11 @@
     "Lupus",
     "Symptomkontrolle",
     "Schmerztherapie",
-    "Schmerzmanagement"
+    "Schmerzmanagement",
+    "Antikoagulation",
+    "Blutverdünner",
+    "Blutungsrisiko",
+    "Gerinnungshemmer"
    ],
    "intl": [
     "conciliation medicamenteuse",
@@ -510,7 +521,9 @@
   "anaesthetist": {
    "en": [
     "anesthesiologist",
-    "anaesthesia doctor"
+    "anaesthesia doctor",
+    "anaesth",
+    "anaes"
    ],
    "de": [
     "Anästhesist",
@@ -610,8 +623,9 @@
     "icu nurse",
     "er nurse",
     "ed nurse",
-    "nurse manager",
-    "ward manager"
+    "community nurse",
+    "district nurse",
+    "practice nurse"
    ],
    "de": [
     "Pflegekraft",
@@ -1095,7 +1109,16 @@
     "covering doctor",
     "doc",
     "medic",
-    "doctor on call"
+    "doctor on call",
+    "sho",
+    "reg",
+    "fy1",
+    "fy2",
+    "spr",
+    "attending",
+    "dr",
+    "on-call reg",
+    "registrar on call"
    ],
    "aliases_de": [
     "Arzt",

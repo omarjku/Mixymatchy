@@ -213,8 +213,12 @@ export function ResultsScreen() {
                 data-banner="needs_task"
                 className="rounded-lg border-2 border-primary bg-primary/10 p-5"
               >
-                <h2 className="text-[19px] font-semibold text-primary-deep">{t("results.needsTask.title")}</h2>
-                <p className="mt-2 text-[15px] leading-relaxed text-ink">{t("results.needsTask.body")}</p>
+                <h2 className="text-[19px] font-semibold text-primary-deep">
+                  {t(brief.roleMissing ? "results.needsRole.title" : "results.needsTask.title")}
+                </h2>
+                <p className="mt-2 text-[15px] leading-relaxed text-ink">
+                  {t(brief.roleMissing ? "results.needsRole.body" : "results.needsTask.body")}
+                </p>
                 <Suggestions items={brief.suggestions ?? []} onPick={rerun} />
               </section>
             )}

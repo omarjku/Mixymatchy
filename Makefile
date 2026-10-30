@@ -1,4 +1,4 @@
-.PHONY: install build precompute backend frontend eval test
+.PHONY: install build precompute backend frontend eval redteam test
 
 install:
 	pip install -r backend/requirements.txt
@@ -21,6 +21,10 @@ frontend:
 eval:
 	python3 -m eval.run
 	python3 -m eval.run_api
+
+# leak measurement on attack/non-task inputs; LLM=1 turns the LLM layer on (needs ANTHROPIC_API_KEY)
+redteam:
+	python3 -m eval.redteam.run $(if $(LLM),--llm,)
 
 test:
 	python3 -m engine.kb > /dev/null

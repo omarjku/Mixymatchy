@@ -85,6 +85,7 @@ export interface BackendBriefing {
     screen_mode?: string | null;
     message?: string | null;
     suggestions?: string[];
+    role_missing?: boolean;   // needs_task because no requester role was stated (DECISIONS 19)
   };
 }
 
@@ -318,6 +319,7 @@ export async function toPatientBrief(
     roleLabel: routing.role_label ?? null,
     taskLabel: briefing.task ?? null,
     screenMode: routing.screen_mode ?? null,
+    roleMissing: routing.role_missing ?? false,
     message: routing.message ?? null,
     suggestions: routing.suggestions ?? [],
     applicabilityNote: routing.applicability_note ?? null,

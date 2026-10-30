@@ -22,6 +22,8 @@ from .understand import fold, norm_text
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATH = os.environ.get("SECOND_LOOK_TASK_INTENT", os.path.join(ROOT, "rulebook", "task_intent.json"))
 PREFIX_MIN = 6
+# CJK (no spaces) and Indic scripts (vowel signs are not \w): match vocabulary words as substrings
+NOSPACE = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\u0900-\u0dff]")
 WORD = re.compile(r"[^\W\d_][\w'-]*")
 
 NEEDS_TASK_MESSAGE = ("Please describe your task. Second Eye shows patient information only for a clinical task: "
@@ -154,6 +156,9 @@ def clinical_words(text, kb, store=None):
         m = re.search(r"(?<![\w])%s(?![\w])" % re.escape(p), t)
         if m:
             hits.append((m.start(), p))
+    for w in words:  # Chinese / Japanese / Indic: a vocabulary word anywhere in the text
+        if NOSPACE.search(w) and w in t:
+            hits.append((t.index(w), w))
     longs = [w for w in words if len(w) >= PREFIX_MIN]
     for m in WORD.finditer(t):
         w = m.group(0).strip("'-")

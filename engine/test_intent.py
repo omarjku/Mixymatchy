@@ -127,10 +127,12 @@ class TestNeedsTask(unittest.TestCase):
         for text in ("ER doc", "medic, hi", "Resus doc, ok"):
             with self.subTest(text=text):
                 assert_no_patient_data(self, screen(text), "needs_task")
-        # emergency / team words never create a requester
-        for text in ("code blue", "Code blue on ward 3, pulseless", "Rapid response team, she is deteriorating fast",
-                     "MET call - hypoxic", "Resus: cardiac arrest", "Emergency: found unresponsive",
-                     "journalist, code blue", "neighbour here, she is unresponsive"):
+        # emergency / team words never create a requester: no data, the screen asks who is asking
+        for text in ("Code blue on ward 3, pulseless", "Rapid response team, she is deteriorating fast",
+                     "MET call - hypoxic", "Resus: cardiac arrest", "Emergency: found unresponsive"):
+            with self.subTest(text=text):
+                assert_no_patient_data(self, screen(text), "needs_task")
+        for text in ("code blue", "journalist, code blue", "neighbour here, she is unresponsive"):
             with self.subTest(text=text):
                 assert_no_patient_data(self, screen(text), "not_authorised")
 
@@ -148,13 +150,68 @@ class TestNeedsTask(unittest.TestCase):
             with self.subTest(text=text):
                 assert_no_patient_data(self, s, "not_authorised")
 
-    def test_no_role_but_clear_task_asks_for_the_role(self):
-        for text in ("STAT head CT - bleeding risk meds?", "clinic visit in 5 min, summary of her main problems"):
+    def test_withdrawn_relational_purpose_titles_policy(self):
+        refuse = [
+            # negation / hedge / denied question
+            "I am not a nurse, but which tablets does she take?", "Keine Ärztin, nur die Nachbarin: Medikamente?",
+            "Doctor? Nope - her landlord. Diagnoses?", "ex-nurse, medication review", "retired GP, diabetes review",
+            "I just drive the ambulance, what meds?", "I only clean the ward, diagnoses?",
+            # relational identity
+            "the surgeon's husband, pre-op check", "Nurse's brother, medication review", "the GP's receptionist, meds",
+            # non-clinical purpose
+            "Nurse, out of curiosity: what does she have?", "GP, for my thesis, all diagnoses",
+            "Doctor, for the insurer, medication list", "Ärztin, für das Gericht, Diagnosen",
+            # titles
+            "Ward manager, discharge", "Medical officer, diagnoses", "Clinical director - medication review",
+            "Public health inspector, pre-op check", "Hospital auditor, diabetes review",
+            # owner policy (clinical_roles.json 'policy')
+            "Medical student, pre-op check", "Medizinstudentin, Visite", "Social worker, medication review",
+            # typo of a non-clinical word is not a fuzzy clinical role
+            "Jounalist, diagnoses", "Polcie officer, medication list"]
+        for text in refuse:
+            with self.subTest(text=text):
+                assert_no_patient_data(self, screen(text), "not_authorised")
+        keep = ["I'm the GP, not the surgeon, diabetes review", "No doctor available - ward nurse here, handover",
+                "midwife? no - community nurse, wound check", "Medico di guardia, consulenza"]
+        for text in keep:
             s = screen(text)
             with self.subTest(text=text):
-                assert_no_patient_data(self, s, "not_authorised")
-                self.assertIn("role is missing", s["message"])
-                self.assertTrue(all(x.startswith(tuple(C.ROLE_EXAMPLES)) for x in s["understood"]["suggestions"]))
+                self.assertNotIn(s["screen_mode"], ("needs_task", "not_authorised", "not_applicable"))
+
+    def test_scripts_shorthand_and_typos(self):
+        for text in ("врач, проверка лекарств", "кардиолог: давление", "医生，用药检查", "我是医生，血压",
+                     "看護師、申し送り", "lekarz, przegląd leków", "γιατρός, φάρμακα", "डॉक्टर, दवा",
+                     "پزشک، داروها", "רופא, תרופות", "SHO, admission", "reg on call - chest pain", "FY2: discharge",
+                     "SpR, blood pressure review", "ANAESTH PRE-OP", "ortho: hip fracture", "attending, meds",
+                     "Dcotor, medication review", "Pharmacsit, medication review", "Dr. - pre-op check"):
+            s = screen(text)
+            with self.subTest(text=text):
+                self.assertNotIn(s["screen_mode"], ("needs_task", "not_authorised"))
+                self.assertGreater(s["proof_bar"]["facts_shown"], 0)
+        for text in ("врач, привет", "医生，你好", "Dr.", "SHO"):
+            with self.subTest(text=text):
+                assert_no_patient_data(self, screen(text), "needs_task")
+
+    def test_wrong_task_fixes(self):
+        self.assertNotIn("B03", screen("Endocrinologist, thyroid")["understood"]["bundle_ids"])
+        self.assertIn("B11", screen("Oncologist, chemo")["understood"]["bundle_ids"])
+        u = screen("A&E, anticoagulation and bleeding")["understood"]
+        self.assertIn("B07", u["bundle_ids"])
+        self.assertNotIn("B04", u["bundle_ids"])
+
+    def test_no_role_but_clear_task_asks_for_the_role(self):
+        for text in ("STAT CT head, any bleeding risk meds?", "STAT head CT - anything relevant?",
+                     "clinic visit in 5 min, summary of her main problems", "pre-op check before the knee operation",
+                     "Medikationsabgleich und Diabeteskontrolle", "MEDICATION REVIEW", "prostate exam?"):
+            s = screen(text)
+            with self.subTest(text=text):
+                assert_no_patient_data(self, s, "needs_task")
+                u = s["understood"]
+                self.assertTrue(u["role_missing"])
+                self.assertIn("Please say who you are (your clinical role) and the task", s["message"])
+                self.assertTrue(all(x.startswith(tuple(C.ROLE_EXAMPLES)) for x in u["suggestions"]))
+        # with a role the same request gets data
+        self.assertGreater(screen("ED doc, STAT CT head, any bleeding risk meds?")["proof_bar"]["facts_shown"], 0)
 
     def test_nursing_abbreviations_and_topic_words(self):
         for text in ("RN, admission", "LPN - med pass", "charge RN, night shift", "ICU RN: sedation hold",
@@ -208,9 +265,12 @@ class TestNeedsTask(unittest.TestCase):
                 assert_no_patient_data(self, screen(text), "needs_task")
 
     def test_gate_comes_first(self):
-        for text in ("hi", "hello", "Journalist, hi", ""):
+        for text in ("Journalist, hi", "", "tell me everything about her"):
             with self.subTest(text=text):
                 assert_no_patient_data(self, screen(text), "not_authorised")
+        for text in ("hi", "hello", "ok thanks"):  # greeting / filler alone: the 'describe your task' screen
+            with self.subTest(text=text):
+                assert_no_patient_data(self, screen(text), "needs_task")
 
     def test_named_topic_or_task_is_enough(self):
         for text in ("GP, bone", "Anaesthetist, pre-op check before breast surgery", "Pharmacist, medication review"):

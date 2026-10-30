@@ -255,18 +255,25 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     gate = C.classify(req["clean"], kb_alias=(u.get("role_match") or {}).get("matched") if rules_role else None,
                       kb_role=rules_role,
                       task_evidence=C.strong_task(u.get("bundles_matched"), k.fallback_bundle) or bool(app["items"]))
+    if req.get("withdrawn_roles") and gate["decision"] not in ("kb_role", "clinical_term", "not_clinical"):
+        # a withdrawn clinical claim ('I'm not a doctor, but ...') and no other clinical identity left: refuse,
+        # even when the task itself is clinical
+        gate = {"decision": "not_clinical", "clinical": False, "term": req["withdrawn_roles"][0], "label": None}
     u["clinical_gate"] = gate
+    # no requester role stated (decision 'no_role' or 'clinical_task': the task alone is clear): never data, the
+    # needs_task screen asks who is asking and for the task (DECISIONS 19); a greeting alone asks for the task
+    if gate["decision"] in ("no_role", "clinical_task"):
+        from . import intent as I
+        words = re.findall(r"[^\W\d_][\w'-]*", req["clean"])
+        if words and all(w in I.lexicon()["never"] for w in words):
+            return needs_task_screen(u, "greeting / filler only", detail, t0)  # 'hello', 'ok': still 0 facts
+        if gate["decision"] == "clinical_task" or I.has_task(req["task"], k)["actionable"]:
+            ask = re.sub(r"\s+", " ", req["task"]).strip(" ,;:.?!")[:80]
+            u["clinical_gate"] = dict(gate, clinical=False)
+            return needs_task_screen(u, "no requester role stated", detail, t0, message=C.NEEDS_ROLE_MESSAGE,
+                                     suggestions=["%s, %s" % (r_, ask) for r_ in C.ROLE_EXAMPLES], role_missing=True)
     if not gate["clinical"]:
-        scr = not_authorised_screen(u, gate, detail, t0)
-        if gate["decision"] == "no_role":  # a clear task but no requester: still no data, ask for the role
-            from . import intent as I
-            if I.has_task(req["task"], k)["actionable"]:
-                ask = re.sub(r"\s+", " ", req["task"]).strip(" ,;:")[:80]
-                scr["message"] = C.NEEDS_ROLE_MESSAGE
-                scr["understood"].update(fallback_note=C.NEEDS_ROLE_MESSAGE, not_authorised_message=C.NEEDS_ROLE_MESSAGE,
-                                         suggestions=["%s, %s" % (r_, ask) for r_ in C.ROLE_EXAMPLES])
-                scr["proof_bar"]["summary_en"] = "No patient facts shown: no role stated."
-        return scr
+        return not_authorised_screen(u, gate, detail, t0)
     rq = u.get("llm_requester_check")
     if rq and rq.get("clinical") is False:  # the optional LLM may only restrict: requester not clinical -> refuse
         gate = dict(gate, decision="llm_not_clinical", clinical=False)
@@ -302,6 +309,10 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     else:
         cand = []
     defaults = [b for b in cand if b in k.bundle_by_id]
+    # the request names its own topics ('Endocrinologist, thyroid'): the core summary plus those topics, not the
+    # role's typical task (which may be about something else, e.g. diabetes)
+    if named_pre and defaults and k.fallback_bundle in k.bundle_by_id:
+        defaults = [k.fallback_bundle]
     if (u["tasks_from"] == "fallback" and defaults and not app["items"]
             and not OVERVIEW_RX.search(u.get("task_text") or "")):
         llm_focus, tcheck = u.get("llm_focus_proposal"), u.get("task_check")
@@ -575,22 +586,29 @@ def other_patient_screen(text, req, detail, t0):
     return scr
 
 
-def needs_task_screen(u, reason, detail, t0, llm_reason=None):
-    """Clinical requester, no recognisable task: zero patient facts, no counts, a request to name the task."""
+def needs_task_screen(u, reason, detail, t0, llm_reason=None, message=None, suggestions=None, role_missing=False):
+    """Zero patient facts, no counts: a request to name the task (clinical requester, no task) or, with
+    role_missing, to say who is asking (a task but no requester role)."""
     from . import intent as I
     gate = u.get("clinical_gate") or {}
-    role_id = u.get("role_id") if u.get("role_id") not in (None, "other") else None
-    label = (u.get("role_label") if role_id else None) or gate.get("label") or "Clinician"
+    role_id = u.get("role_id") if u.get("role_id") not in (None, "other") and not role_missing else None
+    label = "Role not stated" if role_missing else \
+        (u.get("role_label") if role_id else None) or gate.get("label") or "Clinician"
+    msg = message or I.NEEDS_TASK_MESSAGE
     scr = not_authorised_screen(u, gate, detail, t0)
     u = scr["understood"]
     u.update({"role_id": role_id or "other", "role_label": label, "task_labels": ["Task not stated"],
-              "tasks_from": "needs_task", "screen_mode": "needs_task", "suggestions": list(I.NEEDS_TASK_SUGGESTIONS),
-              "fallback_note": I.NEEDS_TASK_MESSAGE, "not_authorised_message": None,
-              "needs_task_message": I.NEEDS_TASK_MESSAGE, "needs_task_reason": reason,
+              "tasks_from": "needs_task", "screen_mode": "needs_task",
+              "suggestions": list(suggestions or I.NEEDS_TASK_SUGGESTIONS),
+              "fallback_note": msg, "not_authorised_message": None, "role_missing": role_missing,
+              "needs_task_message": msg, "needs_task_reason": reason,
               "llm_used": bool(llm_reason), "llm_reason": llm_reason})
+    if role_missing:
+        u["task_labels"] = ["Role not stated"]
     scr["screen_mode"] = "needs_task"
-    scr["message"] = I.NEEDS_TASK_MESSAGE
-    scr["proof_bar"]["summary_en"] = "No patient facts shown: no clinical task stated."
+    scr["message"] = msg
+    scr["proof_bar"]["summary_en"] = ("No patient facts shown: no role stated." if role_missing else
+                                      "No patient facts shown: no clinical task stated.")
     return scr
 
 

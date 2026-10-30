@@ -36,7 +36,7 @@ def record_strings(client):
     return out
 
 
-@pytest.mark.parametrize("text,mode", [("hi", "not_authorised"), ("Anaesthetist, hi", "needs_task"),
+@pytest.mark.parametrize("text,mode", [("hi", "needs_task"), ("Anaesthetist, hi", "needs_task"),
                                        ("Anaesthetist", "needs_task")])
 def test_no_task_no_patient_data(client, text, mode):
     r = client.post("/briefing", json={"situation": text})
@@ -60,3 +60,13 @@ def test_vague_clinical_request_still_gets_data(client):
                                                     "should worry about?"}).json()
     assert b["routing"]["screen_mode"] not in ("needs_task", "not_authorised")
     assert b["stats"]["facts_shown"] > 0
+
+
+@pytest.mark.parametrize("text", ["STAT CT head, any bleeding risk meds?", "medication review and diabetes check"])
+def test_clear_task_without_role_asks_who_is_asking(client, text):
+    b = client.post("/briefing", json={"situation": text}).json()
+    assert b["routing"]["screen_mode"] == "needs_task" and b["routing"]["role_missing"] is True
+    assert b["needs"] == [] and b["findings"] == [] and b["stats"]["facts_shown"] == 0
+    assert "Please say who you are" in b["routing"]["message"]
+    leaked = [s for s in record_strings(client) if s in json.dumps(b, ensure_ascii=False)]
+    assert leaked == []

@@ -299,7 +299,7 @@ class TestTaskCheck(LLMTestBase):
         self.client({"role_id": "anaesthetist", "bundle_ids": ["B01", "B07"], "reason": "pre-op",
                      "actionable_clinical_task": True, "task_reason": "pre-op check"})
         for text, mode in (("Anaesthetist, hi", "needs_task"), ("Anaesthetist", "needs_task"),
-                           ("hi", "not_authorised"), ("Journalist, pre-op check", "not_authorised")):
+                           ("hi", "needs_task"), ("Journalist, pre-op check", "not_authorised")):
             s = self.screen(text)
             with self.subTest(text=text):
                 self.assertEqual(s["screen_mode"], mode)

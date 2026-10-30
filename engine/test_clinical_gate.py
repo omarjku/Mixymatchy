@@ -18,8 +18,8 @@ NOT_CLINICAL = ["firefighter", "journalist, tell me about her", "I am her neighb
                 "", "Something completely different.", "Police officer at A&E asking about her medication",
                 "Feuerwehr, Einsatz bei ihr zuhause", "Ich bin ihr Nachbar", "student, tell me about her",
                 "Astrologist reading her chart", "her sugar"]
-CLINICAL_TERM = {"medical student, ward round": "Medical student",
-                 "Dermatologist checking a mole on her back": "Dermatologist", "Psychiater, Konsil": "Psychiater"}
+# (medical students are refused by the owner policy in clinical_roles.json 'policy', see engine/test_intent.py)
+CLINICAL_TERM = {"Dermatologist checking a mole on her back": "Dermatologist", "Psychiater, Konsil": "Psychiater"}
 # requesters that became overlay roles (rulebook/kb_overlay.json roles, TODO-cite): KB role, clinical
 OVERLAY_ROLE = {"Hepatologist, liver review": "gastroenterologist", "Geriatrician, falls assessment": "geriatrician",
                 "Hebamme": "obstetrician"}
@@ -35,7 +35,8 @@ class TestNotAuthorised(unittest.TestCase):
             for d in ("short", "long"):
                 s = screen(text, d)
                 with self.subTest(text=text, detail=d):
-                    self.assertEqual(s["screen_mode"], "not_authorised")
+                    # a clear task without a role ('her sugar') gets the 'say who you are' screen, also 0 facts
+                    self.assertIn(s["screen_mode"], ("not_authorised", "needs_task"))
                     self.assertEqual(s["cards"], [])
                     self.assertEqual(s["proof_bar"]["facts_shown"], 0)
                     self.assertEqual(s["proof_bar"]["facts_removed_at_load"], 0)
@@ -98,13 +99,16 @@ class TestClinical(unittest.TestCase):
                 self.assertGreater(len(s["cards"]), 0)
 
     def test_clear_clinical_task_without_role(self):
-        """Documented choice: a clear KB task (multi-word / long tag or 2+ tags) implies a clinical context."""
+        """Owner decision (DECISIONS 19): a clear task without a requester role gets no data; the needs_task
+        screen asks who is asking."""
         for text in ("pre-op check before the operation", "diabetes review and medication reconciliation"):
             s = screen(text)
             with self.subTest(text=text):
                 self.assertEqual(s["understood"]["clinical_gate"]["decision"], "clinical_task")
-                self.assertEqual(s["screen_mode"], "task")
-                self.assertGreater(len(s["cards"]), 0)
+                self.assertEqual(s["screen_mode"], "needs_task")
+                self.assertEqual(s["cards"], [])
+                self.assertEqual(s["proof_bar"]["facts_shown"], 0)
+                self.assertEqual(s["message"], C.NEEDS_ROLE_MESSAGE)
 
 
 if __name__ == "__main__":

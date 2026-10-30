@@ -81,6 +81,22 @@ def _blank_alias(t, alias):
     return "".join(out)
 
 
+def _edits(a, b):
+    """Optimal string alignment distance (Damerau-Levenshtein with adjacent transpositions)."""
+    d = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
+    for i in range(len(a) + 1):
+        d[i][0] = i
+    for j in range(len(b) + 1):
+        d[0][j] = j
+    for i in range(1, len(a) + 1):
+        for j in range(1, len(b) + 1):
+            c = 0 if a[i - 1] == b[j - 1] else 1
+            d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c)
+            if i > 1 and j > 1 and a[i - 1] == b[j - 2] and a[i - 2] == b[j - 1]:
+                d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)
+    return d[len(a)][len(b)]
+
+
 _PERSON = {}
 
 
@@ -102,7 +118,8 @@ def _non_clinical_gram(g):
         from . import clinical as C
         if len(_NONCLIN) > 5000:
             _NONCLIN.clear()
-        _NONCLIN[g] = bool(C._hits(fold(g), C.lexicon()["non_clinical"]))
+        _NONCLIN[g] = bool(C._hits(fold(g), C.lexicon()["non_clinical"])) or \
+            any(C.fuzzy_non_clinical(w) for w in g.split() if len(w) >= 5)  # denylist before fuzzy roles
     return _NONCLIN[g]
 
 
@@ -146,6 +163,10 @@ def match_role(t, kb):
                 if g[:1] != a[:1] or is_clinical_word(g) or _non_clinical_gram(g):
                     continue  # 'hospital director' is not a typo of 'hospital doctor'
                 r = difflib.SequenceMatcher(None, g, a).ratio()
+                if r < FUZZY_THRESHOLD and " " not in a and len(a) >= 6 and abs(len(g) - len(a)) <= 2:
+                    d = _edits(g, a)  # transposed / dropped letters: 'Dcotor', 'pharmacsit'
+                    if d <= (1 if len(a) < 8 else 2):
+                        r = FUZZY_THRESHOLD
                 if r >= FUZZY_THRESHOLD and (best is None or r > best[0]):
                     best = (r, role["id"], alias)
     if best:

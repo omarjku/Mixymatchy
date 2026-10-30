@@ -406,6 +406,7 @@ def _routing(screen: dict) -> dict:
             "slots_shown": len(screen.get("cards") or []), "anchor_date": u.get("anchor_date"),
             "screen_mode": u.get("screen_mode"), "suggestions": u.get("suggestions") or [],
             "role_label": u.get("role_label"), "message": screen.get("message"),
+            "role_missing": bool(u.get("role_missing")),
             "clinical_gate": (u.get("clinical_gate") or {}).get("decision"),
             "llm_used": bool(u.get("llm_used")), "llm_reason": u.get("llm_reason") if u.get("llm_used") else None,
             "applicability_note": u.get("applicability_note"), "applicability": u.get("applicability"),

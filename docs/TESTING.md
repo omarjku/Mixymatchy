@@ -213,6 +213,12 @@ Run 5 (round 2): 130/234. Red-team of 103 inputs found 3 leaks -> not pushed.
 
 Run 6 (round 3, `eval/synthetic/results/holdout_v2_run6.json`, `fix3_verify.md`, `fix4_verify.md`): 130/234, 0 regressions. Red-team of 168 own inputs: 8 leaks (7 pre-existing on cb82abe), 11 false blocks (non-Latin scripts, UK shorthand SHO/reg, typos) -> round 4.
 
+Run 7 (gate round 4): 125/234 (policy: no role -> needs_task for h028/h031/h060; bugs h033 documentation specialist -> physician, h048 typo'd oncologist task). Red-team harness eval/redteam (484 inputs, `make redteam`, also in the start-up self-test with the LLM): rules-only leaks 37 -> 17, false blocks 20 -> 15.
+
+### Red-team
+
+`eval/redteam/` holds 484 adversarial and benign inputs (non-clinician claims, negation, relational and purpose phrasing, titles, other scripts, shorthand). `make redteam` runs them rules-only and reports leaks (should be refused but passed) and false blocks (should pass but refused). The same set runs in the start-up self-test with the LLM guard on. Live numbers with the LLM guard come from Render logs ("EVAL: redteam").
+
 ## 7. Known open items
 
 | Item | Detail | Owner |

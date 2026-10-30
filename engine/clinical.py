@@ -33,6 +33,7 @@ L = r"\w"          # Unicode letters/digits (accent-folded text, Arabic script i
 PREFIX_MIN = 6
 PREFIX_MIN_INTL = 8
 ARABIC = re.compile(r"[\u0600-\u06FF]")
+CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff]")
 
 NOT_AUTHORISED_MESSAGE = ("Second Eye shows patient information only to clinical staff for a care task. "
                           "Please state your clinical role and what you are doing, e.g. 'Anaesthetist, pre-op check'.")
@@ -45,8 +46,9 @@ NOT_AUTHORISED_SUGGESTIONS = [
 
 # no requester at all but a clear clinical request ('STAT CT head, any bleeding risk meds?'): still no data
 # (an explicit requester is required), but the message asks for the role and offers the request with one
-NEEDS_ROLE_MESSAGE = ("Your request is clear, but your role is missing. Second Eye shows patient information only to "
-                      "clinical staff: please add your clinical role, e.g. 'Emergency physician, ...'.")
+NEEDS_ROLE_MESSAGE = ("Please say who you are (your clinical role) and the task. Second Eye shows patient "
+                      "information only to clinical staff for a care task, e.g. 'Emergency physician, head CT: "
+                      "bleeding risk medication?' or 'Ward nurse, admission handover'.")
 ROLE_EXAMPLES = ["Emergency physician", "GP", "Ward nurse"]
 
 _LEX = None
@@ -60,6 +62,8 @@ def _term_rx(term, mode):
     pre = "(?<![%s])" % L
     if ARABIC.search(term):
         return re.compile(pre + "(?:[وفبلك])?(?:ال|لل)?" + t + "(?:ة|ه|ها|ي|ات|ون|ين)?(?![%s])" % L)
+    if CJK.search(term):  # Chinese / Japanese: no spaces between words, plain substring
+        return re.compile(t)
     if (mode == "de" and len(term) >= PREFIX_MIN) or (mode == "intl" and len(term) >= PREFIX_MIN_INTL):
         return re.compile(pre + t + "[%s-]*" % L)          # prefix: the span covers the whole word
     return re.compile(pre + t + "(?:s|es)?(?![%s])" % L)
@@ -75,9 +79,21 @@ def lexicon():
         def terms(kind):
             return [(t, _term_rx(t, mode)) for mode in ("en", "de", "intl")
                     for t in d.get("%s_%s" % (kind, mode)) or []]
+        tit = d.get("titles_override") or {}
+        pol = d.get("policy") or {}
+        pur = d.get("non_clinical_purpose") or {}
         _LEX = {
             "clinical": terms("clinical"),
             "non_clinical": terms("non_clinical"),
+            "titles": [(t, _term_rx(t, "en")) for t in tit.get("words") or []],
+            "title_exceptions": {fold(norm_text(x)) for x in tit.get("exceptions") or []},
+            "policy": [(t, _term_rx(t, "intl" if len(t) >= PREFIX_MIN_INTL else "en")) for t in pol.get("refuse_roles") or []],
+            "purpose": [(t, re.compile(r"(?<![\w'])%s(?![\w])" % re.escape(fold(norm_text(t)))))
+                        for t in pur.get("phrases") or []],
+            "clin_words": sorted({fold(norm_text(x)) for k_ in ("clinical_en", "clinical_de") for x in d.get(k_) or []
+                                  if " " not in x and len(x) >= 5}),
+            "non_words": sorted({fold(norm_text(x)) for k_ in ("non_clinical_en", "non_clinical_de")
+                                 for x in d.get(k_) or [] if " " not in x and len(x) >= 5}),
             "patterns": [re.compile(fold(p)) for p in pats.get("clinical") or []],
             "exclude": [re.compile(fold(p)) for p in pats.get("exclude") or []],
         }
@@ -184,6 +200,24 @@ def self_described_non_clinical(t, non_hits, clin_spans):
     return None
 
 
+_SELF_JOB = re.compile(r"(?<![\w'])i (?:actually |really |just |only |mostly )?(?:deliver|drive|sell|clean|cook|"
+                       r"guard|fix|repair)s?(?![\w'])")
+
+
+def fuzzy_non_clinical(word):
+    """A typo of a non-clinical word ('Cleanr', 'jounalist'), unless the word is closer to a clinical one."""
+    import difflib
+    w = fold(norm_text(word))
+    lex = lexicon()
+    if w in lex["clin_words"] or w in lex["non_words"]:
+        return None
+    best_non = max(((difflib.SequenceMatcher(None, w, x).ratio(), x) for x in lex["non_words"]
+                    if abs(len(x) - len(w)) <= 2 and x[:1] == w[:1]), default=(0, None))
+    best_cl = max((difflib.SequenceMatcher(None, w, x).ratio() for x in lex["clin_words"]
+                   if abs(len(x) - len(w)) <= 2), default=0)
+    return best_non[1] if best_non[0] >= 0.85 and best_non[0] > best_cl else None
+
+
 def _label(term):
     return term[:1].upper() + term[1:]
 
@@ -197,8 +231,42 @@ def classify(text, kb_alias=None, task_evidence=False, kb_role=False):
     if kb_alias:
         clin += [(m.start(), m.end(), kb_alias, "kb_role")
                  for m in re.compile("(?<![%s])%s" % (L, re.escape(fold(norm_text(kb_alias))))).finditer(t)]
+    for term, rx in lex["purpose"]:  # a non-clinical purpose refuses whoever asks ('just curious', 'for court')
+        if rx.search(t):
+            return {"decision": "not_clinical", "clinical": False, "term": term, "label": None}
+    # owner policy (clinical_roles.json 'policy'): clinical-adjacent roles that do not treat are refused
+    pol = _hits(t, lex["policy"])
+    clin = [h for h in clin if not any(ps <= h[0] and h[1] <= pe for ps, pe, _t in pol)]
     non = [(s, e, term, "not_clinical") for s, e, term in _hits(t, lex["non_clinical"])
            if not any(cs <= s and e <= ce and (ce - cs) > (e - s) for cs, ce, _t, _k in clin)]
+    non += [(s, e, term, "not_clinical") for s, e, term in pol]
+    # title words win even inside a clinical-looking term (ward manager, medical director, health inspector)
+    for s, e, term in _hits(t, lex["titles"]):
+        inside = [t[cs:ce].strip() for cs, ce, _t, _k in clin if cs <= s and e <= ce]
+        if not any(x in lex["title_exceptions"] for x in inside):
+            non.append((s, e, term, "not_clinical"))
+            clin = [h for h in clin if not (h[0] <= s and e <= h[1])]
+    # typos of non-clinical words in the leading phrase ('Cleanr') are checked before any fuzzy clinical match
+    lead0 = re.search(r"[,;:.!?()]|\s[-–]\s", t)
+    lead0 = lead0.start() if lead0 else len(t)
+    lead_clin = any(cs < lead0 for cs, _ce, _t, _k in clin)  # 'Medico di guardia': a clinical word is there
+    for m in ([] if lead_clin else re.finditer(r"[^\W\d_][\w-]{4,}", t[:lead0])):
+        if any(cs <= m.start() < ce for cs, ce, _t, _k in clin + non):
+            continue
+        term = fuzzy_non_clinical(m.group(0))
+        if term:
+            non.append((m.start(), m.end(), term, "not_clinical"))
+    # relational identity: 'doctor's wife', 'GP's assistant', 'pharmacist's cousin' -> not that role
+    for cs, ce, _t, _k in clin:
+        rel = re.match(r"(?:'s|s'|’s)\s+", t[ce:])
+        if rel and any(s == ce + rel.end() for s, _e, _t2, _k2 in non):
+            return {"decision": "not_clinical", "clinical": False, "term": t[cs:ce] + "'s", "label": None}
+    # a first-person non-clinical job ('I drive the ambulance only', 'I deliver pizza'): no clinical role in it
+    for m in _SELF_JOB.finditer(t):
+        end = re.search(r"[,;:.!?()]", t[m.end():])
+        clause = (m.end(), m.end() + (end.start() if end else len(t)))
+        if not any(clause[0] <= cs < clause[1] for cs, _ce, _t, _k in clin):
+            return {"decision": "not_clinical", "clinical": False, "term": m.group(0).strip(), "label": None}
     if clin or kb_role:  # a clinical requester who mentions a relative as the source of the question
         non = [h for h in non if not third_party_mention(t, h[0], h[1])]
     selfd = self_described_non_clinical(t, non, [(cs, ce) for cs, ce, _t, _k in clin])
