@@ -11,7 +11,7 @@ RUN npm run build
 
 FROM python:3.12-slim
 WORKDIR /app
-RUN pip install --no-cache-dir "fastapi>=0.115" "uvicorn[standard]>=0.30" "pydantic>=2.7" "python-dotenv>=1.0"
+RUN pip install --no-cache-dir "fastapi>=0.115" "uvicorn[standard]>=0.30" "pydantic>=2.7" "python-dotenv>=1.0" "anthropic==2.3.0"
 COPY . .
 RUN rm -rf frontend mobile
 COPY --from=web /web/dist /app/static

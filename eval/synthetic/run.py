@@ -1,4 +1,7 @@
-"""Synthetic situation eval: python3 -m eval.synthetic.run [--verbose] [--only s01,s02]
+"""Synthetic situation eval: python3 -m eval.synthetic.run [--verbose] [--only s01,s02] [--llm]
+
+--llm turns on the optional LLM understand layer (engine/llm.py; needs ANTHROPIC_API_KEY, spends real
+money within the budget guard) and prints the calls and estimated spend of the run.  Default: rules only.
 
 Scores the deterministic engine through the API adapter (backend/app/adapter.build_briefing) in the short
 view as the mobile app shows it: P1 needs + the P2 'also relevant' group.  Situations and expected answers
@@ -106,25 +109,29 @@ def invariants(b):
     return errs
 
 
-def run(only=None, verbose=False):
+def run(only=None, verbose=False, use_llm=False, out=print):
     data = json.loads(CASES.read_text(encoding="utf-8"))["situations"]
     adapter.engine_store()
     tot = ok_n = 0
     sit_ok = 0
     fails, slow = [], 0
+    max_ms = MAX_MS
+    if use_llm:  # the model call is outside the engine's latency budget; it is capped by its own timeout
+        from engine import llm
+        max_ms = MAX_MS + 1000 * llm.timeout_s()
     for s in data:
         if only and s["id"] not in only:
             continue
         t0 = time.perf_counter()
-        b = adapter.build_briefing(s["situation"], detail="short", use_llm=False)
+        b = adapter.build_briefing(s["situation"], detail="short", use_llm=use_llm)
         ms = (time.perf_counter() - t0) * 1000
         inv = invariants(b)
         dump = len(b.needs) > MAX_NEEDS
-        slow += ms > MAX_MS
+        slow += ms > max_ms
         all_ok = True
         for i, q in enumerate(s["questions"], 1):
             ok, why = check_q(q, b)
-            if ok and (inv or dump or ms > MAX_MS):
+            if ok and (inv or dump or ms > max_ms):
                 ok, why = False, "; ".join(inv[:2]) or ("%d cards (dump)" % len(b.needs) if dump else "%.0f ms" % ms)
             tot += 1
             ok_n += ok
@@ -134,14 +141,32 @@ def run(only=None, verbose=False):
                               b.routing.get("screen_mode"), b.task))
         sit_ok += all_ok
         if verbose:
-            print("%s %-4s %5.0f ms %2d cards  %s | %s | %s" % ("OK  " if all_ok else "FAIL", s["id"], ms, len(b.needs),
+            out("%s %-4s %5.0f ms %2d cards  %s | %s | %s" % ("OK  " if all_ok else "FAIL", s["id"], ms, len(b.needs),
                                                              s["situation"][:60], b.routing.get("role_label"), b.task[:50]))
-    print("\nsynthetic eval: questions %d/%d (%.1f%%), situations %d/%d, slow (> %d ms) %d"
-          % (ok_n, tot, 100.0 * ok_n / max(tot, 1), sit_ok, len(only or data) if only else len(data), MAX_MS, slow))
+    out("synthetic eval%s: questions %d/%d (%.1f%%), situations %d/%d, slow (> %d ms) %d"
+        % (" (llm)" if use_llm else "", ok_n, tot, 100.0 * ok_n / max(tot, 1), sit_ok,
+           len(only or data) if only else len(data), max_ms, slow))
     for f in fails:
-        print("  FAIL %s q%d [%s] %s -> %s  (role %s, mode %s, task %s)" % (f[0], f[1], f[2][:50], f[3], f[4], f[5], f[6],
+        out("  FAIL %s q%d [%s] %s -> %s  (role %s, mode %s, task %s)" % (f[0], f[1], f[2][:50], f[3], f[4], f[5], f[6],
                                                                           f[7][:40]))
     return ok_n, tot
+
+
+def llm_on():
+    """Turn the LLM layer on for this process; -> (available, budget snapshot before)."""
+    import os
+    from engine import llm, llm_budget
+    os.environ["SECOND_LOOK_LLM"] = "1"
+    return llm.available(), llm_budget.budget().snapshot()
+
+
+def spend_line(before):
+    from engine import llm, llm_budget
+    now = llm_budget.budget().snapshot()
+    return ("llm: model %s, calls %d (cache hits %d, errors %d), est. spend this run EUR %.4f, total EUR %.4f "
+            "of budget EUR %.2f" % (llm.model(), now["calls_total"] - before["calls_total"],
+                                    now["cache_hits"] - before["cache_hits"], now["errors"] - before["errors"],
+                                    now["spend_eur"] - before["spend_eur"], now["spend_eur"], now["budget_eur"]))
 
 
 def main():
@@ -149,8 +174,17 @@ def main():
     ap.add_argument("--verbose", "-v", action="store_true")
     ap.add_argument("--only", default="")
     ap.add_argument("--min", type=float, default=0.0, help="exit 1 below this pass rate (percent)")
+    ap.add_argument("--llm", action="store_true", help="enable the LLM understand layer (needs ANTHROPIC_API_KEY)")
     a = ap.parse_args()
-    ok, tot = run(set(x for x in a.only.split(",") if x) or None, a.verbose)
+    before = None
+    if a.llm:
+        ok_llm, before = llm_on()
+        if not ok_llm:
+            print("llm: not available (SECOND_LOOK_LLM=1 needs ANTHROPIC_API_KEY and the anthropic package); "
+                  "running rules only")
+    ok, tot = run(set(x for x in a.only.split(",") if x) or None, a.verbose, use_llm=a.llm)
+    if before is not None:
+        print(spend_line(before))
     return 1 if 100.0 * ok / max(tot, 1) < a.min else 0
 
 

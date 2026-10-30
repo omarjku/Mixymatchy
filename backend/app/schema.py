@@ -121,7 +121,8 @@ class Briefing(BaseModel):
     findings: list[Finding] = []
     stats: dict = {}             # always computed from the briefing itself, never typed in
     detail: Optional[str] = None  # "short" (P1, default) | "long" (P1-P3); KB rulebook only
-    routing: dict = {}           # role, bundles, matched tags, rules fired, fallback note, rulebook version
+    routing: dict = {}           # role, bundles, matched tags, rules fired, fallback note, rulebook version;
+                                 # llm_used (bool) / llm_reason (str|None): the optional AI reading changed the route
 
 
 class BriefingRequest(BaseModel):

@@ -240,14 +240,16 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     app = A.check(u.get("task_text") or "", st)
 
     # clinical gate (rulebook/clinical_roles.json): patient data only for a clinical requester
-    gate = C.classify(text, kb_alias=(u.get("role_match") or {}).get("matched") if role else None,
-                      kb_role=bool(role),
+    # a role read by the LLM never authorises: kb_role only for a role the rules found in the text
+    rules_role = bool(role) and (u.get("role_match") or {}).get("method") != "llm"
+    gate = C.classify(text, kb_alias=(u.get("role_match") or {}).get("matched") if rules_role else None,
+                      kb_role=rules_role,
                       task_evidence=C.strong_task(u.get("bundles_matched"), k.fallback_bundle) or bool(app["items"]))
     u["clinical_gate"] = gate
     if not gate["clinical"]:
         return not_authorised_screen(u, gate, detail, t0)
     defaults = [b for b in (role or {}).get("default_bundles") or [] if b in k.bundle_by_id and b != k.fallback_bundle]
-    if (u["tasks_from"] == "fallback" and len(defaults) == 1 and not app["items"]
+    if (rules_role and u["tasks_from"] == "fallback" and len(defaults) == 1 and not app["items"]
             and not OVERVIEW_RX.search(u.get("task_text") or "")):
         # a recognised role with one typical task, task wording not recognised: that task, with a visible note
         u = route(text, k, st, as_of, detail=detail, use_llm=False, force_bundles=defaults)
@@ -385,6 +387,7 @@ def not_authorised_screen(u, gate, detail, t0):
         "fallback_note": C.NOT_AUTHORISED_MESSAGE, "not_authorised_message": C.NOT_AUTHORISED_MESSAGE,
         "applicability_note": None, "applicability": {"sex": None, "passage": None, "word": None, "items": []},
         "rules": {"listed": [], "fired": [], "not_fired": [], "in_fill": []}, "llm_note": None,
+        "llm_used": False, "llm_reason": None,
     })
     return {
         "understood": u, "rulebook": "kb", "detail": detail, "screen_mode": "not_authorised",

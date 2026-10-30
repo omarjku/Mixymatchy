@@ -4,8 +4,10 @@ situation text -> role (aliases, EN + DE, fuzzy at a fixed threshold) -> bundles
 -> implied bundles (e.g. B04 adds B05) -> slots (union, best priority wins) -> role modifiers
 -> link rules evaluated on the facts -> detail filter (short = P1, long = P1 + P2 + P3).
 
-Deterministic.  The optional LLM proposal (engine/llm.py) may only fill gaps with IDs that exist in
-the KB: a unique alias/tag match always wins over the model (guide step 3).
+Deterministic.  The optional LLM layer (engine/llm.py, SECOND_LOOK_LLM=1) reads every request; its
+proposal is merged with IDs that exist in the KB only: it may ADD bundles to the rules result, and set the
+role only when the rules found none or a fuzzy (low-confidence) match.  An alias match always wins over
+the model's role (guide step 3).  Timeout, error or budget stop -> the rules result alone.
 """
 import difflib
 import re
@@ -18,6 +20,7 @@ from .understand import _phrase_rx, _you_are_spans, extract_modifiers, norm_text
 FUZZY_THRESHOLD = 0.85        # fixed, per the guide; only aliases of 5+ characters are fuzzy-matched
 SAFETY_RULES = {"R01", "R02", "R03", "R10", "R17"}   # allergies, blood thinners, contrast reaction/metformin: add at P1
 PRIO_RANK = {"P1": 1, "P2": 2, "P3": 3}
+LLM_EXTRA_WITH_RULES = 1     # bundles the LLM may add when the rules matched a task (up to 3 when they did not)
 
 
 # Rules whose when_task/when_fact the engine evaluates on the facts.  when_task is satisfied by the rule
@@ -279,18 +282,30 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
     matched = match_bundles(t_task, kb)
     chosen = choose_bundles(matched, role)
     how = "kb_alias_tags"
-    llm_note = None
+    llm_note, llm_used, llm_reason, llm_info = None, False, None, None
     if use_llm:
-        prop = llm.understand(text, [r["id"] for r in kb.roles], [b["id"] for b in kb.bundles])
+        # every request: the model's reading is merged in (rules result + LLM-added bundles); the role is
+        # taken from the model only when the rules found none or only a fuzzy (low-confidence) match
+        prop, llm_info = llm.propose(text, kb)
         if prop:
             rid = prop.get("role_id")
-            bids = [x for x in prop.get("task_ids") or prop.get("bundle_ids") or [] if x in kb.bundle_by_id]
-            if rid in kb.role_by_id and not role:
-                role_id, role, method = rid, kb.role_by_id[rid], "llm"
-            if bids and not chosen:
-                chosen, how = sorted(set(bids), key=lambda b: int(b[1:])), "kb_llm"
-            elif bids and set(bids) != set(chosen):
-                llm_note = "LLM proposed %s; alias/tag match kept" % bids
+            if rid in kb.role_by_id and (not role or (method == "fuzzy" and rid != role_id)):
+                role_id, role, alias, method = rid, kb.role_by_id[rid], None, "llm"
+                t_task = t
+                matched = match_bundles(t_task, kb)
+                chosen = choose_bundles(matched, role)
+                llm_used = True
+            added = [b for b in prop.get("bundle_ids") or [] if b in kb.bundle_by_id and b not in chosen
+                     and b != kb.fallback_bundle]
+            if chosen:  # the rules already found the task: one extra bundle at most (no screen dumps)
+                added = added[:LLM_EXTRA_WITH_RULES]
+            if added:
+                how = "kb_llm" if not chosen else "kb_alias_tags+llm"
+                chosen = sorted(set(chosen) | set(added), key=lambda b: int(b[1:]))
+                llm_used = True
+                llm_note = "LLM added %s" % ", ".join(added)
+            if llm_used:
+                llm_reason = prop.get("reason") or None
     note = None
     if force_bundles:  # screen.py: a recognised role's own task when the wording is not recognised
         chosen, how = list(force_bundles), "role_default"
@@ -320,12 +335,15 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
         "tasks_from": how,
         "fallback_note": note,
         "llm_note": llm_note,
+        "llm_used": llm_used,
+        "llm_reason": llm_reason,
+        "llm": llm_info,
         "rules": rules,
         "detail": detail,
         "slots": [{"slot": s, "priority": info[s]["priority"], "origins": info[s]["origins"]} for s in order],
         "slots_shown": shown,
         "slot_info": info,
         "modifiers": extract_modifiers(t),
-        "method": "rules+llm" if how == "kb_llm" or method == "llm" else "rules",
+        "method": "rules+llm" if llm_used else "rules",
         "rulebook": "kb %s" % kb.version,
     }

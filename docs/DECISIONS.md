@@ -17,5 +17,6 @@ Submission UI = Zoha's `mobile/` app on main (backend-wired). The Next.js `front
 13. **Privacy fixes:** no patient data in browser history state, self-hosted fonts, on-device voices only, mock patient renamed.
 14. **English translation under German quotes:** deferred (needs an LLM key); toggle shows UI language only.
 15. **Lymph-node item:** stays a documentation note until the medical team decides.
+16. **AI reading (optional, owner budget < EUR 5, no translation):** Claude Haiku 5.5 reads every request when `SECOND_LOOK_LLM=1` + `ANTHROPIC_API_KEY` are set (engine/llm.py). Structured output with enums of real role/bundle ids; it may add bundles (1 extra when the rules matched, up to 3 when they did not) and set the role only when the rules found none or a fuzzy one. It never authorises: the clinical gate reads the text alone. Timeout 4 s / error / budget stop -> rules only. Budget guard engine/llm_budget.py (`SECOND_LOOK_LLM_BUDGET_EUR`=4, `SECOND_LOOK_LLM_MAX_CALLS_PER_DAY`=3000, LRU cache); /health shows `llm`; Briefing `routing.llm_used` / `routing.llm_reason`. `EVAL_ON_START=1` prints a self-test to the logs ("EVAL:").
 
 Working mode: commit straight to `main` after the full test suite passes; checkpoints are branches `checkpoint/N-*`.

@@ -29,6 +29,12 @@ async def lifespan(_app: FastAPI):
     if store.use_engine():
         store.documents()
         store.segments()
+    if os.environ.get("EVAL_ON_START") == "1":  # opt-in self-test, printed to the logs ("EVAL:" lines)
+        try:
+            from eval.selftest import start_background
+            start_background()
+        except Exception as e:  # never stop the app over the self-test
+            print("EVAL: self-test not started: %r" % (e,), flush=True)
     yield
 
 
@@ -64,8 +70,11 @@ def audit_access(session: Session, resource: str, task: str = "", **extra) -> No
 
 @app.get("/health")
 def health() -> dict:
+    from engine import llm
+    s = llm.status()
     return {"ok": True, "backend": store.BACKEND, "documents": len(store.documents()),
-            "facts": store.facts_count()}
+            "facts": store.facts_count(),
+            "llm": {k: s[k] for k in ("enabled", "calls_today", "spend_eur_est", "budget_eur")}}
 
 
 @app.get("/documents")

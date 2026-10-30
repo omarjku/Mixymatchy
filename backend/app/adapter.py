@@ -394,6 +394,7 @@ def _routing(screen: dict) -> dict:
             "screen_mode": u.get("screen_mode"), "suggestions": u.get("suggestions") or [],
             "role_label": u.get("role_label"), "message": screen.get("message"),
             "clinical_gate": (u.get("clinical_gate") or {}).get("decision"),
+            "llm_used": bool(u.get("llm_used")), "llm_reason": u.get("llm_reason") if u.get("llm_used") else None,
             "applicability_note": u.get("applicability_note"), "applicability": u.get("applicability"),
             "also_relevant": u.get("also_relevant") or [], "also_relevant_more": u.get("also_relevant_more") or 0,
             "other_record_issues": screen.get("other_record_issues", 0),
