@@ -395,12 +395,18 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
     chosen = choose_bundles(matched, role)
     how = "kb_alias_tags"
     llm_note, llm_used, llm_reason, llm_info, llm_focus, llm_kind, prop = None, False, None, None, None, None, None
+    llm_question = None
     if use_llm and llm_pending is not None:
         prop, llm_info = llm_pending.result()  # never waits past the LLM deadline
         if prop:
             llm_kind, llm_reason = prop.get("kind"), prop.get("reason") or None
             if prop.get("focus_concepts"):  # promoted by engine/focus.py after the clinical gate
                 llm_focus = {"concepts": list(prop["focus_concepts"]), "reason": llm_reason}
+            if llm_kind == "clinical_task" and (prop.get("answer_slots") or prop.get("question_terms")):
+                # the question as the model read it: slot ids and German search words, used by engine/screen.py
+                # after the clinical gate; the screen still shows only record facts / verbatim passages
+                llm_question = {"slots": list(prop.get("answer_slots") or []),
+                                "terms": [dict(q) for q in prop.get("question_terms") or []]}
             rid = prop.get("role_id")
             llm_b = [x for x in prop.get("bundle_ids") or [] if x in kb.bundle_by_id and x != kb.fallback_bundle]
             if llm_kind == "clinical_task" and role is not None:
@@ -452,6 +458,7 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
         "llm_reason": llm_reason,
         "llm": llm_info,
         "llm_focus_proposal": llm_focus,
+        "llm_question": llm_question,
         "llm_kind": llm_kind,
         "llm_role": (prop or {}).get("role_id"),
         "llm_ms": (llm_info or {}).get("llm_ms"),

@@ -226,10 +226,14 @@ def covered(subject, kb, named_topics, bundle_tags):
     return any(fold(norm_text(t)) in s for t in bundle_tags if len(t) > 3)
 
 
-def answer_card(store, subject, as_of=None):
+def answer_card(store, subject, as_of=None, ai_words=()):
     """One card for one asked subject: matching facts (translated, with sources), else the passages that
-    mention it word for word, else 'Nothing found' naming what was searched."""
+    mention it word for word, else 'Nothing found' naming what was searched.  ai_words: German search words
+    the optional LLM reading suggested (engine/llm.py question_terms); only search keys, never facts."""
     words, from_lexicon = search_words(subject)
+    ai_words = [w for w in ai_words or () if fold(w.lower()) not in {fold(x.lower()) for x in words}]
+    if ai_words:
+        words = (words if from_lexicon else []) + list(ai_words)
     rxs = [_word_rx(w) for w in words]
     # only letters written by the as-of date
     docs = [d for d in store.docs if as_of is None or str(store.doc_date(d) or "")[:10] <= str(as_of)[:10]]
@@ -251,13 +255,13 @@ def answer_card(store, subject, as_of=None):
              and (as_of is None or str(f.get("date") or "") <= str(as_of) or not f.get("date"))
              and (any(r.search(fold(str(f.get("quote") or "").lower())) for r in rxs)
                   or any(rx.search(english(f)) for rx in labels)
-                  or (not from_lexicon and _phrase_in(fold(subject), english(f))))]
+                  or (not from_lexicon and not ai_words and _phrase_in(fold(subject), english(f))))]
     label = "Your question: %s" % subject
     why = "You asked about %s; every passage of the %d documents was searched for it." % (subject, len(docs))
     searched = {"documents": len(docs), "passages_scanned": len(store.passages), "terms": words,
-                "from_lexicon": from_lexicon}
+                "from_lexicon": from_lexicon, "ai_terms": list(ai_words)}
     base = {"need": "ask_%s" % re.sub(r"\W+", "_", subject).strip("_"), "slot": None, "label_en": label,
-            "priority": "P1", "why": why, "sources": [], "rules": [], "origins": ["your question"],
+            "priority": "P1", "why": why, "sources": [], "rules": [], "origins": ["your question"] + (["AI search words"] if ai_words else []),
             "group": "question", "searched": searched, "collapsed": 0}
     if facts:
         items = group_items(store, facts)
@@ -281,9 +285,10 @@ def answer_card(store, subject, as_of=None):
                     note=("%d more passage(s) mention it." % more) if more else None,
                     value_en="Mentioned in %d passage(s), quoted word for word below; read them in context."
                              % len(hit_passages))
-    if from_lexicon:
-        value = ("Nothing found for %s: none of the %d documents contains any of these words: %s."
-                 % (subject, len(docs), ", ".join(words)))
+    if from_lexicon or ai_words:
+        value = ("Nothing found for %s: none of the %d documents contains any of these words: %s.%s"
+                 % (subject, len(docs), ", ".join(words),
+                    " (German search words suggested by the AI reading.)" if ai_words else ""))
     else:
         value = ("Nothing found for '%s': none of the %d documents contains %s. The letters are in German and no "
                  "German search word is stored for this term, so check the letters if it matters."

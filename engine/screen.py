@@ -278,6 +278,18 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         rules_actionable = it0["actionable"]
         rules_task = bool(C.strong_task(u.get("bundles_matched"), k.fallback_bundle)) or it0["reason"] in (
             "KB task", "named topic", "applicability item", "review / overview request")
+        # a question the rules see as a real question (not greeting / filler only) that the model mapped to KB
+        # slots or search words ('has she ever had a stumble at home?' -> falls): the model's reading may route
+        # it.  The requester's role still has to come from the rules (llm_gate.decide); the model adds only slot
+        # ids and search keys, never facts
+        lq = u.get("llm_question") or {}
+        if not rules_actionable and (lq.get("slots") or lq.get("terms")) and u.get("llm_kind") == "clinical_task":
+            from . import ask as Q0
+            from .understand import fold as fold0
+            content = [w for w in re.findall(r"[^\W\d_][\w'-]{3,}", fold0(req["task"]).lower())
+                       if w not in I0.lexicon()["never"] and w not in Q0.STOP]
+            if Q0.is_question(u.get("task_text") or "") and content:
+                rules_actionable = True
     verdict = G.decide(u, gate, req, [alias0] if alias0 else [], rules_task=rules_task, app_items=app["items"],
                        rules_actionable=rules_actionable)
     llm_ok = False
@@ -359,11 +371,11 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         defaults = [k.fallback_bundle]
     if (u["tasks_from"] == "fallback" and defaults and not app["items"]
             and not OVERVIEW_RX.search(u.get("task_text") or "")):
-        llm_focus, tcheck = u.get("llm_focus_proposal"), u.get("task_check")
+        llm_focus, tcheck, llm_q = u.get("llm_focus_proposal"), u.get("task_check"), u.get("llm_question")
         u = route(req["task"], k, st, as_of, detail=detail, use_llm=False, force_bundles=defaults,
                   force_role=role["id"] if role else None)
         u.update(text=text, as_of_date=as_of, anchor_date=anchor, clinical_gate=gate, llm_focus_proposal=llm_focus,
-                 task_check=tcheck,
+                 task_check=tcheck, llm_question=llm_q,
                  ignored_instructions=req["instructions"], excluded_text=req["excluded_text"] or None)
         info = u.pop("slot_info")
         u["suggestions"] = _suggest_bundles(k, u.get("task_text"), role)
@@ -435,8 +447,8 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     ex_ids = {tp["id"] for tp in excluded}
     named = [tp for tp in F.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
              if tp["id"] not in ex_ids]
+    ex_slots = {x for tp in excluded for x in tp.get("slots") or []}
     if excluded:
-        ex_slots = {x for tp in excluded for x in tp.get("slots") or []}
         slots = [x for x in slots if x in SAFETY_CORE or x not in ex_slots]
     # specific questions (engine/ask.py, routing guide layer 3): subjects no topic or bundle tag covers get an
     # answer card; a question that names no task gets only the safety core and its answers, not the role's
@@ -456,6 +468,35 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         ask_subs = [s for s in ask_subs if Q.slot_for(s, k) or Q.search_words(s)[1]]
     ask_slots = [x for x in dict.fromkeys(Q.slot_for(s, k) for s in ask_subs) if x]  # a KB slot answers these
     ask_subs = [s for s in ask_subs if not Q.slot_for(s, k)]
+    # the optional LLM's reading of the question (engine/llm.py answer_slots / question_terms), after the gate:
+    # it adds KB slots that answer the question however it is worded, and German search words for a topic no
+    # slot covers.  Only ids and search keys: the cards still show record facts, verbatim passages or
+    # 'Nothing found'.  Used for a question, or when the rules did not recognise the task.
+    llmq, ai_slots, ai_terms = u.get("llm_question") or {}, [], {}
+    if llmq and (asked or u.get("tasks_from") in ("role_default", "fallback")) and not _asks_judgement(
+            u.get("task_text") or ""):
+        for x in llmq.get("slots") or []:
+            if x in k.slot_by_id and x not in ask_slots and x not in ex_slots:
+                ask_slots.append(x)
+                ai_slots.append(x)
+        for q in llmq.get("terms") or []:
+            subj = q["subject"]
+            if (ex_text and fold(subj) in ex_text) or Q.covered(subj, k, (), tags):
+                continue
+            if Q.slot_for(subj, k):
+                if Q.slot_for(subj, k) not in ask_slots:
+                    ask_slots.append(Q.slot_for(subj, k))
+                    ai_slots.append(Q.slot_for(subj, k))
+                continue
+            same = next((s_ for s_ in ask_subs if fold(s_)[:4] == fold(subj)[:4]), None)
+            if same is None:
+                ask_subs.append(subj)
+                same = subj
+            ai_terms[same] = q["terms_de"]
+        asked = asked or bool(ai_slots or ai_terms)
+    if ai_slots or ai_terms:
+        u["llm_used"] = True
+        u["llm_question_used"] = {"slots": ai_slots, "terms": ai_terms}
     unanswered = ask_subs[Q.MAX_SUBJECTS:]
     ask_subs = ask_subs[:Q.MAX_SUBJECTS]
     # only when the rules and the LLM chose no task (the role's default or the general fallback stood in), and the
@@ -476,7 +517,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     for x in ask_slots:
         if x not in slots:
             slots.append(x)
-            _ensure_info(k, info, x, "your question")
+            _ensure_info(k, info, x, "your question (AI reading)" if x in ai_slots else "your question")
     u["question_only"] = question_only
     u["asked_subjects"] = ask_subs
     u["unanswered_subjects"] = unanswered
@@ -527,7 +568,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
                                       tsettings)
         focus = focus + tcards
         u["topic_cards"] = tinfo
-    focus = [Q.answer_card(st, s, as_of) for s in ask_subs] + focus  # also beside a not-applicable item
+    focus = [Q.answer_card(st, s, as_of, ai_terms.get(s, ())) for s in ask_subs] + focus  # also beside a not-applicable item
     also = []
     if detail == "short" and mode == "task" and not question_only:  # P2 'also relevant' group, shown without a second request
         p2_all = {x["slot"] for x in u["slots"] if x["priority"] == "P2" and x["slot"] not in slots}
