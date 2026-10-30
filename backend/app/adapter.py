@@ -266,7 +266,7 @@ def need_result(st, card: dict) -> NeedResult:
 
     res.computed.extend(_open_checks(card))
     for cl in card.get("computed_lines") or []:  # e.g. the 'Letters disagree' card: what compare/ found
-        if cl.get("passages"):
+        if cl.get("passages") and not cl.get("stat"):
             res.computed.append(Computed(label=cl["label"], value=cl.get("value") or "", formula=cl.get("formula") or "",
                                          segment_ids=list(cl["passages"])))
     calc = card.get("calculated")
@@ -276,6 +276,7 @@ def need_result(st, card: dict) -> NeedResult:
             formula="full years from the date of birth %s to %s (anchor: latest document)" % (calc["dob"], calc["at"]),
             segment_ids=list(card["items"][0]["passages"])))
     elif calc and card.get("items"):
+        from engine.fill import change_text
         first, last = card["items"][0], card["items"][-1]
         unit = calc.get("unit") or ""
         v0, v1 = (st.fact_by_id[i["facts"][0]] for i in (first, last))
@@ -283,9 +284,13 @@ def need_result(st, card: dict) -> NeedResult:
         b = (v1.get("attrs") or {}).get("value")
         res.computed.append(Computed(
             label=card.get("label_en") or "Change",
-            value="%+g %s over %d months" % (calc["change"], unit, calc["months"]),
+            value=change_text(calc),
             formula="%s %s (%s) - %s %s (%s); %s" % (b, unit, calc["to"], a, unit, calc["from"], calc["method"]),
             segment_ids=list(dict.fromkeys(first["passages"] + last["passages"]))))
+    for cl in card.get("computed_lines") or []:  # statistics (engine/stats.py) after the card's own change
+        if cl.get("passages") and cl.get("stat"):
+            res.computed.append(Computed(label=cl["label"], value=cl.get("value") or "", formula=cl.get("formula") or "",
+                                         segment_ids=list(cl["passages"])))
     if not res.facts and res.superseded:
         res.facts, res.superseded = res.superseded, []
     return res
