@@ -2,13 +2,15 @@
 
 v3 (DECISIONS 24): ONE cached model call, one sentence, every value from the letters.
   1 GATE      rules, 0 ms: empty, greeting-only, injection-only -> 0 facts; another patient -> refused
-  2 RULES     engine/screen.build_screen_kb (gates skipped) fills the cards for 'Show more'; engine/evidence.py gives
-              the rules' answers: a matched task bundle's P1 answers are REQUIRED (never a list dump, never for a
-              direct question); engine/drug_safety.py adds the kidney / metformin / diabetes facts for a nephrotoxic or
-              renally cleared drug (v3.1)
-  3 CALL      engine/onecall.py: ONE structured Haiku call over the whole (cached) fact store, the required facts as
-              "Must include" ids; kind, fact_ids, not-documented topics, a placeholder sentence.  AI kind
-              greeting_or_empty / spam -> 0 facts
+  2 CALL      engine/onecall.py starts at once (v3.2: in parallel with the rules, which took ~1.5 s on the Render CPU
+              before the call in v3.1): ONE structured Haiku call over the whole (cached) fact store, the drug-safety
+              map's facts (engine/drug_safety.py, kidney / metformin / diabetes for a nephrotoxic or renally cleared
+              drug) as "Must include" ids; kind, fact_ids, not-documented topics, a placeholder sentence.  AI kind
+              greeting_or_empty / spam -> 0 facts.  A sentence that fails the checks keeps the model's fact ids only
+              (code writes the sentence)
+  3 RULES     meanwhile engine/screen.build_screen_kb (gates skipped) fills the cards for 'Show more';
+              engine/evidence.py gives the rules' answers: a matched task bundle's P1 answers are REQUIRED (never a
+              list dump, never for a direct question)
   4 RENDER    code substitutes every value (engine/cited.render); loose picks dropped, one concept once, a minority
               side replaced by the majority side; a list of facts is rewritten as one natural sentence
               (engine/cited.natural); required answers the model left out are appended (a second sentence); every
@@ -51,10 +53,12 @@ def enabled():
 def _log(stats):
     if os.environ.get("SECOND_LOOK_V3_LOG", "1") == "0":
         return
-    print("V3: origin=%s llm_ms=%s cache_read_input_tokens=%s cache_creation_input_tokens=%s total_ms=%s%s" % (
-        stats.get("origin"), stats.get("llm_ms"), stats.get("cache_read_input_tokens"),
+    print("V3: origin=%s llm_ms=%s rules_ms=%s cache_read_input_tokens=%s cache_creation_input_tokens=%s "
+          "total_ms=%s%s%s" % (
+        stats.get("origin"), stats.get("llm_ms"), stats.get("rules_ms"), stats.get("cache_read_input_tokens"),
         stats.get("cache_creation_input_tokens"), stats.get("total_ms"),
-        (" why=%s" % stats["why"]) if stats.get("why") else ""), flush=True)
+        (" why=%s" % stats["why"]) if stats.get("why") else "",
+        (" salvaged=%s" % stats["salvaged"]) if stats.get("salvaged") else ""), flush=True)
 
 
 def request_topic(text, st):
@@ -296,8 +300,16 @@ def build_screen_v2(text, as_of=None, use_llm=True, detail="short"):
         scr = other_patient_screen(text, req, detail, t0)
         scr["understood"]["router"] = "v2"
         return scr
-    # 2. the rules first (~0.2 s): cards for 'Show more', a matched task bundle's answers, the drug-safety map; their
-    #    facts go to the one call as "must include" ids so the model's sentence covers them (v3.1)
+    # 2. the one call starts NOW (v3.2): the rules ran first in v3.1 and on the Render CPU took ~1.5 s before the
+    #    call even started (live: total_ms - llm_ms ~ 1.5-2 s, timeouts at the 4 s deadline with llm_ms ~ 1.3 s).
+    #    Only the drug-safety map (< 1 ms) goes along as "Must include" ids; a matched bundle's required facts are
+    #    known after the rules and appended by code when the model leaves them out (step 4)
+    drug = DS.match(text, st)  # drug-safety map (TODO-cite): kidney function / metformin / diabetes
+    store_chunks = O.chunks(st)
+    must = [m for m in dict.fromkeys(drug["facts"]) if m in store_chunks]
+    pending = O.start(text, st, t0, use_llm=use_llm, must=must)
+    t_rules = time.perf_counter()
+    # 3. the rules, while the model works: cards for 'Show more', a matched task bundle's answers
     screen = build_screen_kb(text, as_of=as_of, use_llm=False, detail=detail,
                              v2={"slots": [], "task_label": "", "applicability_item": None})
     u = screen["understood"]
@@ -316,22 +328,22 @@ def build_screen_v2(text, as_of=None, use_llm=True, detail="short"):
     by_ev = {c["id"]: c for c in chunks}
     req_needs = [] if direct else [(n, ids) for n, ids in ranked if n.get("required") and not dump(n)]
     req_ids = [i for _n, ids in req_needs for i in ids if by_ev[i]["kind"] in ("fact", "computed", "status")]
-    drug = DS.match(text, st)  # drug-safety map (TODO-cite): kidney function / metformin / diabetes
-    store_chunks = O.chunks(st)
     by_all = dict(store_chunks, **by_ev)
-    must = [O.fid(st.fact_by_id[by_ev[i]["facts"][0]]) for i in req_ids
-            if by_ev[i]["kind"] == "fact" and by_ev[i]["facts"] and by_ev[i]["facts"][0] in st.fact_by_id]
-    must = [m for m in dict.fromkeys(must + drug["facts"]) if m in store_chunks]
-    # 3. the one call
-    pending = O.start(text, st, t0, use_llm=use_llm, must=must)
-    out, info = pending.result(st) if pending else (None, {"skipped": "disabled" if not use_llm else "no key"})
+    required = [O.fid(st.fact_by_id[by_ev[i]["facts"][0]]) for i in req_ids  # a matched bundle's P1 store facts
+                if by_ev[i]["kind"] == "fact" and by_ev[i]["facts"] and by_ev[i]["facts"][0] in st.fact_by_id]
+    required = [m for m in dict.fromkeys(must + required) if m in store_chunks]
+    rules_ms = round((time.perf_counter() - t_rules) * 1000, 1)
+    # 4. merge: the call's answer (it ran in parallel with the rules)
+    out, info = (pending.result(st, max_chars=W.MAX_CHARS if (must or req_ids) else None) if pending
+                 else (None, {"skipped": "disabled" if not use_llm else "no key"}))
     stats = {"origin": "template", "called": bool(info.get("called")), "cached": bool(info.get("cached")),
              "llm_ms": info.get("llm_ms"), "rejected": [], "skipped": {},
              "cache_read_input_tokens": info.get("cache_read_input_tokens", 0),
              "cache_creation_input_tokens": info.get("cache_creation_input_tokens", 0),
              "input_tokens": info.get("input_tokens", 0), "output_tokens": info.get("output_tokens", 0),
              "cost_eur": round(info.get("cost_eur") or 0.0, 6), "required_appended": 0, "must": len(must),
-             "drug_safety": drug["rows"], "deduped": 0, "minority_replaced": 0}
+             "drug_safety": drug["rows"], "deduped": 0, "minority_replaced": 0, "rules_ms": rules_ms,
+             "salvaged": info.get("salvaged")}
     if info.get("skipped"):
         stats["skipped"]["call"] = info["skipped"]
     if info.get("rejected"):
@@ -349,7 +361,7 @@ def build_screen_v2(text, as_of=None, use_llm=True, detail="short"):
     topics = []
     if out is not None:  # 4. render: the model's facts (one concept once, never a minority side alone), the
         #                     required facts it left out, the not-documented topics
-        facts, changed = _model_facts(st, out, store_chunks, stats, text, must)
+        facts, changed = _model_facts(st, out, store_chunks, stats, text, required)
         seen = {_concept(st, by_all, i) for i in facts}
         placed = {f for i in facts for f in store_chunks[i]["facts"]}
         extras = _extras(st, req_ids, drug["facts"], by_ev, store_chunks, by_all, seen, placed,
@@ -426,7 +438,7 @@ def build_screen_v2(text, as_of=None, use_llm=True, detail="short"):
     stats["needs"] = [n["needs"] for n, _ids in ranked]
     stats["required"] = len(req_ids)
     stats["total_ms"] = round((time.perf_counter() - t0) * 1000, 1)
-    stats["ms"] = {"total": stats["total_ms"], "llm": stats["llm_ms"]}
+    stats["ms"] = {"total": stats["total_ms"], "llm": stats["llm_ms"], "rules": rules_ms}
     u["answer_v2"] = stats
     screen["timing_ms"] = stats["total_ms"]
     _log(stats)

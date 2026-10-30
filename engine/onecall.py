@@ -359,8 +359,10 @@ class Pending:
     def __init__(self, fut, info, t0, t_call):
         self.fut, self.info, self.t0, self.t_call = fut, info, t0, t_call
 
-    def result(self, st):
-        """-> (validated output | None, info).  Never waits past the call timeout or the request deadline."""
+    def result(self, st, max_chars=None):
+        """-> (validated output | None, info).  Never waits past the call timeout or the request deadline.
+        max_chars: the sentence limit (cited.MAX_CHARS when the rules found required facts, known only after the call
+        started, v3.2); default: MAX_CHARS with must-include ids, else SENTENCE_CHARS."""
         now = time.perf_counter()
         left = min(call_timeout_s() - (now - self.t_call), deadline_s() - (now - self.t0) - 0.05)
         info = self.info
@@ -375,12 +377,31 @@ class Pending:
             return None, info
         if raw is None:
             return None, info
-        out, why = validate(raw, st, max_chars=W.MAX_CHARS if info.get("must") else SENTENCE_CHARS)
+        limit = max_chars or (W.MAX_CHARS if info.get("must") else SENTENCE_CHARS)
+        out, why = validate(raw, st, max_chars=limit)
         if out is None:
+            out = salvage(raw, st)
+            if out is not None:  # the model's picks are kept, its sentence is not: code writes it (v3.2)
+                info["salvaged"] = why
+                return out, info
             info["rejected"] = why
             if _model_hook is None:  # never serve a rejected output from the cache
                 llm_budget.budget().cache.pop(_key(info.get("text"), info.get("must")), None)
         return out, info
+
+
+def salvage(raw, st):
+    """A clinical_question whose sentence failed the checks (live v3.1 probe: "words not allowed outside the facts",
+    "too long", a semicolon list with typed text) -> the model's listed fact ids only, as a list form, so code writes
+    the sentence from the facts' own fields (engine/cited.natural); the model's text is dropped entirely.  None when
+    the output names no valid fact."""
+    if not isinstance(raw, dict) or raw.get("kind") != "clinical_question":
+        return None
+    out, _why = validate(dict(raw, sentence=""), st)
+    if out is None or not out["listed"]:
+        return None
+    out.update(facts=list(out["listed"]), list_form=True, salvaged=True)
+    return out
 
 
 def _hook_must(text, st, must):

@@ -377,17 +377,60 @@ class TestPipeline(Base):
         self.assertTrue(a["flags"])
 
     def test_must_include_ids_after_the_cached_prefix(self):
-        """v3.1: a matched bundle's P1 facts and the drug-safety map's facts go to the call as 'Must include' ids,
-        in the user turn (the cached system block stays byte-identical)."""
+        """v3.1: the drug-safety map's facts go to the call as 'Must include' ids, in the user turn (the cached system
+        block stays byte-identical).  v3.2: the call starts before the rules, so a matched bundle's P1 facts are not
+        sent; code appends the ones the model leaves out."""
         f = self.fake(reply(sentence=""))
-        build_screen(CASE1, use_llm=True, rulebook="kb")
+        s1 = build_screen(CASE1, use_llm=True, rulebook="kb")
         build_screen("Emergency doctor, I'm about to give IV gentamicin.", use_llm=True, rulebook="kb")
         u1, u2 = (kw["messages"][0]["content"] for kw in f.calls)
-        self.assertIn("\nMust include: F", u1)
+        self.assertNotIn("Must include", u1)
         self.assertIn("Must include: F0248, F0209", u2)  # metformin, diabetes (drug-safety map)
         self.assertEqual(f.calls[0]["system"], f.calls[1]["system"])
+        self.assertIn("Thrombo ASS", s1["answer"]["text"])  # the bundle's required facts, appended by code
+
+    def test_call_runs_in_parallel_with_the_rules(self):
+        """v3.2 (live v3.1: rules ~1.5 s on the Render CPU BEFORE the call -> p50 3.2 s, deadline timeouts): the call
+        starts at t ~ 0 and the rules run meanwhile, so total ~ max(rules, model), not rules + model."""
+        from engine import screen as S
         asa = self.fid("Thrombo ASS", "dose")
-        self.assertIn(asa, u1)
+        f = self.fake(reply(facts=[asa], sentence="She takes {%s.name} {%s.dose} {%s.schedule}." % (asa, asa, asa)),
+                      delay=1.0)
+        started = []
+        create = f.create
+        f.create = lambda **kw: (started.append(time.perf_counter()), create(**kw))[1]
+        slow = S.build_screen_kb
+
+        def slow_rules(*a, **kw):  # the Render CPU: ~0.8 s of rules
+            time.sleep(0.8)
+            return slow(*a, **kw)
+        S.build_screen_kb = slow_rules
+        try:
+            t = time.perf_counter()
+            s = build_screen(CASE1, use_llm=True, rulebook="kb")
+            total = time.perf_counter() - t
+        finally:
+            S.build_screen_kb = slow
+        st = s["understood"]["answer_v2"]
+        self.assertLess(started[0] - t, 0.15)  # the call starts before the rules
+        self.assertLess(total, 1.6, st)  # serial would be >= 1.8 s
+        self.assertGreaterEqual(st["rules_ms"], 800)
+        self.assertEqual(s["answer"]["origin"], "llm")
+        self.assertIn("Thrombo ASS", s["answer"]["text"])
+
+    def test_failed_sentence_keeps_the_models_facts(self):
+        """v3.2 (live v3.1: 'words not allowed outside the facts: allergy, because, contrast', 'too long'): the
+        sentence is dropped, the model's fact ids are kept and code writes the sentence from their own fields."""
+        met = self.fid("Metformin", "dose")
+        dm = self.fid("Diabetes mellitus type II")
+        self.fake(reply(facts=[met, dm], sentence="Because of contrast allergy {%s} and {%s}." % (met, dm)))
+        s = build_screen("what diabetes medication does she take?", use_llm=True, rulebook="kb")
+        a, st = s["answer"], s["understood"]["answer_v2"]
+        self.assertEqual(a["origin"], "llm")
+        self.assertTrue(st["salvaged"])
+        self.assertIn("metformin (glucophage) 1000 mg", a["text"].lower())
+        self.assertNotIn("ontrast", a["text"])
+        self.assertNotIn("Because", a["text"])
 
     def test_model_sentence_with_required_facts_is_used(self):
         """v3.1: when the model places the required facts, its sentence is the answer (no appended template)."""

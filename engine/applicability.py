@@ -5,6 +5,7 @@
 
 Deterministic; the table holds generic keywords only, never patient content.
 """
+import functools
 import json
 import os
 import re
@@ -26,6 +27,7 @@ def table():
     return _TABLE
 
 
+@functools.lru_cache(maxsize=None)
 def _term_rx(term):
     from .understand import fold, norm_text
     t = re.escape(fold(norm_text(term)))

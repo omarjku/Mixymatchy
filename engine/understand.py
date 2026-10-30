@@ -4,6 +4,7 @@ Deterministic keyword/synonym matcher (default).  An optional LLM proposal
 (engine/llm.py) is accepted only for IDs that exist in the rulebook.
 """
 import difflib
+import functools
 import re
 
 from . import llm
@@ -57,7 +58,10 @@ def norm_text(text):
     return re.sub(r"\s+", " ", t)
 
 
+@functools.lru_cache(maxsize=None)
 def _phrase_rx(phrase, whole_word):
+    """Compiled once per (phrase, whole_word): thousands of lexicon phrases overflow re's own 512-entry cache, so
+    every request re-compiled them (~1 s per request on the Render free CPU, DECISIONS 24 v3.2)."""
     p = re.escape(phrase.lower())
     pre = r"(?<![\w])" if phrase[:1].isalnum() else ""
     post = r"(?![\w])" if whole_word and phrase[-1:].isalnum() else ""
