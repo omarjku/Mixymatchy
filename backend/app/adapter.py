@@ -34,6 +34,9 @@ Mapping rules (documented once, applied everywhere)
                           screen are counted in stats.other_record_issues and listed with on_screen=False
                           in the long view only
   stats                -> counted from the Briefing object itself
+  key_facts (engine/keyfacts.py) -> Briefing.key_facts (layout "answer_first"): one line per P1 need with the
+                          chosen card items as Facts (+ since = first letter), the safety core, the not-documented
+                          needs and the first contradiction; every NeedResult stays as the details view
 
 Routing knowledge base (default rulebook; SECOND_LOOK_RULEBOOK=legacy for roles.json + tasks.json)
   card slot/shape/priority/why/sources/rules/note -> the optional NeedResult fields of the same name
@@ -56,8 +59,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:  # engine/, pipeline/, compare/ are top-level packages of the repo
     sys.path.insert(0, str(ROOT))
 
-from .schema import (Briefing, ChecklistItem, Computed, Document, Fact, Finding, NeedResult,  # noqa: E402
-                     Segment, SourceRef)
+from .schema import (Briefing, ChecklistItem, Computed, Document, Fact, Finding, KeyFact,  # noqa: E402
+                     NeedResult, Segment, SourceRef)
 
 BUILD_DIR = Path(os.environ.get("SECOND_LOOK_BUILD", ROOT / "data" / "build"))
 RAW_DIR = ROOT / "data" / os.environ.get("PATIENT_ID", "patient-0000-0001")
@@ -418,6 +421,22 @@ def _routing(screen: dict) -> dict:
             "other_record_issues_en": screen.get("other_record_issues_en")}
 
 
+def key_fact(st, line: dict) -> KeyFact:
+    """engine/keyfacts.py line -> KeyFact; every item becomes a Fact with its passages (item_fact)."""
+    facts = []
+    for it in line.get("items") or []:
+        f = item_fact(st, it, "conflicting" if it.get("conflicts") else _trust(line.get("trust") or ""))
+        first = str(it.get("first_date") or "")[:10]
+        if first and f.date and first < f.date:
+            f.since = first
+        facts.append(f)
+    computed = [Computed(label=c["label"], value=c["value"], formula=c.get("formula") or "", segment_ids=c["passages"])
+                for c in line.get("computed") or [] if c.get("passages")]
+    return KeyFact(kind=line["kind"], needs=line.get("needs") or [], label=line.get("label") or "", facts=facts,
+                   computed=computed, text=line.get("text"), segment_ids=list(line.get("passages") or []),
+                   more=line.get("more") or 0, trust=line.get("trust"))
+
+
 def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | None = None,
                    detail: str = "short", rulebook: str | None = None) -> Briefing:
     st = engine_store()
@@ -440,6 +459,12 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
                  as_of="" if gated else (u.get("as_of_date") or ""),
                  needs=[need_result(st, c) for c in cards], blind_spot=blind, findings=found,
                  detail=screen.get("detail"), routing=_routing(screen))
+    if not gated and screen.get("key_facts"):  # answer-first (docs/DECISIONS.md 20): the cards become details
+        b.key_facts = [key_fact(st, ln) for ln in screen["key_facts"]]
+        b.layout = "answer_first"
+        keyed = {x for ln in b.key_facts if ln.kind in ("need", "safety") for x in ln.needs}
+        for n in b.needs:
+            n.key = n.need in keyed
     bs = screen.get("blind_spot") or {}
     if gated:
         b.routing["anchor_date"] = None

@@ -14,7 +14,7 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("Second Eye screen crashed", error, info.componentStack);
+    console.error("Second Look screen crashed", error, info.componentStack);
   }
 
   render() {

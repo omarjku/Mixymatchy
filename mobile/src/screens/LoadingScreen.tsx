@@ -4,7 +4,6 @@ import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { roles } from "@/data/roles";
 import { t } from "@/i18n/strings";
 import { BriefTimeoutError, fetchPatientBriefWithTimeout } from "@/lib/api";
 import { setResults } from "@/lib/session";
@@ -39,8 +38,6 @@ export function LoadingScreen() {
 
   if (!request) return <Navigate to="/" replace />;
 
-  const roleName = t(roles.find((r) => r.id === request.role)!.nameKey);
-
   if (error) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pt-[env(safe-area-inset-top)]">
@@ -51,7 +48,7 @@ export function LoadingScreen() {
             {error === "timeout" ? t("loading.error.timeout") : t("loading.error.generic")}
           </p>
           <p className="mt-4 text-sm text-ink-muted">
-            {roleName} · {request.task}
+            {request.task}
           </p>
           <div className="mt-8 flex flex-col gap-2">
             <Button
@@ -91,7 +88,7 @@ export function LoadingScreen() {
       <p role="status" className="mb-4 text-sm text-ink-muted">
         <span className="font-medium text-ink">{t("loading.title")}</span>
         <br />
-        {roleName} · {request.task}
+        {request.task}
       </p>
 
       <div className="lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start lg:gap-8">

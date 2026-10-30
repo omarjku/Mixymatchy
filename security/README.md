@@ -1,4 +1,4 @@
-# Second Eye: access security
+# Second Look: access security
 
 This module handles sign-in, the PIN lock screen, idle and tab-hidden locking, and an append-only audit trail. It is built for a shared clinical workstation or tablet. The backend uses only the Python 3 standard library, and the frontend is plain HTML, CSS and JS with no build step and no CDN. You can drop it into any frontend, including Next.js.
 

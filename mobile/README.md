@@ -1,4 +1,4 @@
-# Second Eye: mobile frontend
+# Second Look: mobile frontend
 
 Responsive, phone-first web app for Track 1: a clinician picks a role, types a task, and gets one screen of the
 patient facts that task needs, each linked to its source. Opens in a phone browser, no native build.
@@ -31,7 +31,7 @@ numbers, no IBM data).
 | Results: patient card with trust counts + stats panel, contradictions, fact cards, source and guideline sheets | done |
 | Übersicht / Verlauf tabs: screen-wide switch, value history (trend line + dated values) on facts that have one | done |
 | Dashboard tab (3rd level): proof ring, change tiles, weight and recorded-vs-calculated BMI charts, blood-pressure comparisons, dated facts without trends. All derived numbers computed in `src/lib/stats.ts`; no scores, predictions or advice | done |
-| Read-only notice ("Second Eye ändert keine Daten") on results and flag sheet | done |
+| Read-only notice ("Second Look ändert keine Daten") on results and flag sheet | done |
 | Responsive layouts (phone, tablet, desktop) | done |
 | Read aloud (Web Speech API, German voices only, prefers on-device voices) | done |
 | Source viewer with the three tracks (dialog-stack), flag form, PDF export, EN/DE toggle | to do |

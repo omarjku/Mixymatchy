@@ -1,5 +1,5 @@
 ---
-title: Second Eye
+title: Second Look
 emoji: 🩺
 colorFrom: green
 colorTo: blue
@@ -8,4 +8,4 @@ app_port: 8000
 pinned: false
 ---
 
-Second Eye (AIM Austria hackathon, Track 1). Password-protected demo; source on GitHub.
+Second Look (AIM Austria hackathon, Track 1). Password-protected demo; source on GitHub.
