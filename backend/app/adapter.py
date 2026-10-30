@@ -240,6 +240,8 @@ def need_result(st, card: dict) -> NeedResult:
     trust = _trust(status)
     for it in card.get("items") or []:
         fact = item_fact(st, it, "stale" if it.get("not_on_latest_list") else trust)
+        if it.get("collapsed"):
+            fact.collapsed = True
         if it.get("not_on_latest_list"):
             res.superseded.append(fact.model_copy(update={"status": "not on latest medication list"}))
         else:

@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Add01Icon, LanguageSkillIcon, StopCircleIcon, VolumeHighIcon } from "@hugeicons/core-free-icons";
 import { AppBar } from "@/components/AppBar";
 import { ContradictionCard } from "@/components/ContradictionCard";
-import { FactCard } from "@/components/FactCard";
+import { FactCard, FactRows, RowSource, TrendLine } from "@/components/FactCard";
 import { PatientCard } from "@/components/PatientCard";
 import { SourceViewer } from "@/components/SourceViewer";
 import { hasHistory } from "@/components/ValueHistory";
@@ -18,7 +18,7 @@ import { t } from "@/i18n/strings";
 import { getResults } from "@/lib/session";
 import { speak, stopSpeaking, useVoiceAvailable } from "@/lib/speech";
 import { cn } from "@/lib/utils";
-import type { Fact, GuidelineCitation, PatientBrief, SourceCitation } from "@/types/fact";
+import type { Fact, FactRow, GuidelineCitation, PatientBrief, SourceCitation } from "@/types/fact";
 import type { BriefRequest } from "@/types/request";
 
 // Results: patient + how the request was read, banners (not authorised / not applicable / task not
@@ -165,12 +165,11 @@ export function ResultsScreen() {
               <span className="font-medium text-ink">{brief.taskLabel ?? brief.task}</span>
             </p>
 
-            <Notice tone="readonly" title={t("readonly.title")} className="mt-4">
-              {t("readonly.body")}
-            </Notice>
+            {/* one line on the results screen (the full text is on the start screen and in Help) */}
+            <Notice tone="readonly" title={t("readonly.title")} className="mt-3 py-2 text-[13px]" />
 
             {!notAuthorised && (
-              <div className="mt-4">
+              <div className="mt-3">
                 <ViewTabs
                   tabs={[
                     { id: "overview", label: t("results.view.overview") },
@@ -181,9 +180,9 @@ export function ResultsScreen() {
                   label={t("results.view.label")}
                   panelId="facts-panel"
                 />
-                <p className="mt-2 px-2 text-xs text-ink-muted" aria-live="polite">
+                <p className={cn("px-2 text-xs text-ink-muted", view === "history" && "mt-2")} aria-live="polite">
                   {view === "overview"
-                    ? t("results.view.overviewHint")
+                    ? <span className="sr-only">{t("results.view.overviewHint")}</span>
                     : historyCount > 0
                       ? t("results.view.historyAvailable", { n: historyCount, m: allFacts.length })
                       : t("results.view.historyNone")}
@@ -192,7 +191,7 @@ export function ResultsScreen() {
             )}
           </aside>
 
-          <div className="mt-6 space-y-6 lg:mt-0">
+          <div className="mt-5 space-y-5 lg:mt-0">
             {notAuthorised && (
               <section
                 role="alert"
@@ -275,7 +274,7 @@ export function ResultsScreen() {
                     {t("results.empty")}
                   </p>
                 ) : (
-                  <div className={cn("grid gap-3 md:grid-cols-2", viewer && "lg:grid-cols-1")}>{brief.facts.map(factCard)}</div>
+                  <div className={cn("grid gap-2.5 md:grid-cols-2", viewer && "lg:grid-cols-1")}>{brief.facts.map(factCard)}</div>
                 )}
               </section>
             )}
@@ -285,7 +284,7 @@ export function ResultsScreen() {
                 <h2 id="also-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.alsoRelevant")} ({brief.alsoRelevant!.length})
                 </h2>
-                <div className={cn("grid gap-3 md:grid-cols-2", viewer && "lg:grid-cols-1")}>{brief.alsoRelevant!.map(factCard)}</div>
+                <AlsoRelevantList facts={brief.alsoRelevant!} onPressSource={showSource} />
               </section>
             )}
 
@@ -313,7 +312,7 @@ export function ResultsScreen() {
                 </h2>
                 <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
                   {gaps.map((gap) => (
-                    <li key={gap.id} className="p-4">
+                    <li key={gap.id} className="px-4 py-3">
                       <p className="text-xs font-medium text-ink-muted">{t(`results.gap.${gap.kind}`)}</p>
                       <p className="mt-0.5 text-[15px] font-semibold text-ink">{gap.title}</p>
                       {gap.explanation && <p className="mt-0.5 text-[14px] text-ink-muted">{gap.explanation}</p>}
@@ -342,7 +341,7 @@ export function ResultsScreen() {
           </div>
         </div>
 
-        <p className="mt-8 text-center text-xs leading-snug text-ink-muted">{t("app.disclaimer")}</p>
+        <p className="mt-6 text-center text-xs leading-snug text-ink-muted">{t("app.disclaimer")}</p>
 
         {viewer && (
           <SourceViewer
@@ -371,6 +370,55 @@ export function ResultsScreen() {
         </Modal>
       </main>
     </>
+  );
+}
+
+// P2 "Also relevant": one compact list, one line per need ("label: value · date · Source"); several facts
+// become rows, and what the engine collapsed sits behind "+N more". Always visible, no tap needed.
+function AlsoRelevantList({ facts, onPressSource }: { facts: Fact[]; onPressSource: (fact: Fact) => void }) {
+  return (
+    <ul className="divide-y divide-line rounded-2xl border border-line bg-surface px-4 py-1">
+      {facts.map((fact) => {
+        const openRow = (row: FactRow) => onPressSource({ ...fact, source: row.sources[0], sources: row.sources });
+        const rows = fact.rows ?? [];
+        const open = rows.filter((r) => !r.collapsed);
+        const label = <span className="text-[13px] text-ink-muted">{fact.label}: </span>;
+        let body: ReactNode;
+        if (fact.trust === "not_documented" || fact.trust === "not_applicable") {
+          body = (
+            <p className="text-[15px] leading-snug">
+              {label}
+              <span className="font-medium text-undocumented">{t(`trust.${fact.trust}`)}</span>
+              {fact.trust === "not_applicable" && fact.value ? <span className="text-ink-muted">: {fact.value}</span> : null}
+            </p>
+          );
+        } else if (fact.trend) {
+          body = (<>{label}<TrendLine fact={fact} onPressRow={openRow} sparkline={false} /></>);
+        } else if (open.length === 1) {
+          const r = open[0];
+          body = (
+            <>
+              <div className="flex items-start gap-2">
+                <p className="min-w-0 flex-1 text-[14px] leading-snug">
+                  {label}
+                  <span className="font-semibold text-ink">{r.text}</span>
+                  {r.date && <span className="text-[13px] text-ink-muted"> · {r.date}</span>}
+                </p>
+                {r.sources.length > 0 && <RowSource row={r} onPress={openRow} />}
+              </div>
+              {rows.length > 1 && <FactRows rows={rows.filter((x) => x !== r)} onPressRow={openRow} className="mt-0" />}
+            </>
+          );
+        } else {
+          body = (<>{label}<FactRows rows={rows} onPressRow={openRow} /></>);
+        }
+        return (
+          <li key={fact.id} className="py-1.5" data-fact={fact.id} data-trust={fact.trust}>
+            {body}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

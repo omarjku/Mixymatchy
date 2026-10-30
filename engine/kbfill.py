@@ -104,6 +104,7 @@ def build_card(store, kb, slot_id, ctx, contradictions=()):
     elif comp == "list_all":
         keep_neg = any("negative" in (sel.get("assertion_in") or []) for sel in spec.get("select") or [])
         F.list_all(store, card, primary, context, ctx.get("detail") or "short", keep_ruled_out=keep_neg)
+        card["items"] = card["items"] + [dict(it, collapsed=True) for it in card.pop("hidden_items", None) or []]
     else:  # event_history
         F.dated_list(store, card, primary)
         if context:
@@ -113,7 +114,36 @@ def build_card(store, kb, slot_id, ctx, contradictions=()):
     if card["status"] == "not_documented" and comp not in ("status_check", "med_changes", "age_sex"):
         if not card.get("searched"):
             not_documented(store, kb, slot_id, spec, card, extra="")
-    return F.finish(store, card, contradictions, primary_ids=primary_ids)
+    F.finish(store, card, contradictions, primary_ids=primary_ids)
+    if (ctx.get("detail") or "short") == "short" and card.get("priority") == "P1" and comp in P1_COLLAPSIBLE:
+        # the answer values themselves (latest_value: the newest value per key) always stay open
+        answer = set(primary_ids) if primary_ids is not None and comp == "latest_value" else set()
+        open_items = [it for it in card.get("items") or [] if not it.get("collapsed")]
+        for it in open_items[P1_VISIBLE:]:
+            if not set(it["facts"]) & answer:
+                it["collapsed"] = True
+    card["collapsed"] = sum(1 for it in card.get("items") or [] if it.get("collapsed"))
+    return card
+
+
+# Short view, P1 cards whose items are a history or context around the answer: the first P1_VISIBLE items
+# (newest / primary first) stay open, the rest sit behind '+N more'.  Lists that are the answer itself
+# (current medication, list_all lists, checklists, follow-up checks, age/sex) are never collapsed here.
+P1_VISIBLE = 3
+P1_COLLAPSIBLE = ("latest_value", "plan", "event_history", "laterality_finding")
+ALSO_VISIBLE = 3  # P2 'also relevant' cards show at most this many items; the rest sit behind '+N more'
+
+
+def compact_also(card, visible=ALSO_VISIBLE):
+    """P2 'also relevant' card in the short view: at most `visible` items open, the rest marked collapsed
+    (still in the response with their source links, shown behind '+N more').  Trend cards keep their
+    own rule (earliest + latest of each measure, F.collapse_series)."""
+    if card.get("shape") != "trend":
+        open_items = [it for it in card.get("items") or [] if not it.get("collapsed")]
+        for it in open_items[visible:]:
+            it["collapsed"] = True
+    card["collapsed"] = sum(1 for it in card.get("items") or [] if it.get("collapsed"))
+    return card
 
 
 # ----------------------------------------------------------------- R22 label panel

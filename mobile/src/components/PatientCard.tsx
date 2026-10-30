@@ -76,9 +76,9 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
           heading="h1"
         />
 
-        <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label={t("patient.trustSummary")}>
+        <div className="mt-3 grid grid-cols-4 gap-1.5" role="group" aria-label={t("patient.trustSummary")}>
           {counts.map(({ trust, marker, count }) => (
-            <div key={trust} className="rounded-xl bg-canvas px-2.5 py-2">
+            <div key={trust} className="rounded-xl bg-canvas px-2 py-1.5">
               <span className="flex items-center gap-1.5">
                 <span aria-hidden className={cn("size-2.5 shrink-0 rounded-full", marker)} />
                 <span className="text-lg font-semibold leading-none text-ink">{count}</span>
@@ -88,7 +88,7 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
           ))}
         </div>
 
-        <span aria-hidden className="mt-3 flex items-center justify-end gap-0.5 text-[13px] font-medium text-primary-deep">
+        <span aria-hidden className="mt-1.5 flex items-center justify-end gap-0.5 text-[13px] font-medium text-primary-deep">
           {t("patient.details")}
           <Icon icon={ArrowRight01Icon} size={16} />
         </span>

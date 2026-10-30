@@ -42,6 +42,7 @@ class Fact(BaseModel):
     status: Optional[str] = None  # positive / negative / suspected / past / planned
     segment_ids: list[str] = Field(min_length=1)
     trust: Trust = "single"
+    collapsed: bool = False      # short view: behind "+N more" on its card (still linked, never dropped)
 
 
 class Finding(BaseModel):

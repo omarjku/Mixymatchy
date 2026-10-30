@@ -99,15 +99,19 @@ class TestLists(unittest.TestCase):
 
     def test_diagnoses_short(self):
         c = self._diagnoses("short")
-        self.assertLessEqual(len(c["items"]), LIST_LIMIT_SHORT)
+        shown = [it for it in c["items"] if not it.get("collapsed")]
+        self.assertLessEqual(len(shown), LIST_LIMIT_SHORT)
         self.assertGreater(c["more"], 0)
+        # the rest stays on the card, collapsed behind '+N more' (never dropped from the response)
+        self.assertEqual(len(c["items"]) - len(shown), c["more"])
         self.assertIn("more", c["value_en"])
         self._clean(c)
 
     def test_diagnoses_long(self):
         short, c = self._diagnoses("short"), self._diagnoses("long")
         self.assertEqual(c["more"], 0)
-        self.assertEqual(len(c["items"]), len(short["items"]) + short["more"])
+        self.assertEqual(len(c["items"]), len(short["items"]))  # short: shown + collapsed
+        self.assertFalse(any(it.get("collapsed") for it in c["items"]))
         self._clean(c)
 
     def _clean(self, c):
@@ -247,7 +251,7 @@ class TestUnseenSituations(unittest.TestCase):
         s = screen("Covering doctor at the weekend, needs a quick overview.")
         self.assertEqual(s["screen_mode"], "overview")
         dx = next(c for c in s["cards"] if c["slot"] == "diagnoses_all")
-        self.assertLessEqual(len(dx["items"]), LIST_LIMIT_SHORT)
+        self.assertLessEqual(len([it for it in dx["items"] if not it.get("collapsed")]), LIST_LIMIT_SHORT)
 
 
 class TestSexDetection(unittest.TestCase):
@@ -278,3 +282,37 @@ class TestSexDetection(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCompactShortView(unittest.TestCase):
+    """Short view on a phone: P2 cards and trends collapse to a few open items; nothing leaves the response."""
+
+    def test_also_relevant_capped_and_kept(self):
+        from engine.kbfill import ALSO_VISIBLE
+        s = screen("General practitioner, weight review for type 2 diabetes")
+        for c in s.get("also_relevant") or []:
+            items = c.get("items") or []
+            shown = [it for it in items if not it.get("collapsed")]
+            if c.get("shape") != "trend":
+                self.assertLessEqual(len(shown), ALSO_VISIBLE, c["slot"])
+            self.assertEqual(c.get("collapsed", 0), len(items) - len(shown))
+            for it in items:  # collapsed items keep their source passages
+                self.assertTrue(it["passages"], c["slot"])
+
+    def test_bp_trend_dedupe_and_ends_open(self):
+        s = screen("General practitioner, weight review for type 2 diabetes")
+        vit = next((c for c in s["cards"] + (s.get("also_relevant") or []) if c["slot"] == "vitals_bp_hr"), None)
+        if vit is None:
+            self.skipTest("vitals not on this screen")
+        bp = [it for it in vit["items"] if it["label_en"].lower().startswith("blood pressure")]
+        keys = [(it["date"][:10], it["label_en"].split("(")[0].strip()) for it in bp]
+        self.assertEqual(len(keys), len(set(keys)), "same-day identical readings are merged")
+        self.assertFalse(bp[0].get("collapsed"))
+        self.assertFalse(bp[-1].get("collapsed"))
+        self.assertTrue(any(it.get("collapsed") for it in bp[1:-1]))
+
+    def test_weight_series_all_open(self):
+        s = screen("General practitioner, how did her weight change between June 2015 and April 2016")
+        w = next(c for c in s["cards"] + (s.get("also_relevant") or []) if c["slot"] == "weight")
+        self.assertEqual(len(w["items"]), 3)
+        self.assertFalse(any(it.get("collapsed") for it in w["items"]))  # 78 -> 67 -> 66 kg all visible

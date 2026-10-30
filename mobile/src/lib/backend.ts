@@ -1,6 +1,5 @@
-import { t } from "@/i18n/strings";
 import { secureFetch } from "@/second-look";
-import type { Contradiction, Fact, FactTrust, PatientBrief, RecordGap, SourceCitation } from "@/types/fact";
+import type { Contradiction, Fact, FactRow, FactTrust, PatientBrief, RecordGap, SourceCitation } from "@/types/fact";
 
 // Backend contract (backend/app/schema.py, docs/INTEGRATION.md) and the mapping into the app's PatientBrief.
 // Rule: every clinical string shown comes from the backend; this file only rearranges it.
@@ -20,6 +19,7 @@ interface BackendFact {
   date: string | null;
   segment_ids: string[];
   trust: BackendTrust;
+  collapsed?: boolean; // short view: behind "+N more" on its card
 }
 
 interface BackendComputed {
@@ -147,10 +147,6 @@ function segmentIdsOf(briefing: BackendBriefing): string[] {
 
 export const docIdOf = (segmentId: string) => segmentId.split(":")[0];
 
-// Needs with more facts than this are shortened (none of the five demo situations has more than 15).
-const LONG_LIST = 20;
-const LONG_LIST_SHOWN = 8;
-
 export function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return d && m && y ? `${d}.${m}.${y}` : iso;
@@ -185,21 +181,6 @@ function factValue(f: BackendFact): string {
   return measured && !f.label_en.includes(f.value ?? "") ? `${f.label_en}: ${measured}` : f.label_en;
 }
 
-function toFact(id: string, label: string, f: BackendFact, cite: Citer, need: BackendNeed): Fact {
-  const sources = cite(f.segment_ids);
-  return {
-    id,
-    label,
-    value: factValue(f),
-    trust: trustOf[f.trust],
-    source: sources[0],
-    sources,
-    note: need.note ?? undefined,
-    guideline: guidelineOf(need),
-    priority: need.priority ?? undefined,
-  };
-}
-
 // "Why this is shown": the knowledge base's reason plus its first guideline. Never advice for this patient.
 function guidelineOf(need: BackendNeed): Fact["guideline"] {
   const ref = need.sources?.[0];
@@ -222,51 +203,54 @@ function needToFacts(need: BackendNeed, cite: Citer): Fact[] {
     }];
   }
 
-  const facts: Fact[] = [];
-  // Trend: one card with the latest value and the documented history (oldest first).
-  const numeric = need.facts.filter((f) => f.value && /\d/.test(f.value));
-  if (need.shape === "trend" && numeric.length >= 2) {
-    const latest = numeric[numeric.length - 1];
-    facts.push({
-      ...toFact(`${need.need}:${latest.id}`, need.label, latest, cite, need),
-      isTimeSeries: true,
-      history: historyOf(numeric),
-      sources: cite(numeric.flatMap((f) => f.segment_ids)),
-    });
-    need.facts.filter((f) => !numeric.includes(f)).forEach((f) =>
-      facts.push(toFact(`${need.need}:${f.id}`, need.label, f, cite, need)));
-  } else if (need.facts.length > LONG_LIST) {
-    // Very long lists (e.g. every diagnosis mention in a general summary) would bury the screen on a phone:
-    // show the first entries, then one row that keeps all remaining passages one tap away.
-    need.facts.slice(0, LONG_LIST_SHOWN).forEach((f) => facts.push(toFact(`${need.need}:${f.id}`, need.label, f, cite, need)));
-    const rest = need.facts.slice(LONG_LIST_SHOWN);
-    const sources = cite(rest.flatMap((f) => f.segment_ids));
-    facts.push({
-      id: `${need.need}:more`, label: need.label, value: t("results.moreEntries", { n: rest.length }),
-      trust: "single", badgeLabel: "", source: sources[0], sources, note: rest.map((f) => f.label_en).join("; "),
-      priority: need.priority ?? undefined,
-    });
-  } else {
-    need.facts.forEach((f) => facts.push(toFact(`${need.need}:${f.id}`, need.label, f, cite, need)));
+  // One card per need: every fact is one compact row (value · date · source); facts the engine marked
+  // "collapsed" sit behind "+N more" on the card, still with their source links.
+  const rows: FactRow[] = need.facts.map((f) => ({
+    id: `${need.need}:${f.id}`, text: factValue(f), date: f.date ? formatDate(f.date) : undefined,
+    sources: cite(f.segment_ids), collapsed: f.collapsed || undefined,
+  }));
+  need.computed.forEach((c, i) => rows.push({
+    id: `${need.need}:computed:${i}`, text: `${c.label}: ${c.value}`, sources: cite(c.segment_ids),
+    computed: true, note: c.formula,
+  }));
+  // card trust: any conflict wins, then all outdated, then consistent (some fact in 2+ letters), else single
+  const tiers = need.facts.map((f) => trustOf[f.trust]);
+  const trust: FactTrust = tiers.includes("conflicting") ? "conflicting"
+    : tiers.length > 0 && tiers.every((x) => x === "outdated") ? "outdated"
+    : tiers.includes("consistent") ? "consistent" : "single";
+  const sources = cite([...new Set([...need.facts, ...need.computed].flatMap((f) => f.segment_ids))]);
+  const fact: Fact = {
+    id: need.need,
+    label: need.label,
+    value: rows.filter((r) => !r.collapsed).map((r) => r.text).join("; ") || null,
+    trust: need.facts.length === 0 && need.computed.length > 0 ? "consistent" : trust,
+    source: sources[0],
+    sources,
+    note: need.note ?? undefined,
+    guideline: guidelineOf(need),
+    priority: need.priority ?? undefined,
+    rows,
+  };
+
+  // Trend: one line "78 kg → 67 kg → 66 kg" plus the calculated change (one numeric series in one unit).
+  const numeric = need.facts.filter((f) => f.value && f.date && /^-?\d+([.,]\d+)?$/.test(f.value));
+  const oneUnit = numeric.every((f) => (f.unit ?? "") === (numeric[0]?.unit ?? ""));
+  if (need.shape === "trend" && numeric.length >= 2 && numeric.length === need.facts.length && oneUnit) {
+    const sorted = [...numeric].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+    const change = need.computed[0];
+    fact.trend = {
+      points: sorted.map((f) => ({
+        value: `${f.value}${f.unit ? ` ${f.unit}` : ""}`, date: formatDate(f.date!), collapsed: f.collapsed || undefined,
+      })),
+      numbers: sorted.map((f) => Number(f.value!.replace(",", "."))),
+      change: change?.value,
+      formula: change?.formula,
+    };
   }
-  // History view: a need with two or more dated values in one unit gets their history on its latest value.
-  if (need.shape !== "trend") {
-    const dated = numeric.filter((f) => f.date && (f.unit ?? "") === (numeric[0]?.unit ?? ""));
-    if (dated.length >= 2 && dated.length === numeric.length) {
-      const latest = [...dated].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "")).at(-1)!;
-      const card = facts.find((f) => f.id === `${need.need}:${latest.id}`);
-      if (card) Object.assign(card, { isTimeSeries: true, history: historyOf(dated) });
-    }
-  }
-  need.computed.forEach((c, i) => {
-    const sources = cite(c.segment_ids);
-    facts.push({
-      id: `${need.need}:computed:${i}`, label: c.label, value: c.value, trust: "consistent",
-      badgeLabel: t("results.computed"), source: sources[0], sources, note: c.formula, computed: true,
-      priority: need.priority ?? undefined,
-    });
-  });
-  return facts;
+  // History view: a need with two or more dated values in one unit gets their history.
+  const dated = numeric.filter((f) => (f.unit ?? "") === (numeric[0]?.unit ?? ""));
+  if (dated.length >= 2 && dated.length === numeric.length) Object.assign(fact, { isTimeSeries: true, history: historyOf(dated) });
+  return [fact];
 }
 
 // Dated values oldest first, number and unit as the backend sends them (value / unit fields).

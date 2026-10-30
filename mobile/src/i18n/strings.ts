@@ -127,6 +127,8 @@ const de = {
   "results.gap.silence": "In keinem Brief erwähnt",
   "results.computed": "Berechnet",
   "results.moreEntries": "{n} weitere Einträge",
+  "results.moreRows": "+{n} weitere",
+  "results.lessRows": "Weniger anzeigen",
   "results.notApplicable": "Nicht zutreffend",
   "results.backendError": "Der Server ist nicht erreichbar. Bitte erneut versuchen.",
 
@@ -356,6 +358,8 @@ const en: Record<StringKey, string> = {
   "results.gap.silence": "Not mentioned in any letter",
   "results.computed": "Calculated",
   "results.moreEntries": "{n} more entries",
+  "results.moreRows": "+{n} more",
+  "results.lessRows": "Show less",
   "results.notApplicable": "Not applicable",
   "results.backendError": "The server cannot be reached. Try again.",
 

@@ -48,6 +48,8 @@ def items(b):
     out = []
     for n in b.needs:
         for f in n.facts:
+            if f.collapsed:  # behind '+N more': not on the short screen without a tap
+                continue
             out.append((norm(" ".join(str(x) for x in (f.label_en, f.value or "", f.unit or "", f.status or "",
                                                            f.date or ""))), f.segment_ids))
         for c in n.computed:

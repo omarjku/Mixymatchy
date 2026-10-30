@@ -218,7 +218,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     from . import applicability as A
     from .fill import _dob, _d, age_years
     from .kb import kb as load_kb
-    from .kbfill import build_card, label_panel, slot_status_fn
+    from .kbfill import build_card, compact_also, label_panel, slot_status_fn
     from .route import route
     t0 = time.perf_counter()
     st = store()
@@ -320,6 +320,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         built = p2
         for c in also:
             c["group"] = "also_relevant"
+            compact_also(c)
         u["also_relevant"] = [c["slot"] for c in also]
         u["also_relevant_more"] = max(0, len(built) - len(also))
     dob = next((_dob((f.get("attrs") or {}).get("value")) for f in st.facts if f.get("category") == "date_of_birth"), None)

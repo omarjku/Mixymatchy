@@ -41,6 +41,27 @@ export interface Fact {
   computed?: boolean;         // calculated from documented values (allowed by the brief), not quoted
   badgeLabel?: string;        // overrides the trust badge (e.g. "Calculated"); "" hides it
   priority?: string;          // knowledge-base priority of the need (P1 / P2 / P3)
+  rows?: FactRow[];           // one need with several facts: one compact row each (value · date · source)
+  trend?: TrendSummary;       // trend need: "78 kg → 67 kg → 66 kg (−12 kg over 10 months)"
+}
+
+// One documented statement inside a need's card. collapsed: the engine put it behind "+N more"
+// (short view); it stays in the response with its sources, one tap away.
+export interface FactRow {
+  id: string;
+  text: string;
+  date?: string;              // dd.mm.yyyy
+  sources: SourceCitation[];
+  collapsed?: boolean;
+  computed?: boolean;         // calculated from documented values; note = formula
+  note?: string;
+}
+
+export interface TrendSummary {
+  points: { value: string; date: string; collapsed?: boolean }[]; // oldest first, value incl. unit
+  numbers: number[];
+  change?: string;            // the backend's calculated change, e.g. "-12 kg over 10 months"
+  formula?: string;
 }
 
 export interface Contradiction {

@@ -236,7 +236,9 @@ def _series(store, need, card, facts, as_of, outdated_days):
     for (d, v) in keys:
         it = group_items(store, pts[(d, v)])[0]
         items.append(it)
+    collapse_series(items, lambda it: "series", keep_before_last=True)
     card["items"] = items
+    card["collapsed"] = sum(1 for it in items if it.get("collapsed"))
     unit = (facts[0].get("attrs") or {}).get("unit") or ""
     parts = ["%g %s (%s)" % (v, unit, fmt_date(d)) for d, v in keys]
     card["value_en"] = " -> ".join(parts)
@@ -540,11 +542,68 @@ def trend(store, card, facts, calculate_change=True):
         return _series(store, {}, card, facts, "9999-12-31", 10 ** 6)
     items = annotate_status(store, group_items(store, facts))
     items.sort(key=lambda it: (str(it["date"] or ""), it["label_en"]))
+    items = dedupe_readings(store, items)
+    collapse_series(items, _measure_of)
     card["items"] = items
+    card["collapsed"] = sum(1 for it in items if it.get("collapsed"))
     card["value_en"] = " -> ".join(shown(it) for it in items[-12:])
     card["date"] = items[-1]["date"] if items else None
     card["status"] = "consistent"
     return card
+
+
+_MEASURE = re.compile(r"^[^\d:(]*")
+
+
+def _measure_of(it):
+    """'Blood pressure 145/90 mmHg (after treatment)' -> 'blood pressure' (one series per measure)."""
+    return _MEASURE.match(it.get("label_en") or "").group(0).strip().lower() or "value"
+
+
+def _reading_value(store, it):
+    fs = [store.fact_by_id[x] for x in it["facts"] if x in store.fact_by_id]
+    vals = {str((f.get("attrs") or {}).get("value") or "") for f in fs} - {""}
+    return min(vals) if len(vals) == 1 else None
+
+
+def dedupe_readings(store, items):
+    """Near-identical readings (same measure, same value, same day, only the context words differ, e.g.
+    '145/90 mmHg (after treatment)' and '145/90 mmHg (on admission, after treatment)') -> one item; the
+    other wording stays attached (also_as) with all its facts and passages, so no source link is lost."""
+    out, seen = [], {}
+    for it in items:
+        v = _reading_value(store, it)
+        k = (_measure_of(it), v, str(it.get("date") or "")[:10]) if v else None
+        rep = seen.get(k) if k else None
+        if rep is None:
+            if k:
+                seen[k] = it
+            out.append(it)
+            continue
+        rep["facts"] = list(dict.fromkeys(rep["facts"] + it["facts"]))
+        rep["passages"] = list(dict.fromkeys(rep["passages"] + it["passages"]))
+        rep["docs"] = sorted(set(rep["docs"]) | set(it["docs"]))
+        rep.setdefault("also_as", []).append(it["label_en"])
+    return out
+
+
+TREND_VISIBLE = 4  # a series with more readings shows first, the one before the latest, and the latest
+
+
+def collapse_series(items, measure, keep_before_last=False):
+    """Mark the middle readings of each measure 'collapsed' (still in the response, behind '+N more');
+    the earliest and latest stay visible, so the change between them is always on screen."""
+    by = {}
+    for i, it in enumerate(items):
+        by.setdefault(measure(it), []).append(i)
+    for idx in by.values():
+        if len(idx) <= (TREND_VISIBLE if keep_before_last else 2):
+            continue
+        keep = {idx[0], idx[-1]} | ({idx[-2]} if keep_before_last else set())
+        for i in idx:
+            if i not in keep:
+                items[i]["collapsed"] = True
+    return items
 
 
 def _num_attr(f):
@@ -650,6 +709,7 @@ def list_all(store, card, facts, context=(), detail="short", keep_ruled_out=Fals
     total = len(items)
     shown_items = items[:limit] if detail == "short" else items
     card["items"] = shown_items
+    card["hidden_items"] = items[len(shown_items):]  # kept (collapsed) by kbfill, never dropped silently
     card["more"] = total - len(shown_items)
     card["excluded"] = excluded
     card["value_en"] = "; ".join(shown(it) for it in shown_items) + (
