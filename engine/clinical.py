@@ -18,12 +18,14 @@ import json
 import os
 import re
 
-from .understand import norm_text
+from .understand import fold, norm_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATH = os.environ.get("SECOND_LOOK_CLINICAL_ROLES", os.path.join(ROOT, "rulebook", "clinical_roles.json"))
-L = r"a-z0-9äöüß"
+L = r"\w"          # Unicode letters/digits (accent-folded text, Arabic script included)
 PREFIX_MIN = 6
+PREFIX_MIN_INTL = 8
+ARABIC = re.compile(r"[\u0600-\u06FF]")
 
 NOT_AUTHORISED_MESSAGE = ("Second Look shows patient information only to clinical staff for a care task. "
                           "Please state your clinical role and what you are doing, e.g. 'Anaesthetist, pre-op check'.")
@@ -37,10 +39,15 @@ NOT_AUTHORISED_SUGGESTIONS = [
 _LEX = None
 
 
-def _term_rx(term, german):
-    t = re.escape(norm_text(term).strip())
+def _term_rx(term, mode):
+    """mode 'en': whole word (+ plural s/es); 'de' / 'intl': also a word prefix from PREFIX_MIN(_INTL)
+    characters (German compounds, Romance / Turkish inflections); Arabic script: whole word with the
+    article / conjunction prefixes and common suffixes."""
+    t = re.escape(fold(norm_text(term).strip()))
     pre = "(?<![%s])" % L
-    if german and len(term) >= PREFIX_MIN:
+    if ARABIC.search(term):
+        return re.compile(pre + "(?:[وفبلك])?(?:ال|لل)?" + t + "(?:ة|ه|ها|ي|ات|ون|ين)?(?![%s])" % L)
+    if (mode == "de" and len(term) >= PREFIX_MIN) or (mode == "intl" and len(term) >= PREFIX_MIN_INTL):
         return re.compile(pre + t + "[%s-]*" % L)          # prefix: the span covers the whole word
     return re.compile(pre + t + "(?:s|es)?(?![%s])" % L)
 
@@ -51,13 +58,15 @@ def lexicon():
         with open(PATH, encoding="utf-8") as fh:
             d = json.load(fh)
         pats = d.get("patterns") or {}
+
+        def terms(kind):
+            return [(t, _term_rx(t, mode)) for mode in ("en", "de", "intl")
+                    for t in d.get("%s_%s" % (kind, mode)) or []]
         _LEX = {
-            "clinical": [(t, _term_rx(t, False)) for t in d.get("clinical_en") or []]
-                        + [(t, _term_rx(t, True)) for t in d.get("clinical_de") or []],
-            "non_clinical": [(t, _term_rx(t, False)) for t in d.get("non_clinical_en") or []]
-                            + [(t, _term_rx(t, True)) for t in d.get("non_clinical_de") or []],
-            "patterns": [re.compile(p) for p in pats.get("clinical") or []],
-            "exclude": [re.compile(p) for p in pats.get("exclude") or []],
+            "clinical": terms("clinical"),
+            "non_clinical": terms("non_clinical"),
+            "patterns": [re.compile(fold(p)) for p in pats.get("clinical") or []],
+            "exclude": [re.compile(fold(p)) for p in pats.get("exclude") or []],
         }
     return _LEX
 
@@ -68,7 +77,7 @@ def _hits(t, entries):
 
 def _pattern_hits(t, lex):
     out = []
-    for m in re.finditer(r"[a-zäöüß]+", t):
+    for m in re.finditer(r"[^\W\d_]+", t):
         w = m.group(0)
         if any(x.search(w) for x in lex["exclude"]):
             continue
@@ -79,13 +88,13 @@ def _pattern_hits(t, lex):
 
 def excluded_word(w):
     """Words the lexicon marks as not a clinical person (astrologist, Tierarzt, ...)."""
-    return any(x.search(w) for x in lexicon()["exclude"])
+    return any(x.search(fold(w)) for x in lexicon()["exclude"])
 
 
 def is_clinical_word(w):
     """A single word that is an explicit lexicon term (used to stop fuzzy matching, e.g. urologist -> neurologist)."""
     lex = lexicon()
-    w = norm_text(w).strip()
+    w = fold(norm_text(w).strip())
     return any(rx.fullmatch(w) for _t, rx in lex["clinical"]) or \
         (not excluded_word(w) and any(p.search(w) for p in lex["patterns"]))
 
@@ -97,12 +106,12 @@ def _label(term):
 def classify(text, kb_alias=None, task_evidence=False, kb_role=False):
     """-> {"decision": "kb_role" | "clinical_term" | "clinical_task" | "not_clinical" | "no_role",
            "clinical": bool, "term": str|None, "label": str|None}"""
-    t = norm_text(text or "")
+    t = fold(norm_text(text or ""))
     lex = lexicon()
     clin = [(s, e, term, "clinical_term") for s, e, term in _hits(t, lex["clinical"]) + _pattern_hits(t, lex)]
     if kb_alias:
         clin += [(m.start(), m.end(), kb_alias, "kb_role")
-                 for m in re.compile("(?<![%s])%s" % (L, re.escape(norm_text(kb_alias)))).finditer(t)]
+                 for m in re.compile("(?<![%s])%s" % (L, re.escape(fold(norm_text(kb_alias))))).finditer(t)]
     non = [(s, e, term, "not_clinical") for s, e, term in _hits(t, lex["non_clinical"])
            if not any(cs <= s and e <= ce and (ce - cs) > (e - s) for cs, ce, _t, _k in clin)]
     # ties at one position: the longer span wins; equal spans: non-clinical wins (conservative)

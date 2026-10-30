@@ -13,9 +13,10 @@ import difflib
 import re
 
 from . import llm
-from .clinical import is_clinical_word
+from .clinical import excluded_word, is_clinical_word
+from .kb import bundle_tags, role_aliases
 from .slots import drug_classes_of, found, rx
-from .understand import _phrase_rx, _you_are_spans, extract_modifiers, norm_text
+from .understand import _phrase_rx, _you_are_spans, extract_modifiers, fold, norm_text
 
 FUZZY_THRESHOLD = 0.85        # fixed, per the guide; only aliases of 5+ characters are fuzzy-matched
 SAFETY_RULES = {"R01", "R02", "R03", "R10", "R17"}   # allergies, blood thinners, contrast reaction/metformin: add at P1
@@ -72,23 +73,43 @@ def _t(f):
 
 # ----------------------------------------------------------------- role and bundles
 
+def _blank_alias(t, alias):
+    """t with every occurrence of the role alias (matched on the folded form) replaced by spaces."""
+    out = list(t)
+    for m in _phrase_rx(fold(norm_text(alias)), True).finditer(fold(t)):
+        out[m.start():m.end()] = " " * (m.end() - m.start())
+    return "".join(out)
+
+
 def match_role(t, kb):
     spans = _you_are_spans(t)
+    ft = fold(t)
     best = None
     for idx, role in enumerate(kb.roles):
-        for alias in (role.get("aliases_en") or []) + (role.get("aliases_de") or []):
-            for m in _phrase_rx(norm_text(alias), True).finditer(t):
-                score = len(alias) + (100 if any(a <= m.start() < b for a, b in spans) else 0)
+        for alias in role_aliases(role):
+            for m in _phrase_rx(fold(norm_text(alias)), True).finditer(ft):
+                score = len(alias) + (100 if any(a <= m.start() < b for a, b in spans) else 0) \
+                    - (0.5 if role.get("generic") else 0)  # a generic name ('doctor') loses ties to a specialty
                 key = (score, -idx)
                 if best is None or key > best[0]:
                     best = (key, role["id"], alias, "alias")
     if best:
         return best[1], best[2], best[3]
-    words = re.findall(r"[a-zäöüß&-]+", t)
+    # specialty word stems in several languages (rulebook/kb_overlay.json role_stems): the first word in the
+    # text that starts with a stem names the role (cardiolog- / kardiyolog-, onkolog- ...)
+    stems = [(rid, s_) for rid, sts in ((getattr(kb, "overlay", None) or {}).get("role_stems") or {}).items()
+             if not rid.startswith("_") and rid in kb.role_by_id for s_ in sts]
+    if stems:
+        for m in re.finditer(r"[^\W\d_][\w-]*", ft):
+            w = m.group(0)
+            for rid, s_ in stems:
+                if w.startswith(fold(s_)) and not excluded_word(w):
+                    return rid, w, "stem"
+    words = re.findall(r"[^\W\d_][\w&-]*", t)
     grams = words + [" ".join(words[i:i + 2]) for i in range(len(words) - 1)]
     best = None
     for role in kb.roles:
-        for alias in (role.get("aliases_en") or []) + (role.get("aliases_de") or []):
+        for alias in (role.get("aliases_en") or []) + (role.get("aliases_de") or []):  # not the short intl names
             a = norm_text(alias)
             if len(a) < 5:
                 continue
@@ -112,7 +133,8 @@ def _tag_hits(t, tag):
     """Spans where a bundle tag matches: the exact phrase; for multi-word tags all words in one sentence
     (any order: 'review of blood pressure' ~ 'blood pressure review'); single words fuzzy at the fixed
     threshold (typos)."""
-    nt = norm_text(tag).strip()
+    nt = fold(norm_text(tag).strip())
+    t = fold(t)
     out = [(m.start(), m.end()) for m in _phrase_rx(nt, len(nt) < PREFIX_MIN).finditer(t)]
     if out:
         return out
@@ -129,7 +151,7 @@ def _tag_hits(t, tag):
                 out.append((min(a for a, _ in spans), max(b for _, b in spans)))
         return out
     if len(nt) >= PREFIX_MIN:
-        for m in re.finditer(r"[a-zäöüß][a-zäöüß-]+", t):
+        for m in re.finditer(r"[^\W\d_][\w-]+", t):
             if abs(len(m.group(0)) - len(nt)) <= 2 and \
                     difflib.SequenceMatcher(None, m.group(0), nt).ratio() >= FUZZY_THRESHOLD:
                 out.append((m.start(), m.end()))
@@ -143,7 +165,7 @@ def match_bundles(t, kb):
     for b in kb.bundles:
         if b["id"] == kb.fallback_bundle:
             continue
-        for tag in (b.get("tags_en") or []) + (b.get("tags_de") or []):
+        for tag in bundle_tags(b):
             if tag.startswith("("):
                 continue
             for s0, e0 in _tag_hits(t, tag):
@@ -272,13 +294,15 @@ def current_meds(store, as_of):
 
 # ----------------------------------------------------------------- entry point
 
-def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=None):
+def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=None, force_role=None):
     t = norm_text(text)
     role_id, alias, method = match_role(t, kb)
+    if force_role and force_role != role_id and force_role in kb.role_by_id:  # role read earlier (e.g. by the LLM)
+        role_id, alias, method = force_role, None, "llm"
     role = kb.role_by_id.get(role_id)
     t_task = t
     if alias:  # the words naming the role describe who asks, not the task
-        t_task = _phrase_rx(norm_text(alias), True).sub(lambda m: " " * len(m.group(0)), t)
+        t_task = _blank_alias(t, alias)
     matched = match_bundles(t_task, kb)
     chosen = choose_bundles(matched, role)
     how = "kb_alias_tags"
@@ -312,8 +336,9 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
     note = None
     if force_bundles:  # screen.py: a recognised role's own task when the wording is not recognised
         chosen, how = list(force_bundles), "role_default"
-        note = "Task wording not recognised: showing what a %s usually needs (%s)." % (
-            role["name"], ", ".join(kb.bundle_by_id[b]["title"] for b in force_bundles))
+        note = "Task wording not recognised: showing what %s usually needs (%s)." % (
+            ("a %s" % role["name"]) if role else "this role",
+            ", ".join(kb.bundle_by_id[b]["title"] for b in force_bundles))
     if not chosen:
         chosen = [kb.fallback_bundle]
         how = "fallback"

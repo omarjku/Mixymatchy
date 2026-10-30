@@ -1,8 +1,8 @@
 {
   "version": "0.1",
   "status": "draft, hand-written; needs review by the medical team",
-  "purpose": "Sex-specific organs, examinations and tests. When the task names one of these and the record documents a patient of the other sex, the screen shows 'not applicable' with the source passage instead of a summary. Generic keywords only; no patient content.",
-  "matching": "Terms are matched in the task text (lowercase, after the role words are removed). Terms of 5+ characters also match as a word prefix (German compounds, e.g. Prostatauntersuchung); shorter terms match as whole words.",
+  "purpose": "Sex-specific organs, examinations and tests. When the task names one of these and the record documents a patient of the other sex, the screen shows 'not applicable' with the source passage instead of a summary. Generic keywords only; no patient content. Age-specific specialties (paediatrics, neonatology) and pregnancy care use applicable_age_min / applicable_age_max against the age computed from the documented date of birth.",
+  "matching": "Terms are matched in the task text (lowercase, after the role words are removed). Terms of 5+ characters also match as a word prefix (German compounds, e.g. Prostatauntersuchung); shorter terms match as whole words. Items with scope 'request' are matched in the whole request (role words included): the specialty asking is itself the item (a paediatrician, an obstetrician). roles: KB role ids whose request about this item makes the whole screen not applicable. terms_intl: French/Spanish/Italian/Turkish/Arabic (accent-folded). New rows and age limits: source TODO-cite (medical team).",
   "safety_block": [
     "age_sex",
     "allergies",
@@ -34,11 +34,20 @@
         "prostatectomy",
         "psa",
         "digital rectal exam for prostate",
-        "turp"
+        "turp",
+        "prostate exam",
+        "prostate cancer screening",
+        "benign prostatic",
+        "bph",
+        "erectile dysfunction",
+        "erectile"
       ],
       "terms_de": [
         "prostata",
-        "prostatektomie"
+        "prostatektomie",
+        "psa-wert",
+        "psa-kontrolle",
+        "erektile dysfunktion"
       ],
       "slots": [
         "age_sex",
@@ -54,6 +63,19 @@
             "PSA"
           ]
         }
+      ],
+      "roles": [
+        "urologist"
+      ],
+      "terms_intl": [
+        "prostate",
+        "prostata",
+        "prostat",
+        "البروستاتا",
+        "بروستاتا",
+        "depistage du cancer de la prostate",
+        "antigeno prostatico",
+        "antigene prostatico"
       ]
     },
     {
@@ -93,6 +115,19 @@
             "scrot"
           ]
         }
+      ],
+      "roles": [
+        "urologist"
+      ],
+      "terms_intl": [
+        "testicule",
+        "testiculaire",
+        "testiculo",
+        "testicolo",
+        "testis",
+        
+        "الخصية",
+        "خصية"
       ]
     },
     {
@@ -106,13 +141,25 @@
         "prenatal",
         "obstetric",
         "beta-hcg",
-        "hcg"
+        "hcg",
+        "obstetrician",
+        "obstetrics",
+        "midwife",
+        "antenatal care",
+        "pregnancy test",
+        "expecting a baby",
+        "gestation",
+        "gestational"
       ],
       "terms_de": [
         "schwangerschaft",
         "schwanger",
         "schwangerenvorsorge",
-        "geburtshilf"
+        "geburtshilf",
+        "geburtshelfer",
+        "hebamme",
+        "mutterpass",
+        "schwangere"
       ],
       "slots": [
         "age_sex",
@@ -132,6 +179,32 @@
             "hCG"
           ]
         }
+      ],
+      "scope": "request",
+      "roles": [
+        "obstetrician"
+      ],
+      "applicable_age_max": 55,
+      "source": "TODO-cite (age limit 55 is an engineering proposal)",
+      "terms_intl": [
+        "grossesse",
+        "enceinte",
+        "obstetric",
+        "sage-femme",
+        "embarazo",
+        "embarazada",
+        "obstetra",
+        "matrona",
+        "gravidanza",
+        "incinta",
+        "ostetric",
+        "gebelik",
+        "hamile",
+        "ebe",
+        "الحمل",
+        "حامل",
+        "طبيب التوليد",
+        "قابلة قانونية"
       ]
     },
     {
@@ -174,6 +247,15 @@
             "Zytolog"
           ]
         }
+      ],
+      "terms_intl": [
+        "frottis",
+        "col de l'uterus",
+        "citologia cervical",
+        "papanicolaou",
+        "pap test",
+        "rahim agzi",
+        "عنق الرحم"
       ]
     },
     {
@@ -205,6 +287,12 @@
             "mammogra"
           ]
         }
+      ],
+      "terms_intl": [
+        "mammographie",
+        "mamografia",
+        "mammografia",
+        "mamografi"
       ]
     },
     {
@@ -283,7 +371,92 @@
             "Menarche"
           ]
         }
+      ],
+      "terms_intl": [
+        "gynecolog",
+        "ginecolog",
+        "jinekolog",
+        "examen gynecologique",
+        "examen ginecologico",
+        "visita ginecologica",
+        "jinekolojik",
+        "فحص نسائي"
       ]
+    },
+    {
+      "id": "paediatrics",
+      "label": "Paediatric care (children)",
+      "scope": "request",
+      "applicable_age_max": 17,
+      "source": "TODO-cite (age limit 17 = under 18; medical team to confirm)",
+      "terms_en": [
+        "paediatrician",
+        "pediatrician",
+        "paediatric",
+        "pediatric",
+        "paediatrics",
+        "pediatrics",
+        "child health",
+        "well-child",
+        "children's doctor",
+        "school entry exam"
+      ],
+      "terms_de": [
+        "kinderarzt",
+        "kinderärztin",
+        "kinderheilkunde",
+        "pädiat",
+        "kinderklinik",
+        "kindervorsorge",
+        "u-untersuchung"
+      ],
+      "terms_intl": [
+        "pediatr",
+        "cocuk doktoru",
+        "cocuk hekimi",
+        "طبيب اطفال",
+        "طبيب الاطفال",
+        "طب الاطفال"
+      ],
+      "slots": [
+        "age_sex",
+        "allergies"
+      ],
+      "record_checks": []
+    },
+    {
+      "id": "neonatology",
+      "label": "Neonatal care (newborns)",
+      "scope": "request",
+      "applicable_age_max": 0,
+      "source": "TODO-cite",
+      "terms_en": [
+        "neonatologist",
+        "neonatology",
+        "neonatal",
+        "newborn",
+        "neonate",
+        "nicu"
+      ],
+      "terms_de": [
+        "neonatolog",
+        "neugeboren",
+        "frühgeboren"
+      ],
+      "terms_intl": [
+        "neonatolog",
+        "nouveau-ne",
+        "recien nacido",
+        "neonato",
+        "yenidogan",
+        "حديثي الولادة",
+        "حديث الولادة"
+      ],
+      "slots": [
+        "age_sex",
+        "allergies"
+      ],
+      "record_checks": []
     }
   ],
   "record_check_matching": "record_checks terms are case-insensitive regular expressions matched at a word start in each fact's English text and its source quote."

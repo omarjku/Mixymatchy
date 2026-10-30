@@ -157,6 +157,7 @@ OVERVIEW_RX = re.compile(r"(?<![a-zäöüß])(overview|summary|summarise|summari
 def _suggest_bundles(k, task_text, role, n=3):
     """Nearest bundle titles for an unrecognised task: fuzzy tag similarity, the role's own bundles first."""
     import difflib
+    from .kb import bundle_tags
     from .understand import norm_text
     words = [w for w in re.findall(r"[a-zäöüß]{4,}", task_text or "")]
     defaults = (role or {}).get("default_bundles") or []
@@ -165,7 +166,7 @@ def _suggest_bundles(k, task_text, role, n=3):
         if b["id"] == k.fallback_bundle:
             continue
         best = 0.0
-        for tag in (b.get("tags_en") or []) + (b.get("tags_de") or []):
+        for tag in bundle_tags(b):
             if tag.startswith("("):
                 continue
             for tw in norm_text(tag).split():
@@ -227,9 +228,18 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     anchor = st.anchor_date()
     m = re.search(r"\bas of (\d{4}-\d{2}-\d{2})\b", text or "")
     as_of = as_of or (m.group(1) if m else anchor)
-    u = route(text, k, st, as_of, detail=detail, use_llm=use_llm)
+    # request semantics (engine/request.py): instructions inside the text are blanked before anything reads
+    # it (they can never add content, pick a role or authorise); excluded topics are blanked from the task
+    from . import request as R
+    req = R.analyse(text, st)
+    if req["other_patient"] and C.classify(req["clean"])["decision"] != "not_clinical":
+        return other_patient_screen(text, req, detail, t0)  # (a non-clinical requester gets the gate's refusal)
+    u = route(req["task"], k, st, as_of, detail=detail, use_llm=use_llm)
+    u["text"] = text
     u["as_of_date"] = as_of
     u["anchor_date"] = anchor
+    u["ignored_instructions"] = req["instructions"]
+    u["excluded_text"] = req["excluded_text"] or None
     sex, sex_pid = st.patient_sex()
     patient = {"sex": sex, "sex_passage": sex_pid}
     contras, csource = _contradictions(st)
@@ -237,25 +247,42 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     role = k.role_by_id.get(u["role_id"])
 
     # applicability (rulebook/applicability.json) and the safety summary for unrecognised tasks
-    app = A.check(u.get("task_text") or "", st)
+    app = A.check(u.get("task_text") or "", st, full_text=req["task"], as_of=as_of)
 
     # clinical gate (rulebook/clinical_roles.json): patient data only for a clinical requester
     # a role read by the LLM never authorises: kb_role only for a role the rules found in the text
     rules_role = bool(role) and (u.get("role_match") or {}).get("method") != "llm"
-    gate = C.classify(text, kb_alias=(u.get("role_match") or {}).get("matched") if rules_role else None,
+    gate = C.classify(req["clean"], kb_alias=(u.get("role_match") or {}).get("matched") if rules_role else None,
                       kb_role=rules_role,
                       task_evidence=C.strong_task(u.get("bundles_matched"), k.fallback_bundle) or bool(app["items"]))
     u["clinical_gate"] = gate
     if not gate["clinical"]:
         return not_authorised_screen(u, gate, detail, t0)
-    defaults = [b for b in (role or {}).get("default_bundles") or [] if b in k.bundle_by_id and b != k.fallback_bundle]
-    if (rules_role and u["tasks_from"] == "fallback" and len(defaults) == 1 and not app["items"]
+    # recognised role (or a clinical requester the lexicon knows), task wording not recognised: the role's own
+    # typical task (rulebook/kb_overlay.json role_fallback_bundles, else its first default bundle) with a
+    # visible note, instead of the generic safety summary
+    fbmap = (getattr(k, "overlay", None) or {}).get("role_fallback_bundles") or {}
+    if role:
+        cand = fbmap.get(role["id"]) or (role.get("default_bundles") or [])[:1]
+    elif gate["decision"] == "clinical_term":
+        cand = fbmap.get("physician") or []
+    else:
+        cand = []
+    defaults = [b for b in cand if b in k.bundle_by_id]
+    if (u["tasks_from"] == "fallback" and defaults and not app["items"]
             and not OVERVIEW_RX.search(u.get("task_text") or "")):
-        # a recognised role with one typical task, task wording not recognised: that task, with a visible note
         llm_focus = u.get("llm_focus_proposal")
-        u = route(text, k, st, as_of, detail=detail, use_llm=False, force_bundles=defaults)
-        u.update(as_of_date=as_of, anchor_date=anchor, clinical_gate=gate, llm_focus_proposal=llm_focus)
+        u = route(req["task"], k, st, as_of, detail=detail, use_llm=False, force_bundles=defaults,
+                  force_role=role["id"] if role else None)
+        u.update(text=text, as_of_date=as_of, anchor_date=anchor, clinical_gate=gate, llm_focus_proposal=llm_focus,
+                 ignored_instructions=req["instructions"], excluded_text=req["excluded_text"] or None)
         info = u.pop("slot_info")
+        u["suggestions"] = _suggest_bundles(k, u.get("task_text"), role)
+        titles = ", ".join(k.bundle_by_id[b]["title"] for b in defaults)
+        what = ("what a %s usually needs (%s)" % (role["name"], titles) if role else
+                "the general core summary for %s (%s)" % (gate.get("label") or "this role", titles))
+        u["fallback_note"] = "Task wording not recognised: showing %s. For a specific task try e.g. %s." % (
+            what, ", ".join("'%s'" % x for x in u["suggestions"]))
     if not role and gate["decision"] == "clinical_term":
         u["role_label"] = gate["label"]
         u["role_match"] = {"method": "clinical_lexicon", "matched": gate["term"]}
@@ -264,10 +291,17 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     front, back, mode = [], [], "task"
     slots = list(u["slots_shown"])
     if app["not_applicable"]:
-        front = [A.not_applicable_card(st, r, app["sex"], app["passage"], app["word"]) for r in app["not_applicable"]]
-        u["applicability_note"] = "%s: not applicable, the record documents %s patient." % (
-            "; ".join(r["label"] for r in app["not_applicable"]), A.SEX_WORD.get(app["sex"], app["sex"]))
-        if fallback:
+        front = [A.not_applicable_card(st, r, app["sex"], app["passage"], app["word"], app["age"],
+                                       app["age_passage"], app["dob"]) for r in app["not_applicable"]]
+        u["applicability_note"] = "%s: not applicable, the record documents %s." % (
+            "; ".join(r["label"] for r in app["not_applicable"]),
+            "; ".join(("a patient aged %s" % app["age"]) if r.get("reason") == "age" else
+                      ("%s patient" % A.SEX_WORD.get(app["sex"], app["sex"])) for r in app["not_applicable"]))
+        # the whole request does not apply: the task is not recognised otherwise, the item is about who asks
+        # (paediatrics, obstetrics ...), or the asking specialty exists for this item (urologist + prostate)
+        whole = fallback or any(r.get("scope") == "request" or u.get("role_id") in r.get("roles")
+                                for r in app["not_applicable"])
+        if whole:
             mode, slots = "not_applicable", list(safety)
             u["fallback_note"] = None
             u["task_labels"] = ["Not applicable: %s" % r["label"] for r in app["not_applicable"]]
@@ -303,28 +337,54 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         for x in SAFETY_CORE:
             if x in k.slot_by_id:
                 _ensure_info(k, info, x, "safety core")
+    # named topics (engine/focus.py, rulebook/kb_overlay.json 'topics'): the request's own topics as P1 cards;
+    # excluded topics ('not interested in X') are removed, never the safety core
+    from . import focus as F
+    from .understand import norm_text
+    tsettings = (getattr(k, "overlay", None) or {}).get("topics_settings") or {}
+    excluded = F.match_topics(norm_text(req["excluded_text"]), getattr(k, "overlay", None) or {})
+    ex_ids = {tp["id"] for tp in excluded}
+    named = [tp for tp in F.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
+             if tp["id"] not in ex_ids]
+    if excluded:
+        ex_slots = {x for tp in excluded for x in tp.get("slots") or []}
+        slots = [x for x in slots if x in SAFETY_CORE or x not in ex_slots]
+    if mode != "not_applicable":
+        for x in F.topic_slots(k, named, excluded)[:tsettings.get("max_topic_slots", 5)]:
+            if x not in slots:
+                slots.append(x)
+                _ensure_info(k, info, x, "named topic")
+    if named and u.get("tasks_from") == "role_default":
+        u["fallback_note"] = "Showing the topics you named (%s) and what %s usually needs (%s)." % (
+            ", ".join(tp["label"] for tp in named), ("a %s" % role["name"]) if role else "a clinician",
+            ", ".join(k.bundle_by_id[b]["title"] for b in u["bundle_ids"]))
+    u["named_topics"] = [tp["id"] for tp in named]
+    u["excluded_topics"] = [tp["id"] for tp in excluded]
     u["slots_shown"] = slots
     u["screen_mode"] = mode
     u["applicability"] = {k_: app[k_] for k_ in ("sex", "passage", "word")}
     u["applicability"]["items"] = [{x: r[x] for x in ("id", "label", "applicable_sex", "term")} for r in app["items"]]
 
-    ctx = {"as_of": as_of, "anchor": as_of, "patient": patient, "text": text, "slot_info": info,
+    ctx = {"as_of": as_of, "anchor": as_of, "patient": patient, "text": req["task"], "slot_info": info,
            "bundles": u["bundle_ids"], "detail": detail}
     cards = front + [build_card(st, k, s, ctx, contras) for s in slots] + back
     focus = []
     if mode != "not_applicable":  # task focus (engine/focus.py): after the clinical gate, never a dump
         from .focus import focus_cards
-        focus, finfo = focus_cards(st, k, u.get("task_text") or "", text, as_of, cards, u.get("llm_focus_proposal"))
+        focus, finfo = focus_cards(st, k, u.get("task_text") or "", req["task"], as_of, cards, u.get("llm_focus_proposal"))
         u.update(finfo)
         if finfo["llm_focus"]:
             u["llm_used"] = True
             u["llm_reason"] = u.get("llm_reason") or finfo["llm_focus"]["reason"]
+        tcards, tinfo = F.topic_cards(st, k, named, excluded, u.get("task_text") or "", as_of, cards + focus, tsettings)
+        focus = focus + tcards
+        u["topic_cards"] = tinfo
     also = []
     if detail == "short" and mode == "task":  # P2 'also relevant' group, shown without a second request
         p2_all = {x["slot"] for x in u["slots"] if x["priority"] == "P2" and x["slot"] not in slots}
         in_bundles = [x for b_ in u["bundle_ids"] for x in (k.bundle_by_id[b_].get("slots") or {}).get("P2") or []]
         p2 = [x for x in dict.fromkeys(in_bundles + [x["slot"] for x in u["slots"]]) if x in p2_all]  # KB order
-        room = max(0, min(MAX_ALSO_RELEVANT, MAX_SHORT_TOTAL - len(cards) - len(focus)))
+        room = max(0, min(MAX_ALSO_RELEVANT, MAX_SHORT_TOTAL - len(cards) - len(focus) - 1))  # 1: disagreements
         also = [build_card(st, k, s, ctx, contras) for s in p2[:room]]
         built = p2
         for c in also:
@@ -339,11 +399,37 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         for c in cards:  # rule R22: label panel for every shown medication
             if c.get("shape") == "current_list" and c.get("items"):
                 c["label_panel"] = label_panel(st, k, c, status, u["bundle_ids"], detail, age)
+    # exclusions, then: facts of a named topic or sharing a word with the request are never behind '+N more'
+    cards, focus, also = (F.apply_exclusions(x, st, excluded) for x in (cards, focus, also))
+    F.open_named(cards + focus + also, st, named, u.get("task_text") or "", getattr(k, "overlay", None) or {})
+    if mode != "not_applicable":  # letters that disagree about what is on this screen (or all, for a review)
+        review = bool(REVIEW_RX.search(req["task"]))
+        dc = disagreement_card(st, cards + focus + also, contras, excluded, review)
+        if dc:
+            if len(cards) + len(focus) + len(also) + 1 > MAX_SHORT_TOTAL and also:
+                also = also[:-1]
+            focus = focus + [dc]
+        u["review_request"] = review
+        counted = [c for c in contras if c.get("counted", True)]
+        for c_ in cards + focus + also:  # the flag beside each shown fact a counted contradiction is about
+            for it in c_.get("items") or []:
+                hit = [c["id"] for c in counted if set(c.get("facts") or []) & set(it.get("facts") or [])]
+                if hit:
+                    it["conflicts"] = hit
     _annotate_followups(st, cards + focus + also)
+    notes = []
+    if req["instructions"]:
+        notes.append("Instructions inside the request were ignored (Second Look never changes or adds record "
+                      "content): %s." % "; ".join("'%s'" % x[:60] for x in req["instructions"]))
+    if excluded:
+        notes.append("Left out as requested: %s (allergies and age/sex always stay)."
+                     % ", ".join(tp["label"] for tp in excluded))
+    if notes:
+        u["fallback_note"] = " ".join(([u["fallback_note"]] if u.get("fallback_note") else []) + notes)
 
     # only what touches this screen: contradictions, blind spot, open follow-ups
-    contra_all, proof = _proof_and_contradictions(st, cards + focus, contras)
-    on_card = {x for c in cards for x in c.get("conflicts") or []}
+    contra_all, proof = _proof_and_contradictions(st, cards + focus + also, contras)
+    on_card = {x for c in cards + focus for x in c.get("conflicts") or []}
     for c in contra_all:
         c["relevant"] = c["relevant"] or c["id"] in on_card
         c["slots"] = [x["slot"] for x in cards if set(c["facts"]) & set(x["facts"]) or c["id"] in (x.get("conflicts") or [])]
@@ -387,6 +473,72 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         "proof_bar": proof,
         "timing_ms": round((time.perf_counter() - t0) * 1000, 1),
     }
+
+
+REVIEW_RX = re.compile(
+    r"(?<![\w])(inconsisten\w*|contradict\w*|discrepan\w*|conflicting|disagree\w*|mismatch\w*|plausib\w*|"
+    r"documentation (?:quality|review|errors?|check)|data quality|record quality|quality (?:check|review) of the (?:record|letters|documentation)|"
+    r"copy[- ]?paste|errors? in the (?:record|letters|documentation|documents)|"
+    r"widerspr\w*|unstimmig\w*|inkonsisten\w*|dokumentationsqualit\w*|dokumentationsfehler\w*|abweichung\w*|"
+    r"incoheren\w*|divergen\w*|incoherence|contradiction\w*|contradicc\w*|discrepanc\w*|inconsistenc\w*|"
+    r"incoerenz\w*|contraddi\w*|discrepanz\w*|tutarsiz\w*|celiski\w*|تناقض\w*|تعارض\w*|عدم اتساق)")
+MAX_DISAGREE_ITEMS = 12
+
+
+def disagreement_card(st, shown_cards, contras, excluded=(), review=False):
+    """'Letters disagree' card: every counted contradiction or documentation note (compare/) that touches a fact
+    on this screen - or all of them for a documentation-review request - with one fact per conflicting
+    statement (both sides open) and the explanation as a computed line linked to its passages."""
+    from .focus import topic_fact_ids
+    shown = {x for c in shown_cards for x in c.get("facts") or []}
+    on_card = {x for c in shown_cards for x in c.get("conflicts") or []}
+    ex_ids = {x for tp in excluded for x in topic_fact_ids(st, tp)}
+    picked = [c for c in contras if review or set(c.get("facts") or []) & shown or c["id"] in on_card]
+    picked = [c for c in picked if not (ex_ids and set(c.get("facts") or []) <= ex_ids)]
+    if not picked:
+        return None
+    picked.sort(key=lambda c: (not c.get("counted", True), c["id"]))
+    facts, lines = [], []
+    for c in picked:
+        seen_vals = set()
+        for cl in c.get("claims") or []:
+            v = re.sub(r"\s+", " ", str(cl.get("asserted") or "")).lower()
+            fid = cl.get("fact_id")
+            if v in seen_vals or fid not in st.fact_by_id or fid in facts:
+                continue
+            seen_vals.add(v)
+            facts.append(fid)
+        lines.append({"label": ("Letters disagree: " if c.get("counted", True) else "Documentation note: ")
+                               + (c.get("title_en") or c["id"]),
+                      "value": c.get("detail_en") or "", "passages": list(c.get("passages") or []),
+                      "formula": "compare/: statements about the same thing in different letters (or a value "
+                                 "recomputed from the letters); tier %s" % ("counted contradiction" if c.get(
+                                     "counted", True) else "documentation note")})
+    items = group_items(st, [st.fact_by_id[x] for x in facts])[:MAX_DISAGREE_ITEMS]
+    return {"need": "disagreements", "slot": "disagreements", "label_en": "Letters disagree" + (
+                " (documentation review: all)" if review else " on this screen"),
+            "shape": "list", "priority": "P1", "group": "disagreements",
+            "why": "Contradictions and documentation notes found by comparing the letters (compare/).",
+            "sources": [], "rules": [], "origins": ["compare"], "compute": "disagreements", "status": "conflicting",
+            "value_en": " | ".join(it["label_en"] for it in items), "items": items,
+            "facts": [x for it in items for x in it["facts"]], "conflicts": [c["id"] for c in picked],
+            "passages": list(dict.fromkeys(p for it in items for p in it["passages"])), "collapsed": 0,
+            "computed_lines": lines}
+
+
+def other_patient_screen(text, req, detail, t0):
+    """The request names a different patient: nothing of the open record is shown."""
+    msg = ("Different patient: %s Second Look shows only the record that is open; open the other patient's record "
+           "to ask about them." % req["other_patient"])
+    u = {"text": text, "task_text": "", "role_match": {"method": "none", "matched": None},
+         "clinical_gate": {"decision": "other_patient", "clinical": False, "term": None, "label": None},
+         "rulebook": None}
+    scr = not_authorised_screen(u, u["clinical_gate"], detail, t0)
+    scr["message"] = msg
+    scr["understood"].update(fallback_note=msg, not_authorised_message=msg, role_label="Different patient",
+                             task_labels=["Different patient"], other_patient=req["other_patient"])
+    scr["proof_bar"]["summary_en"] = "No patient facts shown: the request is about a different patient."
+    return scr
 
 
 def not_authorised_screen(u, gate, detail, t0):
