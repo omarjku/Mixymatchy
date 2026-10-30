@@ -75,7 +75,8 @@ class TestRequestAndValidation(LLMTestBase):
         fake = self.client({"role_id": "gp", "bundle_ids": ["B03"], "reason": "GP reviewing diabetes"})
         prop, info = llm.propose("GP here, sugar check", self.kb)
         self.assertEqual(prop, {"role_id": "gp", "bundle_ids": ["B03"], "reason": "GP reviewing diabetes",
-                                "focus_concepts": [], "actionable_clinical_task": None, "task_reason": ""})
+                                "focus_concepts": [], "actionable_clinical_task": None, "task_reason": "",
+                                "requester_is_clinical": None, "requester_reason": ""})
         self.assertTrue(info["called"])
         kw = fake.calls[0]
         self.assertEqual(kw["model"], "claude-haiku-5-5")
@@ -304,6 +305,35 @@ class TestTaskCheck(LLMTestBase):
                 self.assertEqual(s["screen_mode"], mode)
                 self.assertEqual(s["cards"], [])
                 self.assertEqual(s["proof_bar"]["facts_shown"], 0)
+
+    @unittest.skipUnless(HAS_DATA, "no patient data")
+    def test_requester_false_refuses_even_a_rules_role(self):
+        self.client({"role_id": "anaesthetist", "bundle_ids": ["B01"], "reason": "", "actionable_clinical_task": True,
+                     "task_reason": "", "requester_is_clinical": False, "requester_reason": "really a relative"})
+        s = self.screen("Anaesthetist, pre-op check before breast surgery")
+        self.assertEqual(s["screen_mode"], "not_authorised")
+        self.assertEqual(s["cards"], [])
+        self.assertEqual(s["proof_bar"]["facts_shown"], 0)
+        self.assertEqual(s["understood"]["clinical_gate"]["decision"], "llm_not_clinical")
+        self.assertTrue(s["understood"]["llm_used"])
+
+    @unittest.skipUnless(HAS_DATA, "no patient data")
+    def test_requester_true_never_authorises(self):
+        self.client({"role_id": "gp", "bundle_ids": ["B07"], "reason": "", "actionable_clinical_task": True,
+                     "task_reason": "", "requester_is_clinical": True, "requester_reason": "clinician"})
+        for text in ("Cleaner, medication review", "what is wrong with her?", "I'm her neighbour, which tablets?"):
+            s = self.screen(text)
+            with self.subTest(text=text):
+                self.assertEqual(s["screen_mode"], "not_authorised")
+                self.assertEqual(s["proof_bar"]["facts_shown"], 0)
+
+    def test_requester_field_validated(self):
+        fake = self.client({"role_id": "gp", "bundle_ids": [], "reason": "", "requester_is_clinical": "yes"})
+        prop, _ = llm.propose("GP, y", self.kb)
+        self.assertIsNone(prop["requester_is_clinical"])  # not a bool: ignored
+        schema = fake.calls[0]["output_config"]["format"]["schema"]
+        self.assertEqual(schema["properties"]["requester_is_clinical"], {"type": "boolean"})
+        self.assertIn("requester_is_clinical", schema["required"])
 
     @unittest.skipUnless(HAS_DATA, "no patient data")
     def test_timeout_and_error_give_rules_result(self):

@@ -43,6 +43,12 @@ NOT_AUTHORISED_SUGGESTIONS = [
     "Pharmacist, medication review",
 ]
 
+# no requester at all but a clear clinical request ('STAT CT head, any bleeding risk meds?'): still no data
+# (an explicit requester is required), but the message asks for the role and offers the request with one
+NEEDS_ROLE_MESSAGE = ("Your request is clear, but your role is missing. Second Eye shows patient information only to "
+                      "clinical staff: please add your clinical role, e.g. 'Emergency physician, ...'.")
+ROLE_EXAMPLES = ["Emergency physician", "GP", "Ward nurse"]
+
 _LEX = None
 
 
@@ -112,15 +118,32 @@ _SELF = re.compile(r"(?<![\w'])(i am|i'm|i work as|i work for|i work at|i actual
                    r"beruflich|je suis|je travaille comme|je travaille pour|soy|trabajo como|trabajo para|sono|"
                    r"lavoro come|lavoro per|ben|benim|انا|"
                    r"i (?:actually |really |just |only )?(?:deliver|drive|work|write|sell|run|own|teach)s?|"
-                   r"ich (?:liefere|fahre|arbeite|schreibe|verkaufe))(?![\w'])")
+                   r"ich (?:liefere|fahre|arbeite|schreibe|verkaufe)|"
+                   r"[^\W\d_][\w&-]* here|hier)(?![\w'])")   # 'doctor here, well really ...'
+_REPORTED = re.compile(r"\s*(?:has |hat |had )?(?:just |already |gerade |schon )?([^\W_][\w'-]*)(?:\s+(an|angerufen))?")
 # a term followed by one of these starts a clause about someone else ('her daughter asked me', 'her husband
 # wants to know'): the requester mentions a third party, it is not how they describe themselves
 _THIRD_PARTY_VERB = set("""asked asks ask wants want wanted would called calls rang phoned phones says said told tells
 is was has had wonders wondered needs needed requested mentioned worries worried brought came comes visited
 fragt fragte möchte mochte will wollte hat hatte rief ruft ist war sagt sagte meint bittet bat
-demande demandait veut a pregunta pregunto quiere chiede vuole soruyor soruyordu istiyor""".split())
+demande demandait veut a pregunta pregunto quiere chiede vuole soruyor soruyordu istiyor
+phoned phone rang rings ringing calling called emailed wrote writes texted messaged contacted came asking
+wanting wonder wondering worried concerned visited visiting dropped left reported reports
+angerufen anrief anruft fragte gefragt erkundigt erkundigte meldete gemeldet schrieb
+appele appelle telephone a appele llamo llamó llama ha llamado ha chiamato chiama ha telefonato aradi sordu""".split())
+
+
+def third_party_mention(t, s, e):
+    """A non-clinical term followed by a reporting verb ('the husband called', 'her son phoned the practice',
+    'die Tochter hat angerufen'): someone else is mentioned as the source of the question."""
+    m = _REPORTED.match(t[e:])
+    return bool(m and (m.group(1) in _THIRD_PARTY_VERB or m.group(2)))
 _REALLY = re.compile(r"(?<![\w'])(actually|really|in fact|in reality|honestly|eigentlich|tatsachlich|"
                      r"in wirklichkeit|en fait|en realite|en realidad|in realta|aslinda|في الحقيقة)(?![\w'])")
+_POSS_BEFORE = re.compile(r"(?<![\w'])(?:her|his|their|the patient's|patient's|ihr|ihre|ihrem|ihren|ihrer|sein|seine|"
+                          r"seinem|seinen|sa|son|ses|su|sus|sua|suo)\s+$")
+_POSSESSIVE = {"just", "only", "simply", "nur", "the", "her", "his", "their", "patient's", "patients", "patient", "ihr", "ihre", "ihrer", "sein",
+               "seine", "der", "die", "des", "sa", "son", "su", "sua"}
 # words that may stand between the cue and the non-clinical term ('I am a nurse and her neighbour')
 _GAP_OK = set("""a an the her his their its my also too as well and or but just only now currently actually really
 in fact for at with from by deliver delivers drive drives write writes work works sell sells run runs own
@@ -149,14 +172,13 @@ def self_described_non_clinical(t, non_hits, clin_spans):
         return None
     reallys = list(_REALLY.finditer(t))
     for s, e, term, _k in non_hits:
-        nxt = re.match(r"\s*([^\W_][\w'-]*)", t[e:])
-        if nxt and nxt.group(1) in _THIRD_PARTY_VERB:  # 'her daughter asked me about ...'
+        if third_party_mention(t, s, e):  # 'her daughter asked me about ...'
             continue
         for m in selfs:  # 'I am (a nurse and) her neighbour'
             if m.end() <= s and s - m.end() <= 80 and _gap_ok(t, m.end(), s, clin_spans, _GAP_OK):
                 return term
         for m in reallys:  # 'eigentlich Journalistin', 'a journalist really' (first-person request only)
-            if (m.end() <= s and _gap_ok(t, m.end(), s, (), _ARTICLES) or
+            if (m.end() <= s and _gap_ok(t, m.end(), s, (), _ARTICLES | _POSSESSIVE) or
                     m.start() >= e and _gap_ok(t, e, m.start(), (), set())):
                 return term
     return None
@@ -177,9 +199,18 @@ def classify(text, kb_alias=None, task_evidence=False, kb_role=False):
                  for m in re.compile("(?<![%s])%s" % (L, re.escape(fold(norm_text(kb_alias))))).finditer(t)]
     non = [(s, e, term, "not_clinical") for s, e, term in _hits(t, lex["non_clinical"])
            if not any(cs <= s and e <= ce and (ce - cs) > (e - s) for cs, ce, _t, _k in clin)]
+    if clin or kb_role:  # a clinical requester who mentions a relative as the source of the question
+        non = [h for h in non if not third_party_mention(t, h[0], h[1])]
     selfd = self_described_non_clinical(t, non, [(cs, ce) for cs, ce, _t, _k in clin])
     if selfd:  # a non-clinical self-description overrides any clinical claim, wherever it stands
         return {"decision": "not_clinical", "clinical": False, "term": selfd, "label": None}
+    # deny wins in the leading role phrase ('Hospital director, ...', 'Porter here, rapid response ...'): a
+    # non-clinical identity there refuses, whatever clinical words follow; 'her daughter' (possessive) is a mention
+    lead = re.search(r"[,;:.!?()]|\s[-–]\s", t)
+    lead_end = lead.start() if lead else len(t)
+    for s, e, term, _k in non:
+        if s < lead_end and not _POSS_BEFORE.search(t[:s]):
+            return {"decision": "not_clinical", "clinical": False, "term": term, "label": None}
     # ties at one position: the longer span wins; equal spans: non-clinical wins (conservative)
     rank = {"not_clinical": 0, "kb_role": 1, "clinical_term": 2}
     allw = sorted(clin + non, key=lambda h: (h[0], -(h[1] - h[0]), rank[h[3]]))

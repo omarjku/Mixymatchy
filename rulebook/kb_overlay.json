@@ -203,7 +203,12 @@
     "travel vaccination",
     "vaccination advice",
     "travel advice",
-    "malaria prophylaxis"
+    "malaria prophylaxis",
+    "symptom control",
+    "pain control",
+    "pain management",
+    "symptom management",
+    "pain and symptom"
    ],
    "de": [
     "Medikation",
@@ -212,7 +217,10 @@
     "Medikationsabgleich",
     "Osteoporose",
     "Nierenfunktion",
-    "Lupus"
+    "Lupus",
+    "Symptomkontrolle",
+    "Schmerztherapie",
+    "Schmerzmanagement"
    ],
    "intl": [
     "conciliation medicamenteuse",
@@ -270,13 +278,25 @@
     "bp check",
     "heart function",
     "cardiac review",
-    "echo review"
+    "echo review",
+    "myocardial infarction",
+    "heart attack",
+    "after mi",
+    "post-mi",
+    "post mi",
+    "atrial fibrillation",
+    "af",
+    "afib",
+    "cardioversion"
    ],
    "de": [
     "Blutdruck",
     "Hypertonie",
     "Herzkontrolle",
-    "Bluthochdruck"
+    "Bluthochdruck",
+    "Herzinfarkt",
+    "Vorhofflimmern",
+    "Kardioversion"
    ],
    "intl": [
     "tension arterielle",
@@ -577,7 +597,21 @@
     "oncology nurse",
     "nursing staff",
     "breast care nurse",
-    "diabetes nurse"
+    "diabetes nurse",
+    "ward sister",
+    "nursing sister",
+    "nurse in charge",
+    "sister in charge",
+    "rn",
+    "lpn",
+    "lvn",
+    "charge rn",
+    "icu rn",
+    "icu nurse",
+    "er nurse",
+    "ed nurse",
+    "nurse manager",
+    "ward manager"
    ],
    "de": [
     "Pflegekraft",
@@ -585,7 +619,10 @@
     "Krankenpfleger",
     "Pflegeperson",
     "DGKP",
-    "Stationsschwester"
+    "Stationsschwester",
+    "Stationsleitung",
+    "Stationsleiterin",
+    "Stationsleiter"
    ],
    "intl": [
     "infirmier",
@@ -710,7 +747,12 @@
    "en": [
     "emergency doctor",
     "er physician",
-    "emergency medicine"
+    "emergency medicine",
+    "er doc",
+    "ed doc",
+    "a&e doc",
+    "ed",
+    "a&e"
    ],
    "de": [
     "Notfallmediziner",
@@ -1050,7 +1092,10 @@
     "internal medicine",
     "hospitalist",
     "on-call doctor",
-    "covering doctor"
+    "covering doctor",
+    "doc",
+    "medic",
+    "doctor on call"
    ],
    "aliases_de": [
     "Arzt",
@@ -2226,6 +2271,12 @@
    "B18"
   ],
   "physician": [
+   "B18"
+  ],
+  "palliative_care": [
+   "B07"
+  ],
+  "urologist": [
    "B18"
   ]
  },

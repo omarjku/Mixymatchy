@@ -258,6 +258,64 @@ def _common_words(words):
     return any(w in _VOCAB for w in words)
 
 
+# ----------------------------------------------------------------- self-correction of the role
+CORRECTION_RX = re.compile(
+    r"(?<![\w])(?:wait|no wait|actually|sorry|i mean|correction|scratch that|"
+    r"eigentlich|ich meine|nein|korrektur|besser gesagt|pardon|je veux dire|plutot|en fait|perdon|quiero decir|"
+    r"o sea|mejor dicho|anzi|cioe|volevo dire|yani|aslinda|pardon)(?![\w])")
+_POSS = re.compile(r"(?:her|his|their|the patient's|ihr|ihre|ihrem|ihren|sein|seine|son|sa|su|sua)\s+$")
+
+
+_ALIAS_RX = {}
+_FIRST_PERSON = re.compile(r"(?<![\w'])(?:i am|i'm|i work as|ich bin|ich arbeite als|je suis|soy|sono|ben|انا)"
+                           r"(?:\s+(?:a|an|the|her|his|ein|eine|der|die|un|une|una|uno|il|la|el|bir))?\s+$")
+
+
+def _role_spans(t, kb):
+    from . import clinical as C
+    from .kb import role_aliases
+    from .understand import _phrase_rx, fold
+    ft = fold(t)
+    key = id(kb)
+    if key not in _ALIAS_RX:
+        _ALIAS_RX[key] = [_phrase_rx(a, True) for a in {fold(norm_text(a).strip()) for r in kb.roles
+                                                         for a in role_aliases(r)} if len(a) >= 2]
+    spans = [(m.start(), m.end()) for rx_ in _ALIAS_RX[key] for m in rx_.finditer(ft)]
+    lex = C.lexicon()
+    spans += [(s0, e0) for s0, e0, _t in C._hits(ft, lex["clinical"]) + C._pattern_hits(ft, lex)]
+    # non-clinical identities too: the last stated identity wins in both directions ('nurse, no wait, insurance agent')
+    spans += [(s0, e0) for s0, e0, _t in C._hits(ft, lex["non_clinical"])]
+    return sorted(set(spans))
+
+
+def role_correction(t, kb):
+    """'Paediatrician... wait, actually internist', 'Kinderarzt, eigentlich Internist': the LAST stated role
+    counts.  -> (t with the superseded role words blanked, [superseded words]).  A correction cue counts only
+    when a role word follows it closely (at most three words) and another role word stands before it; a role
+    after a possessive ('actually her cardiologist said ...') is somebody else."""
+    spans = _role_spans(t, kb)
+    if len(spans) < 2:
+        return t, []
+    for cue in reversed(list(CORRECTION_RX.finditer(t))):
+        before = [sp for sp in spans if sp[1] <= cue.start()]
+        after = [sp for sp in spans if sp[0] >= cue.end()]
+        if not before or not after:
+            continue
+        a0 = after[0][0]
+        gap = t[cue.end():a0]
+        mention = _POSS.search(gap) and not re.search(r"(?:i mean|ich meine|je veux dire|quiero decir|volevo dire)\s",
+                                                      cue.group(0) + " ")  # 'I mean her lawyer' is the asker
+        if len(re.findall(r"[^\W_][\w'-]*", gap)) > 3 or mention or re.search(r"[;.!?]", gap):
+            continue
+        # deny wins: a first-person non-clinical identity ('Ich bin Journalistin, eigentlich Ärztin') is never
+        # corrected away; a bare leading word is ('student, I mean the on-call surgeon')
+        before = [sp for sp in before if not _FIRST_PERSON.search(t[:sp[0]])]
+        if not before:
+            return t, []
+        return blank(t, before), [t[s0:e0] for s0, e0 in before]
+    return t, []
+
+
 # ----------------------------------------------------------------- entry point
 
 def analyse(text, store):
@@ -266,8 +324,10 @@ def analyse(text, store):
     t = norm_text(text)
     ins = instruction_spans(t)
     clean = blank(t, ins)
+    from .kb import kb as load_kb
+    clean, superseded = role_correction(clean, load_kb())
     exc = exclusion_spans(clean)
     return {"clean": clean, "task": blank(clean, exc), "excluded_text": " | ".join(clean[s:e] for s, e in exc),
             "exclusion_spans": exc, "instructions": [t[s:e].strip() for s, e in ins],
-            "other_patient": other_patient(text, store)}
+            "other_patient": other_patient(text, store), "superseded_roles": superseded}
 

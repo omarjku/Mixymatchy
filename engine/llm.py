@@ -12,6 +12,10 @@ input or a bare role does not).  It can only RESTRICT: engine/screen.py switches
 when the rules found no KB task and the model says false.  It never turns needs_task / not_authorised into
 data; timeout / error -> the rules result.
 
+Requester check (restrict only): `requester_is_clinical` (boolean) + `requester_reason`.  False -> the
+'not authorised' screen (0 facts) even when the rules found a clinical role; true never authorises (the clinical
+gate reads the text alone).
+
 Focus facts: with the record's concept labels (engine/focus.concepts: deduplicated English diagnosis labels
 plus result/plan categories, short labels only, no other patient text) the schema also asks for
 `focus_concepts`, 0-5 labels from that enum.  Code keeps only labels of the record (max MAX_FOCUS) and
@@ -138,6 +142,10 @@ def static_prompt(kb, concepts=()):
         "question about the patient (e.g. pre-op check, medication review, 'anything I should worry about before "
         "surgery'); false for a greeting, filler, a test message, gibberish or a role with no task.\n"
         "- task_reason: max 12 words, why the request is or is not an actionable clinical task.\n"
+        "- requester_is_clinical: false if the asker is (or corrects to) not clinical staff (relative, neighbour, "
+        "press, insurer, manager, admin, cleaner, porter, IT ...), even with clinical words elsewhere; a relative "
+        "only mentioned as the source of a question is not the asker.\n"
+        "- requester_reason: max 12 words.\n"
         + ("- focus_concepts: 0-5 labels, copied exactly from the record concept list, that this person needs "
            "highlighted for this task, most important first: especially a condition the task bundles may not "
            "cover but that changes the plan (e.g. a comorbidity that is a caution for the planned treatment, "
@@ -156,8 +164,11 @@ def static_prompt(kb, concepts=()):
             "reason": {"type": "string"},
             "actionable_clinical_task": {"type": "boolean"},
             "task_reason": {"type": "string"},
+            "requester_is_clinical": {"type": "boolean"},
+            "requester_reason": {"type": "string"},
         },
-        "required": ["role_id", "bundle_ids", "reason", "actionable_clinical_task", "task_reason"],
+        "required": ["role_id", "bundle_ids", "reason", "actionable_clinical_task", "task_reason",
+                     "requester_is_clinical", "requester_reason"],
         "additionalProperties": False,
     }
     if concepts:  # 0-5 is enforced in validate() (array length constraints are not supported by the API)
@@ -182,7 +193,8 @@ def request_params(text, kb, concepts=()):
 
 def validate(raw, kb, concepts=()):
     """Untrusted model output -> {"role_id": str|None, "bundle_ids": [...], "reason": str,
-    "focus_concepts": [...], "actionable_clinical_task": bool|None, "task_reason": str} or None.
+    "focus_concepts": [...], "actionable_clinical_task": bool|None, "task_reason": str,
+    "requester_is_clinical": bool|None, "requester_reason": str} or None.
     actionable_clinical_task: None when missing or not a boolean (no restriction).  focus_concepts: only labels of this record, deduplicated, at most
     MAX_FOCUS."""
     _s, _schema, role_ids, bundle_ids, concepts = static_prompt(kb, concepts)
@@ -207,8 +219,13 @@ def validate(raw, kb, concepts=()):
     act = act if isinstance(act, bool) else None
     treason = raw.get("task_reason")
     treason = _short(treason, MAX_REASON) if isinstance(treason, str) else ""
+    req = raw.get("requester_is_clinical")
+    req = req if isinstance(req, bool) else None
+    rreason = raw.get("requester_reason")
+    rreason = _short(rreason, MAX_REASON) if isinstance(rreason, str) else ""
     return {"role_id": rid, "bundle_ids": bids[:MAX_BUNDLES], "reason": reason, "focus_concepts": focus[:MAX_FOCUS],
-            "actionable_clinical_task": act, "task_reason": treason}
+            "actionable_clinical_task": act, "task_reason": treason,
+            "requester_is_clinical": req, "requester_reason": rreason}
 
 
 def _call(params):

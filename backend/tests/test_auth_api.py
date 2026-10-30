@@ -1,5 +1,7 @@
 """Sign-in and PIN lock in front of the patient-data API (app/auth.py), and the SPA fallback (app/main.py)."""
 import importlib
+import json
+import re
 
 import pytest
 
@@ -70,8 +72,26 @@ def test_login_unlock_flow_and_audit(client, main):
     assert audit["chain_ok"]
     access = [e for e in audit["entries"] if e["event"] == "data_access"]
     assert {e["resource"] for e in access} == {"briefing", "documents"}
-    raw = main.auth_service.audit.path.read_text()
-    assert "anaesthetist pre-op check" not in raw and PIN not in raw and DEMO["password"] not in raw
+    # secrets / the task never in the audit file; hashes are hex and may contain "2468" by chance, so the PIN is
+    # checked in every non-hex string value of the parsed lines
+    values = []
+
+    def walk(x):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                values.append(str(k))
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+        else:
+            values.append(str(x))
+    for line in main.auth_service.audit.path.read_text().splitlines():
+        if line.strip():
+            walk(json.loads(line))
+    assert values
+    assert not any("anaesthetist pre-op check" in v or DEMO["password"] in v for v in values)
+    assert not any(PIN in v for v in values if not re.fullmatch(r"(?:sha256:)?[0-9a-f]{8,}", v))
 
 
 def test_five_wrong_pins_revoke_the_session(client):

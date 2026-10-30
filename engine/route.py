@@ -81,6 +81,31 @@ def _blank_alias(t, alias):
     return "".join(out)
 
 
+_PERSON = {}
+
+
+def _names_person(alias):
+    """The alias names a person (nurse, doctor, -ologist, Arzt ...), not a setting or time ('night duty')."""
+    if alias not in _PERSON:
+        from . import clinical as C
+        a = fold(norm_text(alias))
+        lex = C.lexicon()
+        _PERSON[alias] = bool(C._hits(a, lex["clinical"]) or C._pattern_hits(a, lex))
+    return _PERSON[alias]
+
+
+_NONCLIN = {}
+
+
+def _non_clinical_gram(g):
+    if g not in _NONCLIN:
+        from . import clinical as C
+        if len(_NONCLIN) > 5000:
+            _NONCLIN.clear()
+        _NONCLIN[g] = bool(C._hits(fold(g), C.lexicon()["non_clinical"]))
+    return _NONCLIN[g]
+
+
 def match_role(t, kb):
     spans = _you_are_spans(t)
     ft = fold(t)
@@ -89,7 +114,9 @@ def match_role(t, kb):
         for alias in role_aliases(role):
             for m in _phrase_rx(fold(norm_text(alias)), True).finditer(ft):
                 score = len(alias) + (100 if any(a <= m.start() < b for a, b in spans) else 0) \
+                    + (50 if _names_person(alias) else 0) \
                     - (0.5 if role.get("generic") else 0)  # a generic name ('doctor') loses ties to a specialty
+                # a person word ('nurse') beats a setting alias ('night duty', 'stroke unit') of another role
                 key = (score, -idx)
                 if best is None or key > best[0]:
                     best = (key, role["id"], alias, "alias")
@@ -116,8 +143,8 @@ def match_role(t, kb):
             for g in grams:
                 # a typo keeps its first letter; a distinct clinical word is never a typo of another role
                 # ('urologist' is not 'neurologist', 'rheumatologist' not 'pneumologist')
-                if g[:1] != a[:1] or is_clinical_word(g):
-                    continue
+                if g[:1] != a[:1] or is_clinical_word(g) or _non_clinical_gram(g):
+                    continue  # 'hospital director' is not a typo of 'hospital doctor'
                 r = difflib.SequenceMatcher(None, g, a).ratio()
                 if r >= FUZZY_THRESHOLD and (best is None or r > best[0]):
                     best = (r, role["id"], alias)
@@ -198,10 +225,19 @@ def match_bundles(t, kb):
     return out
 
 
+# time / setting words that are tags of the emergency bundle: they say when, not what. For a role that is not an
+# emergency role they never pull the screen off the role's own task ('Stationsleitung, heute Nacht ...')
+CONTEXT_TAGS = {"nacht", "night", "night duty", "night shift", "nachtdienst", "nachts", "tonight", "heute nacht",
+                "weekend", "wochenende", "on call", "bereitschaft", "nuit", "noche", "notte", "gece"}
+
+
 def choose_bundles(matched, role):
     if not matched:
         return []
     defaults = (role or {}).get("default_bundles") or []
+    if role and defaults and all(fold(norm_text(x)).strip() in CONTEXT_TAGS for v in matched.values() for x in v[1]) \
+            and not any(b in defaults for b in matched):
+        return sorted(defaults[:1], key=lambda b: int(b[1:]))
     in_def = [b for b in matched if b in defaults]
     if in_def:  # the role's own bundles, plus another bundle only if its tags clearly dominate
         best = max(matched[b][0] for b in in_def)
@@ -320,13 +356,15 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
     chosen = choose_bundles(matched, role)
     how = "kb_alias_tags"
     llm_note, llm_used, llm_reason, llm_info, llm_focus = None, False, None, None, None
-    llm_task = None
+    llm_task, llm_requester = None, None
     if use_llm:
         # every request: the model's reading is merged in (rules result + LLM-added bundles); the role is
         # taken from the model only when the rules found none or only a fuzzy (low-confidence) match
         from .focus import concepts as record_concepts
         prop, llm_info = llm.propose(text, kb, record_concepts(store)[0])
         if prop:
+            if prop.get("requester_is_clinical") is False:  # may only restrict (engine/screen.py)
+                llm_requester = {"clinical": False, "reason": prop.get("requester_reason") or None}
             if prop.get("actionable_clinical_task") is not None:  # may only restrict (engine/screen.py)
                 llm_task = {"actionable": prop["actionable_clinical_task"],
                             "reason": prop.get("task_reason") or prop.get("reason") or None}
@@ -385,6 +423,7 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
         "llm": llm_info,
         "llm_focus_proposal": llm_focus,
         "llm_task_check": llm_task,
+        "llm_requester_check": llm_requester,
         "rules": rules,
         "detail": detail,
         "slots": [{"slot": s, "priority": info[s]["priority"], "origins": info[s]["origins"]} for s in order],

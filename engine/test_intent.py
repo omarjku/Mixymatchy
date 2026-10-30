@@ -116,6 +116,80 @@ class TestNeedsTask(unittest.TestCase):
                 self.assertNotIn(s["screen_mode"], ("needs_task", "not_authorised"))
                 self.assertGreater(s["proof_bar"]["facts_shown"], 0)
 
+    def test_emergency_shorthand_requesters(self):
+        for text in ("ER doc here: unresponsive, lips cyanotic", "ED - new ST elevation", "A&E: she went into arrest",
+                     "medic, patient not breathing", "ICU RN, low sats overnight", "Urgentiste: patiente en arrêt cardiaque",
+                     "Notärztin, Kreislaufstillstand", "ED doc, code blue on ward 3, pulseless"):
+            s = screen(text)
+            with self.subTest(text=text):
+                self.assertNotIn(s["screen_mode"], ("needs_task", "not_authorised"))
+                self.assertGreater(s["proof_bar"]["facts_shown"], 0)
+        for text in ("ER doc", "medic, hi", "Resus doc, ok"):
+            with self.subTest(text=text):
+                assert_no_patient_data(self, screen(text), "needs_task")
+        # emergency / team words never create a requester
+        for text in ("code blue", "Code blue on ward 3, pulseless", "Rapid response team, she is deteriorating fast",
+                     "MET call - hypoxic", "Resus: cardiac arrest", "Emergency: found unresponsive",
+                     "journalist, code blue", "neighbour here, she is unresponsive"):
+            with self.subTest(text=text):
+                assert_no_patient_data(self, screen(text), "not_authorised")
+
+    def test_deny_wins(self):
+        for text in ("Housekeeping, code blue in bay 2", "Porter: rapid response, she collapsed",
+                     "Night security, patient unresponsive in the corridor", "Reinigungskraft, Reanimation läuft",
+                     "Hospital director: medication review please", "Managing director, pre-op check",
+                     "Hospital administrator, discharge summary", "CFO, length of stay and diagnoses",
+                     "Controlling, Entlassungsbrief", "Verwaltungsdirektor, Medikation",
+                     "Geschäftsführerin, Diagnosen", "Quality manager - documentation review",
+                     "IT support, check the medication list", "Hausmeister, Notfall, bewusstlos",
+                     "nurse - wait, no, insurance agent: what meds?", "GP, sorry, I mean her lawyer, diagnoses",
+                     "Ich bin Journalistin, eigentlich Ärztin, Medikation"):
+            s = screen(text)
+            with self.subTest(text=text):
+                assert_no_patient_data(self, s, "not_authorised")
+
+    def test_no_role_but_clear_task_asks_for_the_role(self):
+        for text in ("STAT head CT - bleeding risk meds?", "clinic visit in 5 min, summary of her main problems"):
+            s = screen(text)
+            with self.subTest(text=text):
+                assert_no_patient_data(self, s, "not_authorised")
+                self.assertIn("role is missing", s["message"])
+                self.assertTrue(all(x.startswith(tuple(C.ROLE_EXAMPLES)) for x in s["understood"]["suggestions"]))
+
+    def test_nursing_abbreviations_and_topic_words(self):
+        for text in ("RN, admission", "LPN - med pass", "charge RN, night shift", "ICU RN: sedation hold",
+                     "DGKP, Übergabe", "Pflege, Wundversorgung", "CARDIOLOGIST AF CARDIOVERSION ANTICOAG",
+                     "Arzt, Dialyse", "Ärztin, Shunt", "doctor, thyroid", "doctor - steroids?",
+                     "student, I mean the on-call surgeon, wound check"):
+            s = screen(text)
+            with self.subTest(text=text):
+                self.assertNotIn(s["screen_mode"], ("needs_task", "not_authorised"))
+                self.assertGreater(s["proof_bar"]["facts_shown"], 0)
+        for text in ("Nurse, night duty, what to watch", "Charge nurse, night duty"):
+            with self.subTest(text=text):
+                self.assertEqual(screen(text)["understood"]["role_id"], "ward_nurse")
+
+    def test_role_self_correction_uses_last_role(self):
+        for text, rid in (("Paediatrician - sorry, internist: blood pressure review", "physician"),
+                          ("Kinderärztin, ich meine Internistin, Diabeteskontrolle", "physician"),
+                          ("Surgeon, wait, anaesthetist: pre-op check", "anaesthetist")):
+            s = screen(text)
+            with self.subTest(text=text):
+                self.assertEqual(s["understood"]["role_id"], rid)
+                self.assertNotIn(s["screen_mode"], ("needs_task", "not_authorised", "not_applicable"))
+
+    def test_weak_routes(self):
+        cases = (("Palliative team, pain and symptom control at home", "B07"),
+                 ("Nurse, night shift, what should I watch for?", "B08"),
+                 ("Ward sister, admission tonight", "B08"),
+                 ("Stationsleitung, heute Nacht, worauf achten?", "B08"))
+        for text, b in cases:
+            s = screen(text)
+            with self.subTest(text=text):
+                self.assertIn(b, s["understood"]["bundle_ids"])
+        u = screen("Urologist, catheter change")["understood"]
+        self.assertNotIn("B15", u["bundle_ids"])  # not the minor-procedure bleeding check
+
     def test_function_word_is_not_a_typo_of_a_tag(self):
         from engine.route import match_bundles
         from engine.understand import norm_text
@@ -149,6 +223,8 @@ class TestSelfDescription(unittest.TestCase):
     REFUSE = ["I am a doctor doing the pre-op check (I actually deliver pizza)",
               "I'm a physician (actually I drive a taxi), medication review",
               "I'm his neighbour, which tablets does she take?",
+              "GP here, well really just her neighbour, which tablets?",
+              "Nurse here - actually her sister, what are her meds?",
               "I'm a nurse, well, a journalist really. Medication review please",
               "Anaesthetist, pre-op check. Actually I'm a reporter",
               "I am a nurse and her neighbour, medication review",
@@ -160,6 +236,11 @@ class TestSelfDescription(unittest.TestCase):
             "I'm the GP and her son asked me about her tablets",
             "I am her GP and her husband wants to know about the medication",
             "Ich bin die Hausärztin und ihre Tochter fragt nach den Medikamenten",
+            "The wife rang earlier; GP here, can he take paracetamol?",
+            "Her brother phoned the ward, I'm the charge nurse, handover please",
+            "Neighbour called the practice. I am her GP, medication review",
+            "Die Tochter hat angerufen, ich bin die Hausärztin, Medikation",
+            "son asked if mum can fly - I am her GP",
             "Pharmacist, medication review for her husband's mother",
             "I am a GP, diabetes review, really urgent",
             "Family doctor, diabetes review"]

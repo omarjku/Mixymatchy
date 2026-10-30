@@ -209,6 +209,10 @@ Run 3 (no-task fix, `eval/synthetic/results/holdout_v2_run3.json`, `notask_verif
 
 Run 4 (false-block fix 1): 130/234, 0 regressions; red-team 92 own inputs: 0 leaks, 8 false blocks remain (English emergency shorthand without a role word, third-party 'X called/phoned/rang' before the clinician's self-description) -> next fix. Audit test flake: PIN '2468' can occur by chance in hex hashes (~0.7%); not a privacy bug. Results: `eval/synthetic/results/holdout_v2_run4.json`, `fix2_verify.md`.
 
+Run 5 (round 2): 130/234. Red-team of 103 inputs found 3 leaks -> not pushed.
+
+Run 6 (round 3, `eval/synthetic/results/holdout_v2_run6.json`, `fix3_verify.md`, `fix4_verify.md`): 130/234, 0 regressions. Red-team of 168 own inputs: 8 leaks (7 pre-existing on cb82abe), 11 false blocks (non-Latin scripts, UK shorthand SHO/reg, typos) -> round 4.
+
 ## 7. Known open items
 
 | Item | Detail | Owner |

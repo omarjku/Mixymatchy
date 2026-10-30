@@ -257,7 +257,23 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
                       task_evidence=C.strong_task(u.get("bundles_matched"), k.fallback_bundle) or bool(app["items"]))
     u["clinical_gate"] = gate
     if not gate["clinical"]:
-        return not_authorised_screen(u, gate, detail, t0)
+        scr = not_authorised_screen(u, gate, detail, t0)
+        if gate["decision"] == "no_role":  # a clear task but no requester: still no data, ask for the role
+            from . import intent as I
+            if I.has_task(req["task"], k)["actionable"]:
+                ask = re.sub(r"\s+", " ", req["task"]).strip(" ,;:")[:80]
+                scr["message"] = C.NEEDS_ROLE_MESSAGE
+                scr["understood"].update(fallback_note=C.NEEDS_ROLE_MESSAGE, not_authorised_message=C.NEEDS_ROLE_MESSAGE,
+                                         suggestions=["%s, %s" % (r_, ask) for r_ in C.ROLE_EXAMPLES])
+                scr["proof_bar"]["summary_en"] = "No patient facts shown: no role stated."
+        return scr
+    rq = u.get("llm_requester_check")
+    if rq and rq.get("clinical") is False:  # the optional LLM may only restrict: requester not clinical -> refuse
+        gate = dict(gate, decision="llm_not_clinical", clinical=False)
+        scr = not_authorised_screen(u, gate, detail, t0)
+        scr["understood"].update(clinical_gate=gate, llm_used=True,
+                                 llm_reason=rq.get("reason") or "requester is not clinical staff")
+        return scr
     # no task, no data (engine/intent.py, docs/DECISIONS.md 19): a greeting, filler or a role alone never opens
     # the record.  The optional LLM may only restrict: when the rules found no KB task it can say the request is
     # not an actionable clinical task; it can never turn this screen into data.

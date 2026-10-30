@@ -47,8 +47,10 @@ class TestNotAuthorised(unittest.TestCase):
                     self.assertEqual(s["patient"], {})
                     u = s["understood"]
                     self.assertEqual(u["rules"]["fired"], [])
-                    self.assertEqual(u["fallback_note"], C.NOT_AUTHORISED_MESSAGE)
-                    self.assertEqual(len(u["suggestions"]), 4)
+                    # a clear task without a role ('her sugar') asks for the role instead (DECISIONS 19)
+                    self.assertIn(u["fallback_note"], (C.NOT_AUTHORISED_MESSAGE, C.NEEDS_ROLE_MESSAGE))
+                    self.assertEqual(len(u["suggestions"]),
+                                     4 if u["fallback_note"] == C.NOT_AUTHORISED_MESSAGE else len(C.ROLE_EXAMPLES))
 
     def test_non_clinical_named_first_wins_over_kb_alias(self):
         self.assertEqual(screen("Journalist writing about cardiology")["screen_mode"], "not_authorised")
