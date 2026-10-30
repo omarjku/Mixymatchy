@@ -1,4 +1,4 @@
-"""Opt-in start-up self-test (EVAL_ON_START=1): the synthetic eval with the LLM layer on (when the app
+"""Opt-in start-up self-test (EVAL_ON_START=1; EVAL_ON_START=probe = light v2 probe, ~28 requests, 1 worker): the synthetic eval with the LLM layer on (when the app
 has SECOND_LOOK_LLM=1 and a key), plus the 15
 questions of the 5 official situations and their answer lines (eval/answers.py), printed to stdout with the prefix "EVAL:" (read from the host's
 logs), then the LLM spend estimate.  Runs once in a background daemon thread started by the API's
@@ -102,6 +102,80 @@ def redteam(use_llm):
         say(res["spend"])
 
 
+def _pct(vals, q):
+    v = sorted(vals)
+    return v[min(len(v) - 1, int(round(q * (len(v) - 1))))] if v else 0.0
+
+
+def probe(pause=2.0):
+    """Light live probe (EVAL_ON_START=probe): ~28 requests, one at a time with a pause, through the same code path
+    as POST /briefing (adapter.build_briefing with the app's own settings).  One "EVAL: v2 | ..." line each, then a
+    summary.  Official answers are scored with eval/answers_v2.py's logic (token groups, sources, forbid)."""
+    t0 = time.time()
+    try:
+        from app import adapter
+        from engine import llm, llm_budget
+        from eval import answers_v2 as v2
+        from eval import core
+        from eval.keyfacts import official_situations
+        keys = core.load_json(str(ROOT / "eval" / "answer_keys.json"))
+        extra = json.loads((ROOT / "eval" / "v2_probe.json").read_text(encoding="utf-8"))
+        reqs = [(n, t) for n, t in official_situations()] + [(None, t) for t in extra["normal"] + extra["non_task"]]
+        adapter.engine_store()
+        before = llm_budget.budget().snapshot()
+        say("v2 probe start (%d requests, 1 worker, %.0f s pause; llm available: %s)" % (
+            len(reqs), pause, llm.available()))
+        ok = tot = 0
+        chars, ms_all, origins, judge_rejects = [], [], {}, 0
+        for i, (n, text) in enumerate(reqs):
+            if i:
+                time.sleep(pause)
+            t = time.perf_counter()
+            try:
+                b = adapter.build_briefing(text, detail="short")
+                ms = (time.perf_counter() - t) * 1000
+                a = b.answer
+                st = (b.routing or {}).get("answer_v2") or {}
+                origin = a.origin if a else "old"
+                jl = st.get("judge") or []
+                judge = "fail" if (jl and not jl[-1].get("ok")) else ("pass" if jl else "-")
+                judge_rejects += sum(1 for r in st.get("rejected") or [] if r.get("layer") == "judge")
+                sent = a.text if a else ""
+                cites = [f for s in (a.sources if a else []) for f in s.fact_ids]
+                if n:
+                    segs = [x for s in (a.sources if a else []) for x in s.segment_ids]
+                    norm = core.norm(sent)
+                    for qid in sorted(q for q in keys if q.startswith("%d." % n)):
+                        key = keys[qid]
+                        miss = [it["name"] for it in key.get("items", [])
+                                if not (all(core.group_matches(g, {"date": None}, norm) for g in it["groups"])
+                                        and (not set(it.get("sources", key.get("sources", [])) or [])
+                                             or v2._docs(segs) & set(it.get("sources", key.get("sources", [])))))]
+                        good = not miss and not v2._forbidden(key, sent)
+                        ok += good
+                        tot += 1
+                        if not good:
+                            say("  official %s NOT contained: %s" % (qid, miss or "forbidden text"))
+                ms_all.append(ms)
+                chars.append(len(sent))
+                origins[origin] = origins.get(origin, 0) + 1
+                say("v2 | %s | origin=%s | judge=%s | ms=%.0f | %s | cites=%s" % (
+                    (text or "<empty>").replace("\n", " ")[:90], origin, judge, ms, sent.replace("\n", " ") or "-",
+                    ",".join(dict.fromkeys(cites)) or "-"))
+            except Exception as e:
+                say("v2 | %s | ERROR %r" % ((text or "<empty>")[:90], e))
+        now = llm_budget.budget().snapshot()
+        say("v2 summary: official answers contained %d/%d, avg chars %.0f, origins %s, judge rejects %d, "
+            "p50 %.0f ms, p95 %.0f ms, LLM spend EUR %.4f (calls %d, total EUR %.4f of %.2f)" % (
+                ok, tot, sum(chars) / max(len(chars), 1), origins, judge_rejects, _pct(ms_all, 0.5), _pct(ms_all, 0.95),
+                now["spend_eur"] - before["spend_eur"], now["calls_total"] - before["calls_total"],
+                now["spend_eur"], now["budget_eur"]))
+    except Exception:
+        say("v2 probe crashed:")
+        say(traceback.format_exc())
+    say("v2 probe done in %.0f s" % (time.time() - t0))
+
+
 def run():
     t0 = time.time()
     try:
@@ -128,11 +202,11 @@ def run():
     say("self-test done in %.0f s" % (time.time() - t0))
 
 
-def start_background(delay=2.0):
-    """Start the self-test in a daemon thread (the API keeps serving)."""
+def start_background(delay=2.0, mode="1"):
+    """Start the self-test in a daemon thread (the API keeps serving).  mode "probe": the light v2 probe only."""
     def go():
         time.sleep(delay)
-        run()
+        probe() if mode == "probe" else run()
     th = threading.Thread(target=go, name="eval-on-start", daemon=True)
     th.start()
     return th

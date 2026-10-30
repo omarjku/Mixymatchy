@@ -29,10 +29,10 @@ async def lifespan(_app: FastAPI):
     if store.use_engine():
         store.documents()
         store.segments()
-    if os.environ.get("EVAL_ON_START") == "1":  # opt-in self-test, printed to the logs ("EVAL:" lines)
+    if os.environ.get("EVAL_ON_START") in ("1", "probe"):  # opt-in self-test, printed to the logs ("EVAL:" lines)
         try:
             from eval.selftest import start_background
-            start_background()
+            start_background(mode=os.environ["EVAL_ON_START"])
         except Exception as e:  # never stop the app over the self-test
             print("EVAL: self-test not started: %r" % (e,), flush=True)
     yield

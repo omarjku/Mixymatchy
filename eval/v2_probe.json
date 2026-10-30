@@ -1,0 +1,26 @@
+{
+  "_doc": "Requests of the light live probe (EVAL_ON_START=probe, eval/selftest.py): the 5 official situations are read from cases/situations.md; these are the extra normal clinical questions and the non-task inputs.",
+  "normal": [
+    "Female doctor, Pap smear",
+    "OBGYN, fertility check-up",
+    "Gynäkologin, Vorsorge",
+    "Radiologist, contrast CT tomorrow",
+    "GP, diabetes review",
+    "Anaesthetist, pre-op",
+    "Neurologist, carotid follow-up",
+    "Pharmacist, interaction check",
+    "Physio, mobilisation after surgery",
+    "Dermatologist, skin check",
+    "Hausärztin, Diabetes-Kontrolle",
+    "Anästhesist, Prämedikation vor OP",
+    "Radiologe, Kontrastmittel CT morgen",
+    "Oncologist, adjuvant therapy planning",
+    "Kardiologe, Herzinsuffizienz Verlaufskontrolle",
+    "Emergency doctor, dizziness at night",
+    "Chirurgin, OP-Planung Brust",
+    "Nurse, wound care after surgery",
+    "Strahlentherapeut, intraoperative radiotherapy",
+    "Internist, Blutdruck und Medikamente"
+  ],
+  "non_task": ["hi", "", "asdf"]
+}
