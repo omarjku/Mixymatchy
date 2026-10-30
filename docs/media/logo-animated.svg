@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="t">
+  <title id="t">Second Look</title>
+  <defs>
+    <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <style>
+    .bg, .hand, .ring, .plate, .se, .sweep { transform-box: fill-box; }
+    .bg { transform-origin: center; animation: bg .45s cubic-bezier(.2,.8,.2,1) 0s both; }
+    .hand { animation: hand .8s cubic-bezier(.22,1,.36,1) .2s both; }
+    .ring { transform-origin: center; animation: ring .6s cubic-bezier(.2,.9,.25,1) .85s both; }
+    .plate { transform-origin: center; animation: ring .55s cubic-bezier(.2,.9,.25,1) .95s both; }
+    .se { animation: se .7s cubic-bezier(.3,1.25,.5,1) 1.2s both; }
+    .sweep { opacity: 0; animation: sweep .55s cubic-bezier(.45,0,.25,1) 1.9s both; }
+    @keyframes bg { from { opacity: 0; transform: scale(.86); } to { opacity: 1; transform: none; } }
+    @keyframes hand { from { opacity: 0; transform: translate(-150px, 95px) rotate(-6deg); } 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+    @keyframes ring { from { opacity: 0; transform: scale(.05, .3); } to { opacity: 1; transform: none; } }
+    @keyframes se { from { opacity: 0; transform: translateY(-70px); } 45% { opacity: 1; } to { opacity: 1; transform: none; } }
+    @keyframes sweep { from { opacity: 1; transform: translateX(-420px) skewX(-18deg); } 80% { opacity: 1; } to { opacity: 0; transform: translateX(760px) skewX(-18deg); } }
+    @media (prefers-reduced-motion: reduce) { .bg, .hand, .ring, .plate, .se, .sweep { animation: none; } }
+  </style>
+  <g clip-path="url(#tile)">
+    <rect class="bg" width="512" height="512" rx="112" fill="#6381FD"/>
+    <g class="hand" fill="#fff">
+      <rect x="40" y="313" width="56" height="99" rx="6"/>
+      <path d="M100 332C125 330 150 318 178 318C205 318 220 331 250 335C276 338 296 337 303 343C305 348 300 351 292 352C272 355 250 360 232 367C252 362 285 356 309 353C336 341 365 325 384 318C396 313 403 324 393 329C365 352 305 398 266 412C232 422 200 410 178 400C158 393 128 394 102 395Z"/>
+    </g>
+    <path class="ring" fill="#fff" fill-rule="evenodd" d="M99 285a181 28 0 1 0 362 0a181 28 0 1 0-362 0ZM117 280a163 17 0 1 0 326 0a163 17 0 1 0-326 0Z"/>
+    <ellipse class="plate" cx="280" cy="280" rx="148" ry="14" fill="#fff"/>
+    <g class="se" fill="#fff">
+      <path d="M253 145C245 130 230 128 210 128C185 128 172 140 172 156C172 174 190 180 210 186C236 194 250 203 250 222C250 240 232 247 210 247C188 247 172 240 165 226" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="285" y="114" width="38" height="143" rx="10"/>
+      <rect x="285" y="114" width="99" height="37" rx="14"/>
+      <rect x="285" y="170" width="89" height="33" rx="12"/>
+      <rect x="285" y="220" width="101" height="37" rx="14"/>
+    </g>
+    <rect class="sweep" x="0" y="-40" width="150" height="600" fill="url(#sheen)"/>
+  </g>
+</svg>
