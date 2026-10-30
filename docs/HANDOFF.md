@@ -1,4 +1,4 @@
-# Handoff: Second Look (AIM Austria hackathon, Track 1)
+# Handoff: Second Eye (AIM Austria hackathon, Track 1)
 
 Everything a new coding session needs to continue. Start a new session with:
 > Read docs/HANDOFF.md, README.md, docs/PLAN.md and docs/contracts.md, then continue with "Next steps".
@@ -17,8 +17,8 @@ Everything a new coding session needs to continue. Start a new session with:
 - Self-generated synthetic test data is allowed.
 
 ## 3. Team and decisions
-- Omar (JKU student, repo owner `omarjku`), teammate `syedwajiulhassan715-rgb` (wrote the Second Look plan, Next.js frontend, FastAPI shell), medical student(s) (rulebook), a tester.
-- Product: **Second Look**, "Other tools summarise the record. Second Look checks it, for the task in front of you." Plan: docs/PLAN.md (8 features + additions).
+- Omar (JKU student, repo owner `omarjku`), teammate `syedwajiulhassan715-rgb` (wrote the Second Eye plan, Next.js frontend, FastAPI shell), medical student(s) (rulebook), a tester.
+- Product: **Second Eye**, "Other tools summarise the record. Second Eye checks it, for the task in front of you." Plan: docs/PLAN.md (8 features + additions).
 - Decided:
   - Deterministic core; LLM optional (understanding unusual wording). Rule-based path must always work.
   - IBM JSON = index only; the documents are the source of truth.

@@ -169,7 +169,7 @@ export const Problem: React.FC<{ dur: number }> = () => {
           </div>
           <div style={{ position: "absolute", left: 140, top: 860, width: 1640, fontFamily: FONT, fontSize: 30, color: C.ink2, opacity: tween(f, bIn + 124, 20) }}>
             {W.pct}%{months ? ` in ${months} months` : ""}. Stated in none of the letters,{" "}
-            <span style={{ color: C.tealHi, fontWeight: 600 }}>computed by Second Look from two documented weights.</span>
+            <span style={{ color: C.tealHi, fontWeight: 600 }}>computed by Second Eye from two documented weights.</span>
           </div>
         </>
       )}

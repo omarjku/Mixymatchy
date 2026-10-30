@@ -26,7 +26,7 @@ PREFIX_MIN = 6
 NOSPACE = re.compile(r"[\u3040-\u30ff\u3400-\u9fff\u0900-\u0dff]")
 WORD = re.compile(r"[^\W\d_][\w'-]*")
 
-NEEDS_TASK_MESSAGE = ("Please describe your task. Second Look shows patient information only for a clinical task: "
+NEEDS_TASK_MESSAGE = ("Please describe your task. Second Eye shows patient information only for a clinical task: "
                       "state your role and what you are doing, e.g. 'Anaesthetist, pre-op check'.")
 NEEDS_TASK_SUGGESTIONS = [  # generic examples, nothing taken from the open record
     "Anaesthetist, pre-op check",

@@ -1,4 +1,4 @@
-# Audio for the Second Look video
+# Audio for the Second Eye video
 
 All sound is generated from code (Python 3 + numpy + ffmpeg). It uses no samples, downloads or copyrighted material.
 Timings come from `video/storyboard.json`, the timeline shared with `video/remotion/`.
