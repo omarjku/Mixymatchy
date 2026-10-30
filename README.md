@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="docs/media/logo-animated.svg" alt="Second Eye logo: a hand presents the letters SE on a platter" width="104" height="104">
+<img src="docs/media/logo-animated.svg" alt="Second Look logo: a hand presents the letters SL on a platter" width="104" height="104">
 
-# Second Eye
+# Second Look
 
-**Other tools summarise the record. Second Eye checks it, for the task in front of you.**
+**Other tools summarise the record. Second Look checks it, for the task in front of you.**
 
 A clinician types one sentence: who they are and what they are about to do.<br>
-Second Eye answers with one screen: only the facts that task needs, each linked to the exact sentence it came from.
+Second Look answers with one screen: only the facts that task needs, each linked to the exact sentence it came from.
 
 [![AIM Austria hackathon](https://img.shields.io/badge/AIM%20Austria%20hackathon-Track%201%20·%20Clinical%20documentation-4a5bef?style=flat-square)](docs/CHALLENGE.md)
 ![15/15 correct](https://img.shields.io/badge/official%20questions-15%2F15-0f766e?style=flat-square)
@@ -16,7 +16,7 @@ Second Eye answers with one screen: only the facts that task needs, each linked 
 ![Python](https://img.shields.io/badge/Python-FastAPI-141831?style=flat-square&logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React%2019-Vite%20·%20Tailwind%204-141831?style=flat-square&logo=react&logoColor=61DAFB)
 
-<img src="docs/media/second-look.webp" alt="Animation: eight letters about one patient; an error copied from one letter to the next and a weight that vanishes. Second Eye's logo lands. On a phone, an anaesthetist picks a role and types a pre-operative task; one screen of facts appears, and a tap opens the cited sentence highlighted in the original letter. Overview, history and dashboard views follow, then a contradiction between two letters about a penicillin allergy. Results: 15 of 15 answers correct, 0 invented facts, 100 percent of facts linked to their source, the slowest screen in 144 milliseconds." width="100%">
+<img src="docs/media/second-look.webp" alt="Animation: eight letters about one patient; an error copied from one letter to the next and a weight that vanishes. Second Look's logo lands. On a phone, an anaesthetist picks a role and types a pre-operative task; one screen of facts appears, and a tap opens the cited sentence highlighted in the original letter. Overview, history and dashboard views follow, then a contradiction between two letters about a penicillin allergy. Results: 15 of 15 answers correct, 0 invented facts, 100 percent of facts linked to their source, the slowest screen in 144 milliseconds." width="100%">
 
 **[▶ Watch the film with sound](docs/media/second-look.mp4)** · <sub>Animated from the real app running on its invented demo patient. No patient data is shown.</sub>
 
@@ -28,7 +28,7 @@ Second Eye answers with one screen: only the facts that task needs, each linked 
 
 A patient's record is a pile of letters, and each letter copies the last one. Errors travel from letter to letter (a left-sided finding becomes right-sided), and facts quietly fall out of the newest letter. An anaesthetist, a surgeon and an emergency physician each need different facts from the same pile, and none of them has time to read eight letters.
 
-## What Second Eye does
+## What Second Look does
 
 Type *"Anaesthetist, pre-operative check before breast surgery"* and get one screen with:
 
@@ -63,7 +63,7 @@ Results screens use the invented demo patient; no organiser data is shown.
 
 Measured on the organisers' five situations ([`docs/SUBMISSION.md`](docs/SUBMISSION.md), reproducible with the commands below).
 
-| Metric | Target | Second Eye |
+| Metric | Target | Second Look |
 |---|:---:|:---:|
 | Correct answers | 15 / 15 | **15 / 15**, in both the short phone view and the long view |
 | Traceability | 100 % | **100 %** by construction: every fact cites its passage, 0 invariant violations |
@@ -147,7 +147,7 @@ No guideline text is processed by a model. Guidelines in the knowledge base only
 - **Contradictions are tiered.** Only passages that cannot all be true are counted; changes over time and small measurement differences are not flagged.
 - **No clinical role, no patient data.** A journalist or a neighbour gets a "not authorised" screen with zero facts.
 - **Locked by default.** Sign-in, a PIN after 3 minutes idle, and a tamper-evident audit log that stores the task only as a hash.
-- **Read only.** Second Eye never changes the record.
+- **Read only.** Second Look never changes the record.
 
 ## Run it locally
 
@@ -205,7 +205,7 @@ docs/         challenge, plan, contracts, integration, decisions, testing, submi
 ## Limitations
 
 - **One record.** Built and measured on the challenge's single patient (eight letters). New patients need the offline build first.
-- **Unfamiliar requests are the weak spot.** On an adversarial holdout written independently of the engine (73 situations, [`holdout_v2_run1.md`](eval/synthetic/results/holdout_v2_run1.md), rules only, LLM layer not run), Second Eye answers 78 of 227 questions (34 %). Non-clinical requests are refused 9 of 9 times; unusual roles and requests in other languages fail most often.
+- **Unfamiliar requests are the weak spot.** On an adversarial holdout written independently of the engine (73 situations, [`holdout_v2_run1.md`](eval/synthetic/results/holdout_v2_run1.md), rules only, LLM layer not run), Second Look answers 78 of 227 questions (34 %). Non-clinical requests are refused 9 of 9 times; unusual roles and requests in other languages fail most often.
 - **The knowledge base is a draft.** Some guideline citations are still placeholders (`TODO-cite`) and a full clinician review is pending.
 - **The clinical gate is a demo safeguard.** It reads the role from the request; a hospital deployment would take the role from the sign-in.
 - **The LLM layer is off by default.** When it is on, the record's diagnosis labels are sent to Anthropic to choose the task.

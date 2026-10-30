@@ -1,5 +1,5 @@
 /*!
- * Second Eye lock module — login, PIN lock screen, idle/visibility locking.
+ * Second Look lock module — login, PIN lock screen, idle/visibility locking.
  *
  * Drop-in for any frontend (plain HTML, Next.js, ...):
  *
@@ -151,7 +151,7 @@
     els.staff = shell.querySelector('#sl-staff');
     els.pass = shell.querySelector('#sl-pass');
     shell.querySelectorAll('[data-el]').forEach(function (el) { els[el.getAttribute('data-el')] = el; });
-    shell.querySelector('.sl-brand-name').textContent = state.opts.title || 'Second Eye';
+    shell.querySelector('.sl-brand-name').textContent = state.opts.title || 'Second Look';
     state.els = els;
 
     els.dots.addEventListener('animationend', function () { els.dots.classList.remove('sl-shake'); });
@@ -252,7 +252,7 @@
         setMsg(els.loginMsg, r.data.message || 'Sign-in failed.', 'error');
       }
     } catch (e) {
-      setMsg(els.loginMsg, 'Cannot reach the Second Eye server. Check your connection.', 'error');
+      setMsg(els.loginMsg, 'Cannot reach the Second Look server. Check your connection.', 'error');
     } finally {
       state.busy = false;
       els.loginBtn.disabled = false;
@@ -468,7 +468,7 @@
   function init(options) {
     if (state.opts) throw new Error('SecondLook.lock.init() called twice');
     state.opts = Object.assign({ apiBase: '', appRoot: '[data-second-look-app]', lockOnHidden: true,
-      heartbeatSeconds: 30, stylesheet: undefined, title: 'Second Eye' }, options || {});
+      heartbeatSeconds: 30, stylesheet: undefined, title: 'Second Look' }, options || {});
     state.opts.apiBase = (state.opts.apiBase || '').replace(/\/$/, '');
 
     var css = state.opts.stylesheet === undefined ? apiUrl('/lock.css') : state.opts.stylesheet;
