@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="mobile/public/icon-192.png" alt="Second Look logo" width="88" height="88">
+<img src="docs/media/logo-animated.svg" alt="Second Look logo: a hand presents the letters SE on a platter" width="104" height="104">
 
 # Second Look
 
@@ -38,6 +38,25 @@ Type *"Anaesthetist, pre-operative check before breast surgery"* and get one scr
 
 Switch the doctor and keep the patient: the surgeon and the emergency physician each get a different screen, built for their task. Roles we never prepared for still get a screen instead of an error.
 
+## Screens
+
+<table>
+  <tr>
+    <td width="23%" align="center"><img src="docs/media/screenshots/01-sign-in.png" alt="Sign-in screen"><br><sub>Sign in, then a PIN lock</sub></td>
+    <td width="23%" align="center"><img src="docs/media/screenshots/02-start.png" alt="Start screen with role chips and task bar"><br><sub>One sentence: role and task</sub></td>
+    <td width="23%" align="center"><img src="docs/media/screenshots/03-results.png" alt="Results screen with fact cards"><br><sub>Only the facts the task needs</sub></td>
+    <td width="23%" align="center"><img src="docs/media/screenshots/04-source.png" alt="Source letter with the cited passage highlighted"><br><sub>Every fact opens its source</sub></td>
+  </tr>
+  <tr>
+    <td width="23%" align="center"><img src="docs/media/screenshots/05-contradiction.png" alt="Two letters that disagree, side by side"><br><sub>Where the letters disagree</sub></td>
+    <td width="23%" align="center"><img src="docs/media/screenshots/06-history.png" alt="History view with earlier values"><br><sub>Earlier values, each with its source</sub></td>
+    <td width="23%" align="center"><img src="docs/media/screenshots/07-help.png" alt="Help and FAQ page"><br><sub>Help: what the labels mean</sub></td>
+    <td width="23%" align="center"><img src="docs/media/screenshots/08-not-authorised.png" alt="Not authorised screen for a non-clinical request"><br><sub>No clinical role, no patient data</sub></td>
+  </tr>
+</table>
+
+Results screens use the invented demo patient; no organiser data is shown.
+
 ## Results
 
 Measured on the organisers' five situations ([`docs/SUBMISSION.md`](docs/SUBMISSION.md), reproducible with the commands below).
@@ -52,6 +71,15 @@ Measured on the organisers' five situations ([`docs/SUBMISSION.md`](docs/SUBMISS
 
 Also: 15 unseen situations (new roles, a German request, a misspelling) all render without errors in ≤ 0.5 s each.
 
+### Evaluation layers
+
+| Layer | What it checks | Status |
+|---|---|---|
+| Official situations | The organisers' 15 questions on the fact store (`python3 -m eval.run --strict`) and over HTTP (`python3 -m eval.run_api`) | **15 / 15**, 0 invariant violations |
+| Synthetic set v1 | 70 situations, 170 questions: German, typos, unseen and non-clinical roles (`python3 -m eval.synthetic.run`) | 170 / 170. Rules were fitted on this set, so it is not a generalisation result ([`docs/TESTING.md`](docs/TESTING.md) §3) |
+| Adversarial hold-out v2 | 73 situations written by an independent author who never saw the engine (`python3 -m eval.synthetic.run --file eval/synthetic/holdout_v2.json`) | Work in progress, measured in [`docs/TESTING.md`](docs/TESTING.md) |
+| Phone app end to end | 39 Playwright cases against the real backend, including axe accessibility checks (`cd mobile && npm run e2e`) | Run before each merge |
+
 ## How it works
 
 Two phases. An offline build reads the eight letters once and freezes a verified fact store. Every request after that only looks things up, so a screen takes milliseconds, not seconds.
@@ -65,14 +93,18 @@ flowchart LR
         C --> FS
     end
     subgraph ON["Online · every request"]
-        Q["Anaesthetist, pre-op check<br/>before breast surgery"] --> G{"Clinical gate"}
+        Q["Anaesthetist, pre-op check<br/>before breast surgery"] --> U["Understand<br/>alias and tag matcher<br/>optional Claude Haiku 5.5:<br/>rulebook IDs only, budget guard, cache"]
+        U --> R["Route<br/>role, task bundles, slots P1–P3<br/>knowledge base + overlay"]
+        R --> G{"Clinical gate<br/>reads the text alone"}
         G -- "no clinical role:<br/>zero patient facts" --> X["Not authorised"]
-        G --> U["Understand<br/>alias matcher<br/>optional Claude, rulebook IDs only"]
-        U --> R["Route<br/>role, task bundles, slots P1–P3<br/>routing knowledge base"]
-        R --> F["Fill<br/>latest value, not documented,<br/>not applicable, computed values"]
+        G --> FO["Task focus<br/>task terms, overlay relevance,<br/>optional LLM focus concepts"]
+        FO --> F["Fill<br/>safety core: allergies, age and sex<br/>latest value, not documented,<br/>not applicable, computed values"]
         FS --> F
-        F --> API["FastAPI<br/>sign-in, PIN lock, audit log"]
-        API --> APP["Phone app<br/>every fact opens its source sentence"]
+        F --> V["Short view<br/>P1 cards + up to 6 'also relevant'<br/>16 cards at most"]
+    end
+    subgraph HOST["Hosting · Docker on Render"]
+        V --> API["FastAPI<br/>sign-in, PIN lock, audit log"]
+        API --> APP["Phone app, served by FastAPI<br/>every fact opens its source sentence"]
     end
 ```
 
@@ -80,11 +112,16 @@ flowchart LR
 |---|---|---|
 | Fact store | `pipeline/` | Splits each letter into passages with stable IDs and offsets, extracts typed facts (medication, allergy, measurement, finding, plan), links IBM's extraction as an index only, and rejects any fact whose quote is not verbatim. |
 | Compare | `compare/` | Deterministic checks: BMI recomputed from height and weight, event dates, laterality. Counts only passages that cannot all be true; typos and method differences become documentation notes. |
-| Routing knowledge base | `rulebook/kb/` | Written by the medical team: 20 roles, 18 task bundles, 63 fact slots with priorities P1–P3, 22 rules and 21 guideline sources. Holds no patient facts. An overlay adds 5 more roles. |
-| Query engine | `engine/` | Situation → role and task → needs → answer cards: consistent, conflicting, outdated, not documented, not applicable. The short view caps a screen at 16 cards. |
+| Routing knowledge base | `rulebook/kb/` | Written by the medical team: 20 roles, 18 task bundles, 63 fact slots with priorities P1–P3, 22 rules and 21 guideline sources. Holds no patient facts. |
+| Knowledge base overlay | `rulebook/kb_overlay.json` | 5 more roles (rheumatologist, urologist, psychologist, social worker, nephrologist), extra aliases and tags, task terms and task relevance rules; each new rule is marked `TODO-cite` for the medical team. |
+| Query engine | `engine/` | Situation → role and task → needs → answer cards: consistent, conflicting, outdated, not documented, not applicable. Allergies and age/sex are on every clinical screen; the short view adds up to 6 "also relevant" P2 cards and caps a screen at 16 cards. |
+| Clinical gate | `engine/clinical.py` | Patient data only for a clinical requester, decided from the text by rules (`rulebook/clinical_roles.json`). Not authorised means zero patient facts. |
+| Task focus | `engine/focus.py` | Promotes record facts the task points at into one card after the P1 needs: task terms, overlay relevance, and with the LLM on, its `focus_concepts`. |
+| LLM layer | `engine/llm.py`, `engine/llm_budget.py` | Optional Claude Haiku 5.5 reading of the request, with a daily budget and call cap and an in-process cache. |
+| Security | `security/`, `backend/app/auth.py` | Sign-in with salted PBKDF2 hashes, PIN lock, idle and background lock, hash-chained audit log. |
 | API | `backend/app/` | FastAPI: the `Briefing` schema, documents and passages for the source view, sign-in and PIN lock, and serves the built app. |
 | Phone app | `mobile/` | React 19, Vite, Tailwind 4, Motion. Facts with their sources, contradictions, open items, value history and a source viewer that highlights the cited words. English and German. |
-| Evaluation | `eval/` | Scores the 15 official answers on the fact store and over HTTP, and checks the invariants (quotes verbatim, every number inside its quote). |
+| Evaluation | `eval/`, `eval/synthetic/` | Scores the 15 official answers on the fact store and over HTTP, and checks the invariants (quotes verbatim, every number inside its quote). `eval/synthetic/` holds the 70-situation set and the adversarial hold-out. |
 
 ## Where AI is used, and where it is not
 
@@ -93,7 +130,9 @@ The core is deterministic, so every screen can be reproduced and checked.
 | Step | How | Why |
 |---|---|---|
 | Extracting facts | Rules, plus IBM's extraction used as an index; every quote is validated in code | Eight short letters: rules are checkable and fast |
-| Understanding the request | Alias and tag matcher (English and German, fuzzy). **Optional:** Claude Haiku proposes a role and task bundles (`SECOND_LOOK_LLM=1`) | Unusual wording and unseen roles. The model may only choose from the rulebook's own IDs; every pick is checked again in code; on a timeout (4 s), a refusal or bad output the rules answer alone; a budget guard caps daily spend |
+| Understanding the request | Alias and tag matcher (English and German, fuzzy). **Optional:** with `SECOND_LOOK_LLM=1`, Claude Haiku 5.5 reads every request and proposes a role and task bundles through structured output limited to the knowledge base's own IDs | Unusual wording and unseen roles. Every pick is checked again in code. It may add one bundle when the rules matched (up to three when they did not) and set the role only when the rules found none or a fuzzy one. On a timeout (4 s), an error or a spent budget the rules answer alone. `engine/llm_budget.py` caps daily spend and calls; repeated requests hit a cache. `/health` shows the layer's state and every briefing records `routing.llm_used` |
+| Who may see patient data | Clinical gate, rules only | The model never authorises: the gate reads the request text alone |
+| Task focus | Task terms and overlay rules in code. **Optional:** the model returns up to five `focus_concepts` | The model can only pick from this record's own concept labels; code maps them back to existing facts, shown as "AI-highlighted for this task" |
 | "Not documented", contradictions, calculations, what to show | Code only | The model never writes patient facts, statuses, verdicts or numbers |
 
 No guideline text is processed by a model. Guidelines in the knowledge base only explain why a fact is on a checklist; they are never shown as patient facts.
