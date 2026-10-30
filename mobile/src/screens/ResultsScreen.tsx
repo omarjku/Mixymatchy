@@ -3,7 +3,8 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { Add01Icon, LanguageSkillIcon, StopCircleIcon, VolumeHighIcon } from "@hugeicons/core-free-icons";
 import { AppBar } from "@/components/AppBar";
 import { ContradictionCard } from "@/components/ContradictionCard";
-import { FactCard, FactRows, RowSource, TrendLine } from "@/components/FactCard";
+import { FactRows, RowSource, TrendLine } from "@/components/FactCard";
+import { FactList } from "@/components/FactList";
 import { PatientCard } from "@/components/PatientCard";
 import { SourceViewer } from "@/components/SourceViewer";
 import { hasHistory } from "@/components/ValueHistory";
@@ -97,15 +98,6 @@ export function ResultsScreen() {
   const blindSpot = stats.blind_spot ?? 0;
   const taskConcepts = stats.task_concepts ?? 0;
   const otherIssues = stats.other_record_issues ?? 0;
-  const factCard = (fact: Fact) => (
-    <FactCard
-      key={fact.id}
-      fact={fact}
-      showHistory={view === "history"}
-      onPressSource={showSource}
-      onPressGuideline={showGuideline}
-    />
-  );
 
   return (
     <>
@@ -274,7 +266,12 @@ export function ResultsScreen() {
                     {t("results.empty")}
                   </p>
                 ) : (
-                  <div className={cn("grid gap-2.5 md:grid-cols-2", viewer && "lg:grid-cols-1")}>{brief.facts.map(factCard)}</div>
+                  <FactList
+                    facts={brief.facts}
+                    showHistory={view === "history"}
+                    onPressSource={showSource}
+                    onPressGuideline={showGuideline}
+                  />
                 )}
               </section>
             )}
