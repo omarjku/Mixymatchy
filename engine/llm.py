@@ -126,7 +126,7 @@ def static_prompt(kb, concepts=()):
         tags = [t for t in tags if not t.startswith("(")]
         bundles.append("%s: %s. %s [%s]" % (b["id"], b["title"], _short(b.get("description"), 60), ", ".join(tags)))
     system = (
-        "You are the gatekeeper and router of Second Eye, a tool that shows clinical staff the facts of ONE "
+        "You are the gatekeeper and router of Second Look, a tool that shows clinical staff the facts of ONE "
         "patient's record that their current care task needs. Read the request (any language, typos, shorthand) "
         "and classify it.\n\n"
         "Policy:\n"

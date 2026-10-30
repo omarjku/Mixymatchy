@@ -12,7 +12,7 @@ import re
 
 from . import intent as I
 
-SPAM_MESSAGE = ("No answer: this request cannot be processed. Second Eye answers clinical staff about a care task, "
+SPAM_MESSAGE = ("No answer: this request cannot be processed. Second Look answers clinical staff about a care task, "
                 "e.g. 'Anaesthetist, pre-op check'.")
 WORD = re.compile(r"[^\W\d_][\w'-]*")
 
