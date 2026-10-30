@@ -37,6 +37,7 @@ from app import adapter  # noqa: E402
 MAX_NEEDS = 16
 MAX_MS = 1000
 CASES = Path(__file__).with_name("situations.json")
+RESULTS = []  # per-question dicts of the last run (for --json)
 
 
 def norm(s: str) -> str:
@@ -57,8 +58,45 @@ def items(b):
     return out
 
 
+_REGEX = [False]  # holdout files (expect_screen present) use regex tokens; v1 uses substring 'a|b' groups
+
+
 def has(text: str, group: str) -> bool:
+    if _REGEX[0]:
+        try:
+            g = group if "{" in group else group.replace(",", ".")  # text is normalised: decimal comma -> point
+            return re.search(g, text, re.I) is not None
+        except re.error:
+            return norm(group) in text
     return any(norm(alt) in text for alt in group.split("|"))
+
+
+def screen_state(b) -> str:
+    """refused | not_applicable | normal (as the scorer sees the screen)."""
+    mode = b.routing.get("screen_mode")
+    if mode == "not_authorised":
+        return "refused"
+    if mode == "not_applicable" or (b.needs and all(n.status == "not_applicable" for n in b.needs)):
+        return "not_applicable"
+    return "normal"
+
+
+def check_screen(s, b):
+    """-> (ok, why) for expect_screen and must_not_show; (True, '') when the situation has neither."""
+    exp = s.get("expect_screen")
+    if exp:
+        st = screen_state(b)
+        if exp == "refused":
+            nfacts = sum(len(n.facts) for n in b.needs)
+            if st != "refused" or b.needs or b.findings or nfacts:
+                return False, "expected refused (0 facts), got %s with %d cards/%d facts" % (st, len(b.needs), nfacts)
+        elif st != exp:
+            return False, "expected screen %s, got %s" % (exp, st)
+    for rx in s.get("must_not_show") or []:
+        for t, _s in items(b):
+            if re.search(rx, t, re.I):
+                return False, "must_not_show /%s/ appears: %s" % (rx, t[:70])
+    return True, ""
 
 
 def doc_of(seg: str) -> str:
@@ -111,8 +149,11 @@ def invariants(b):
     return errs
 
 
-def run(only=None, verbose=False, use_llm=False, out=print):
-    data = json.loads(CASES.read_text(encoding="utf-8"))["situations"]
+def run(only=None, verbose=False, use_llm=False, out=print, cases=None):
+    data = json.loads(Path(cases or CASES).read_text(encoding="utf-8"))["situations"]
+    _REGEX[0] = any("expect_screen" in x for x in data)
+    RESULTS.clear()
+    scr_tot = scr_ok = 0
     adapter.engine_store()
     tot = ok_n = 0
     sit_ok = 0
@@ -131,12 +172,26 @@ def run(only=None, verbose=False, use_llm=False, out=print):
         dump = len(b.needs) > MAX_NEEDS
         slow += ms > max_ms
         all_ok = True
+        sok, swhy = check_screen(s, b)
+        if s.get("expect_screen") or s.get("must_not_show"):
+            scr_tot += 1
+            scr_ok += sok
+            if not sok:
+                all_ok = False
+                fails.append((s["id"], 0, s["situation"], "(screen)", swhy, b.routing.get("role_label"),
+                              b.routing.get("screen_mode"), b.task))
+            RESULTS.append(dict(id=s["id"], q=0, category=s.get("category"), expect_screen=s.get("expect_screen"),
+                                screen=screen_state(b), ok=bool(sok), why=swhy, role=b.routing.get("role_label"),
+                                mode=b.routing.get("screen_mode"), task=b.task))
         for i, q in enumerate(s["questions"], 1):
             ok, why = check_q(q, b)
             if ok and (inv or dump or ms > max_ms):
                 ok, why = False, "; ".join(inv[:2]) or ("%d cards (dump)" % len(b.needs) if dump else "%.0f ms" % ms)
             tot += 1
             ok_n += ok
+            RESULTS.append(dict(id=s["id"], q=i, category=s.get("category"), expect_screen=s.get("expect_screen"),
+                                question=q["q"], expect=q["expect"], ok=bool(ok), why=why,
+                                role=b.routing.get("role_label"), mode=b.routing.get("screen_mode"), task=b.task))
             all_ok &= ok
             if not ok:
                 fails.append((s["id"], i, s["situation"], q["q"], why, b.routing.get("role_label"),
@@ -148,6 +203,8 @@ def run(only=None, verbose=False, use_llm=False, out=print):
     out("synthetic eval%s: questions %d/%d (%.1f%%), situations %d/%d, slow (> %d ms) %d"
         % (" (llm)" if use_llm else "", ok_n, tot, 100.0 * ok_n / max(tot, 1), sit_ok,
            len(only or data) if only else len(data), max_ms, slow))
+    if scr_tot:
+        out("screen checks (expect_screen / must_not_show): %d/%d" % (scr_ok, scr_tot))
     for f in fails:
         out("  FAIL %s q%d [%s] %s -> %s  (role %s, mode %s, task %s)" % (f[0], f[1], f[2][:50], f[3], f[4], f[5], f[6],
                                                                           f[7][:40]))
@@ -177,6 +234,8 @@ def main():
     ap.add_argument("--only", default="")
     ap.add_argument("--min", type=float, default=0.0, help="exit 1 below this pass rate (percent)")
     ap.add_argument("--llm", action="store_true", help="enable the LLM understand layer (needs ANTHROPIC_API_KEY)")
+    ap.add_argument("--file", default="", help="situations file (default situations.json)")
+    ap.add_argument("--json", default="", help="write per-question results to this path")
     a = ap.parse_args()
     before = None
     if a.llm:
@@ -184,7 +243,9 @@ def main():
         if not ok_llm:
             print("llm: not available (SECOND_LOOK_LLM=1 needs ANTHROPIC_API_KEY and the anthropic package); "
                   "running rules only")
-    ok, tot = run(set(x for x in a.only.split(",") if x) or None, a.verbose, use_llm=a.llm)
+    ok, tot = run(set(x for x in a.only.split(",") if x) or None, a.verbose, use_llm=a.llm, cases=a.file or None)
+    if a.json:
+        Path(a.json).write_text(json.dumps(RESULTS, ensure_ascii=False, indent=1), encoding="utf-8")
     if before is not None:
         print(spend_line(before))
     return 1 if 100.0 * ok / max(tot, 1) < a.min else 0
