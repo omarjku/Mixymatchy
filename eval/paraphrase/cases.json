@@ -1,0 +1,214 @@
+{
+  "_about": "Paraphrase robustness (python -m eval.paraphrase.run). Group 'official': each of the 15 official questions (cases/situations.md, cases/expected.json) reworded 5 ways a clinician might type it (terse shorthand, long sentence, question form, US spelling / typos, German-English mix); one question per request. Group 'common': 30 single questions not in the official set, 3 wordings each, answers read from the letters (data/build/facts.json) or 'not documented'. Scored like eval/synthetic (found: a shown fact or computed value contains every token group and links to an expected document; not_documented: no shown fact has an 'absent' token and a not-documented card matches 'need'); the runner also reports whether the answer is inside key_facts. Written for this eval only; no holdout wording.",
+  "situations": [
+    {"id": "o1.1a", "group": "official", "style": "terse", "situation": "anaesth preop, blood thinner + dose?", "questions": [{"q": "Antithrombotic and dose", "expect": "found", "tokens": ["acetylsalicylic|thrombo ass|aspirin", "100"], "docs": ["12340011", "12340012", "12340018"]}]},
+    {"id": "o1.1b", "group": "official", "style": "long", "situation": "I'm the anaesthetist seeing her before the breast operation next month and I need to know whether she is on any antiplatelet or anticoagulant medication and the dose", "questions": [{"q": "Antithrombotic and dose", "expect": "found", "tokens": ["acetylsalicylic|thrombo ass|aspirin", "100"], "docs": ["12340011", "12340012", "12340018"]}]},
+    {"id": "o1.1c", "group": "official", "style": "question", "situation": "Anaesthesiologist: is she taking aspirin or another blood thinner before surgery?", "questions": [{"q": "Antithrombotic and dose", "expect": "found", "tokens": ["acetylsalicylic|thrombo ass|aspirin", "100"], "docs": ["12340011", "12340012", "12340018"]}]},
+    {"id": "o1.1d", "group": "official", "style": "typo", "situation": "anesthesiolgist pre op asessment: anticoagulaton?", "questions": [{"q": "Antithrombotic and dose", "expect": "found", "tokens": ["acetylsalicylic|thrombo ass|aspirin", "100"], "docs": ["12340011", "12340012", "12340018"]}]},
+    {"id": "o1.1e", "group": "official", "style": "de-mix", "situation": "Anästhesie Prämedikation, welche Blutverdünner nimmt sie?", "questions": [{"q": "Antithrombotic and dose", "expect": "found", "tokens": ["acetylsalicylic|thrombo ass|aspirin", "100"], "docs": ["12340011", "12340012", "12340018"]}]},
+
+    {"id": "o1.2a", "group": "official", "style": "terse", "situation": "anaesthetist pre-op: allergies?", "questions": [{"q": "Allergy", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o1.2b", "group": "official", "style": "long", "situation": "As the anaesthetist doing her pre-operative assessment before the quadrantectomy I want to know about any documented allergies or drug intolerances", "questions": [{"q": "Allergy", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o1.2c", "group": "official", "style": "question", "situation": "Anesthesiologist: does she have any known allergy?", "questions": [{"q": "Allergy", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o1.2d", "group": "official", "style": "typo", "situation": "anaestetist preop, any alergies documented?", "questions": [{"q": "Allergy", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o1.2e", "group": "official", "style": "de-mix", "situation": "Anästhesist, OP-Vorbereitung: Allergien bekannt?", "questions": [{"q": "Allergy", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+
+    {"id": "o1.3a", "group": "official", "style": "terse", "situation": "anaesth preop: last EF?", "questions": [{"q": "LVEF", "expect": "found", "tokens": ["lvef|ejection", "60"], "docs": ["12340012"]}]},
+    {"id": "o1.3b", "group": "official", "style": "long", "situation": "I am the anaesthetist planning her general anaesthesia for the breast surgery and need her most recent echocardiography result, especially the ejection fraction", "questions": [{"q": "LVEF", "expect": "found", "tokens": ["lvef|ejection", "60"], "docs": ["12340012"]}]},
+    {"id": "o1.3c", "group": "official", "style": "question", "situation": "Anaesthetist: how is her heart function, what was the last ejection fraction?", "questions": [{"q": "LVEF", "expect": "found", "tokens": ["lvef|ejection", "60"], "docs": ["12340012"]}]},
+    {"id": "o1.3d", "group": "official", "style": "typo", "situation": "anesthesia pre-op, latest LV funtion / ejection fracton?", "questions": [{"q": "LVEF", "expect": "found", "tokens": ["lvef|ejection", "60"], "docs": ["12340012"]}]},
+    {"id": "o1.3e", "group": "official", "style": "de-mix", "situation": "Anästhesie vor OP: letzte Echo, LV-Funktion?", "questions": [{"q": "LVEF", "expect": "found", "tokens": ["lvef|ejection", "60"], "docs": ["12340012"]}]},
+
+    {"id": "o2.1a", "group": "official", "style": "terse", "situation": "breast surgeon post tumour board: histo + TNM?", "questions": [{"q": "Histology and TNM", "expect": "found", "tokens": ["t2", "n0"], "docs": ["12340016", "12340018"]}]},
+    {"id": "o2.1b", "group": "official", "style": "long", "situation": "I'm the surgeon who will operate on her after the tumour board and I need the final histology of the breast lesion and the TNM staging", "questions": [{"q": "Histology and TNM", "expect": "found", "tokens": ["t2", "n0"], "docs": ["12340016", "12340018"]}]},
+    {"id": "o2.1c", "group": "official", "style": "question", "situation": "Surgeon: what type of breast cancer is it and what stage?", "questions": [{"q": "Histology and TNM", "expect": "found", "tokens": ["t2", "n0"], "docs": ["12340016", "12340018"]}]},
+    {"id": "o2.1d", "group": "official", "style": "typo", "situation": "surgoen planning the operaton: histolgy and staging?", "questions": [{"q": "Histology and TNM", "expect": "found", "tokens": ["t2", "n0"], "docs": ["12340016", "12340018"]}]},
+    {"id": "o2.1e", "group": "official", "style": "de-mix", "situation": "Chirurgin, OP-Planung nach Tumorboard: Histologie und TNM?", "questions": [{"q": "Histology and TNM", "expect": "found", "tokens": ["t2", "n0"], "docs": ["12340016", "12340018"]}]},
+
+    {"id": "o2.2a", "group": "official", "style": "terse", "situation": "breast surgeon: ER/PR/HER2 + Ki67?", "questions": [{"q": "Ki-67", "expect": "found", "tokens": ["ki-67|ki67", "20"], "docs": ["12340016", "12340018"]}]},
+    {"id": "o2.2b", "group": "official", "style": "long", "situation": "As the operating surgeon I would like to see the receptor status of the tumour and the proliferation index before we finalise the surgical plan", "questions": [{"q": "Ki-67", "expect": "found", "tokens": ["ki-67|ki67", "20"], "docs": ["12340016", "12340018"]}]},
+    {"id": "o2.2c", "group": "official", "style": "question", "situation": "Surgeon: is the tumour hormone receptor positive and what is the Ki-67?", "questions": [{"q": "Ki-67", "expect": "found", "tokens": ["ki-67|ki67", "20"], "docs": ["12340016", "12340018"]}]},
+    {"id": "o2.2d", "group": "official", "style": "typo", "situation": "surgeon tumor board follow up: reseptor status, ki 67?", "questions": [{"q": "Ki-67", "expect": "found", "tokens": ["ki-67|ki67", "20"], "docs": ["12340016", "12340018"]}]},
+    {"id": "o2.2e", "group": "official", "style": "de-mix", "situation": "Chirurg: Rezeptorstatus und Ki-67 der Patientin?", "questions": [{"q": "Ki-67", "expect": "found", "tokens": ["ki-67|ki67", "20"], "docs": ["12340016", "12340018"]}]},
+
+    {"id": "o2.3a", "group": "official", "style": "terse", "situation": "surgeon: tumour board rec + OP date?", "questions": [{"q": "Recommendation and date", "expect": "found", "tokens": ["quadrantectomy", "16.05.2016|2016-05-16"], "docs": ["12340018"]}]},
+    {"id": "o2.3b", "group": "official", "style": "long", "situation": "I'm the surgeon and I want to check what the multidisciplinary tumour board decided and on which date the operation is booked", "questions": [{"q": "Recommendation and date", "expect": "found", "tokens": ["quadrantectomy", "16.05.2016|2016-05-16"], "docs": ["12340018"]}]},
+    {"id": "o2.3c", "group": "official", "style": "question", "situation": "Surgeon: what did the tumor board recommend and when is surgery scheduled?", "questions": [{"q": "Recommendation and date", "expect": "found", "tokens": ["quadrantectomy", "16.05.2016|2016-05-16"], "docs": ["12340018"]}]},
+    {"id": "o2.3d", "group": "official", "style": "typo", "situation": "surgeon, planed procedure and date after tumorboard?", "questions": [{"q": "Recommendation and date", "expect": "found", "tokens": ["quadrantectomy", "16.05.2016|2016-05-16"], "docs": ["12340018"]}]},
+    {"id": "o2.3e", "group": "official", "style": "de-mix", "situation": "Chirurg: Empfehlung Tumorkonferenz und OP-Termin?", "questions": [{"q": "Recommendation and date", "expect": "found", "tokens": ["quadrantectomy", "16.05.2016|2016-05-16"], "docs": ["12340018"]}]},
+
+    {"id": "o3.1a", "group": "official", "style": "terse", "situation": "GP DM review: antidiabetics + doses?", "questions": [{"q": "Glucose-lowering drugs", "expect": "found", "tokens": ["metformin", "1000"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o3.1b", "group": "official", "style": "long", "situation": "I'm her family doctor doing the yearly diabetes check this spring and I want a list of all her diabetes medications with doses", "questions": [{"q": "Glucose-lowering drugs", "expect": "found", "tokens": ["metformin", "1000"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o3.1c", "group": "official", "style": "question", "situation": "GP: which glucose lowering drugs is she on?", "questions": [{"q": "Glucose-lowering drugs", "expect": "found", "tokens": ["metformin", "1000"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o3.1d", "group": "official", "style": "typo", "situation": "general practicioner, diabetis meds?", "questions": [{"q": "Glucose-lowering drugs", "expect": "found", "tokens": ["metformin", "1000"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o3.1e", "group": "official", "style": "de-mix", "situation": "Hausarzt, Diabetes-Kontrolle: welche Antidiabetika?", "questions": [{"q": "Glucose-lowering drugs", "expect": "found", "tokens": ["metformin", "1000"], "docs": ["12340012", "12340018"]}]},
+
+    {"id": "o3.2a", "group": "official", "style": "terse", "situation": "GP: last HbA1c?", "questions": [{"q": "HbA1c", "expect": "found", "tokens": ["hba1c", "6.4"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o3.2b", "group": "official", "style": "long", "situation": "As her general practitioner reviewing her diabetes control I need the most recent glycated haemoglobin value and when it was measured", "questions": [{"q": "HbA1c", "expect": "found", "tokens": ["hba1c", "6.4"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o3.2c", "group": "official", "style": "question", "situation": "GP: how well controlled is her diabetes, what is the latest HbA1c?", "questions": [{"q": "HbA1c", "expect": "found", "tokens": ["hba1c", "6.4"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o3.2d", "group": "official", "style": "typo", "situation": "family physican: latest hba1c and date?", "questions": [{"q": "HbA1c", "expect": "found", "tokens": ["hba1c", "6.4"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o3.2e", "group": "official", "style": "de-mix", "situation": "Hausärztin: letzter HbA1c-Wert?", "questions": [{"q": "HbA1c", "expect": "found", "tokens": ["hba1c", "6.4"], "docs": ["12340011", "12340012"]}]},
+
+    {"id": "o3.3a", "group": "official", "style": "terse", "situation": "GP DM review: weight trend 2015->2016?", "questions": [{"q": "Weight change", "expect": "found", "tokens": ["66"], "docs": ["12340018"]}]},
+    {"id": "o3.3b", "group": "official", "style": "long", "situation": "I'm the GP reviewing her diabetes and I'd like to see how her body weight changed between last summer's hospital stay and now", "questions": [{"q": "Weight change", "expect": "found", "tokens": ["66"], "docs": ["12340018"]}]},
+    {"id": "o3.3c", "group": "official", "style": "question", "situation": "GP: has she lost weight since June 2015?", "questions": [{"q": "Weight change", "expect": "found", "tokens": ["66"], "docs": ["12340018"]}]},
+    {"id": "o3.3d", "group": "official", "style": "typo", "situation": "GP diabetes reveiw, wieght change?", "questions": [{"q": "Weight change", "expect": "found", "tokens": ["66"], "docs": ["12340018"]}]},
+    {"id": "o3.3e", "group": "official", "style": "de-mix", "situation": "Hausarzt: Gewichtsverlauf seit 2015?", "questions": [{"q": "Weight change", "expect": "found", "tokens": ["66"], "docs": ["12340018"]}]},
+
+    {"id": "o4.1a", "group": "official", "style": "terse", "situation": "ED night: dizzy + blurred vision L eye, happened before? cause?", "questions": [{"q": "Prior episode and cause", "expect": "found", "tokens": ["amaurosis|vision loss|visual disturbance"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o4.1b", "group": "official", "style": "long", "situation": "I'm the emergency doctor on nights; she came in at 2 am with vertigo and blurry vision in her left eye and I want to know if this has happened before and what caused it", "questions": [{"q": "Prior episode and cause", "expect": "found", "tokens": ["amaurosis|vision loss|visual disturbance"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o4.1c", "group": "official", "style": "question", "situation": "Emergency physician: has she had episodes of visual loss before?", "questions": [{"q": "Prior episode and cause", "expect": "found", "tokens": ["amaurosis|vision loss|visual disturbance"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o4.1d", "group": "official", "style": "typo", "situation": "ER doc: dizzyness and blury vision left eye, previous similiar episode?", "questions": [{"q": "Prior episode and cause", "expect": "found", "tokens": ["amaurosis|vision loss|visual disturbance"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o4.1e", "group": "official", "style": "de-mix", "situation": "Notaufnahme nachts: Schwindel und Sehstörung links, schon mal gehabt?", "questions": [{"q": "Prior episode and cause", "expect": "found", "tokens": ["amaurosis|vision loss|visual disturbance"], "docs": ["12340011", "12340012"]}]},
+
+    {"id": "o4.2a", "group": "official", "style": "terse", "situation": "ED doc: CT angio planned, contrast issues?", "questions": [{"q": "Contrast caution", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o4.2b", "group": "official", "style": "long", "situation": "I'm the emergency physician and want to order a CT angiogram of the head and neck tonight; is there anything in her record I should know before giving iodinated contrast?", "questions": [{"q": "Contrast caution", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o4.2c", "group": "official", "style": "question", "situation": "Emergency doctor: can I give her iodine contrast for a CT?", "questions": [{"q": "Contrast caution", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o4.2d", "group": "official", "style": "typo", "situation": "emergancy physician, contrast dye alergy before CTA?", "questions": [{"q": "Contrast caution", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "o4.2e", "group": "official", "style": "de-mix", "situation": "Notarzt: Kontrastmittel für CT-Angio, Kontraindikationen?", "questions": [{"q": "Contrast caution", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+
+    {"id": "o4.3a", "group": "official", "style": "terse", "situation": "ED night: BP meds + dose?", "questions": [{"q": "Antihypertensive", "expect": "found", "tokens": ["candesartan", "16"], "docs": ["12340018"]}]},
+    {"id": "o4.3b", "group": "official", "style": "long", "situation": "I'm the night emergency physician and her blood pressure is high; which antihypertensive does she currently take and at what dose?", "questions": [{"q": "Antihypertensive", "expect": "found", "tokens": ["candesartan", "16"], "docs": ["12340018"]}]},
+    {"id": "o4.3c", "group": "official", "style": "question", "situation": "Emergency physician: what does she take for her hypertension?", "questions": [{"q": "Antihypertensive", "expect": "found", "tokens": ["candesartan", "16"], "docs": ["12340018"]}]},
+    {"id": "o4.3d", "group": "official", "style": "typo", "situation": "ER physician, antihypertensiv medication?", "questions": [{"q": "Antihypertensive", "expect": "found", "tokens": ["candesartan", "16"], "docs": ["12340018"]}]},
+    {"id": "o4.3e", "group": "official", "style": "de-mix", "situation": "Notaufnahme: welches Blutdruckmedikament nimmt sie?", "questions": [{"q": "Antihypertensive", "expect": "found", "tokens": ["candesartan", "16"], "docs": ["12340018"]}]},
+
+    {"id": "o5.1a", "group": "official", "style": "terse", "situation": "GP: open f/u from June 2015 discharge?", "questions": [{"q": "Recommended follow-ups", "expect": "found", "tokens": ["ophthalmolog|eye"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o5.1b", "group": "official", "style": "long", "situation": "I'm her GP going through the discharge letter from her hospital stay in June 2015 and I want to see which follow-up examinations were recommended", "questions": [{"q": "Recommended follow-ups", "expect": "found", "tokens": ["ophthalmolog|eye"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o5.1c", "group": "official", "style": "question", "situation": "GP: what follow up was recommended after her 2015 admission?", "questions": [{"q": "Recommended follow-ups", "expect": "found", "tokens": ["ophthalmolog|eye"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o5.1d", "group": "official", "style": "typo", "situation": "family doctor, pending folow-ups after the 2015 hospitalisation?", "questions": [{"q": "Recommended follow-ups", "expect": "found", "tokens": ["ophthalmolog|eye"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o5.1e", "group": "official", "style": "de-mix", "situation": "Hausarzt: offene Kontrollen nach Entlassung 2015?", "questions": [{"q": "Recommended follow-ups", "expect": "found", "tokens": ["ophthalmolog|eye"], "docs": ["12340011", "12340012"]}]},
+
+    {"id": "o5.2a", "group": "official", "style": "terse", "situation": "GP: carotid duplex f/u done?", "questions": [{"q": "Follow-up ultrasound done", "expect": "found", "tokens": ["carotid|duplex", "no record"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o5.2b", "group": "official", "style": "long", "situation": "I'm the GP and I'd like to know whether the carotid ultrasound that was recommended two months after her 2015 discharge was ever carried out", "questions": [{"q": "Follow-up ultrasound done", "expect": "found", "tokens": ["carotid|duplex", "no record"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o5.2c", "group": "official", "style": "question", "situation": "GP: was the follow-up carotid Doppler ever performed?", "questions": [{"q": "Follow-up ultrasound done", "expect": "found", "tokens": ["carotid|duplex", "no record"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o5.2d", "group": "official", "style": "typo", "situation": "GP checking open folowups: did the carotis ultrasound happen?", "questions": [{"q": "Follow-up ultrasound done", "expect": "found", "tokens": ["carotid|duplex", "no record"], "docs": ["12340011", "12340012"]}]},
+    {"id": "o5.2e", "group": "official", "style": "de-mix", "situation": "Hausarzt: wurde die Carotis-Duplex-Kontrolle gemacht?", "questions": [{"q": "Follow-up ultrasound done", "expect": "found", "tokens": ["carotid|duplex", "no record"], "docs": ["12340011", "12340012"]}]},
+
+    {"id": "o5.3a", "group": "official", "style": "terse", "situation": "GP: carotid stenosis side?", "questions": [{"q": "Side", "expect": "found", "tokens": ["carotid", "left"], "docs": ["12340008", "12340011", "12340012"]}]},
+    {"id": "o5.3b", "group": "official", "style": "long", "situation": "I'm her GP reviewing the open items from 2015 and I need to confirm on which side the carotid artery narrowing was found", "questions": [{"q": "Side", "expect": "found", "tokens": ["carotid", "left"], "docs": ["12340008", "12340011", "12340012"]}]},
+    {"id": "o5.3c", "group": "official", "style": "question", "situation": "GP: is the carotid stenosis on the left or the right?", "questions": [{"q": "Side", "expect": "found", "tokens": ["carotid", "left"], "docs": ["12340008", "12340011", "12340012"]}]},
+    {"id": "o5.3d", "group": "official", "style": "typo", "situation": "GP: wich side is the carotis stenosis?", "questions": [{"q": "Side", "expect": "found", "tokens": ["carotid", "left"], "docs": ["12340008", "12340011", "12340012"]}]},
+    {"id": "o5.3e", "group": "official", "style": "de-mix", "situation": "Hausärztin: Carotisstenose welche Seite?", "questions": [{"q": "Side", "expect": "found", "tokens": ["carotid", "left"], "docs": ["12340008", "12340011", "12340012"]}]},
+
+    {"id": "c01a", "group": "common", "style": "terse", "situation": "GP: current meds?", "questions": [{"q": "Current medication", "expect": "found", "tokens": ["metformin", "1000"], "docs": ["12340012", "12340018"]}]},
+    {"id": "c01b", "group": "common", "style": "question", "situation": "Pharmacist: what medications is she taking at the moment?", "questions": [{"q": "Current medication", "expect": "found", "tokens": ["metformin", "1000"], "docs": ["12340012", "12340018"]}]},
+    {"id": "c01c", "group": "common", "style": "typo", "situation": "ward nurse: medicaton list please", "questions": [{"q": "Current medication", "expect": "found", "tokens": ["metformin", "1000"], "docs": ["12340012", "12340018"]}]},
+
+    {"id": "c02a", "group": "common", "style": "terse", "situation": "endocrinologist: HbA1c?", "questions": [{"q": "HbA1c", "expect": "found", "tokens": ["hba1c", "6.4"], "docs": ["12340011", "12340012"]}]},
+    {"id": "c02b", "group": "common", "style": "question", "situation": "Diabetologist: what was her last A1c?", "questions": [{"q": "HbA1c", "expect": "found", "tokens": ["hba1c", "6.4"], "docs": ["12340011", "12340012"]}]},
+    {"id": "c02c", "group": "common", "style": "long", "situation": "Internist: I'd like to know her glycaemic control, the long-term sugar value", "questions": [{"q": "HbA1c", "expect": "found", "tokens": ["hba1c", "6.4"], "docs": ["12340011", "12340012"]}]},
+
+    {"id": "c03a", "group": "common", "style": "terse", "situation": "dietitian: weight history?", "questions": [{"q": "Weight", "expect": "found", "tokens": ["66"], "docs": ["12340018"]}]},
+    {"id": "c03b", "group": "common", "style": "question", "situation": "Nutritionist: how much does she weigh now?", "questions": [{"q": "Weight", "expect": "found", "tokens": ["66"], "docs": ["12340018"]}]},
+    {"id": "c03c", "group": "common", "style": "typo", "situation": "oncologist: weigt loss?", "questions": [{"q": "Weight", "expect": "found", "tokens": ["66"], "docs": ["12340018"]}]},
+
+    {"id": "c04a", "group": "common", "style": "terse", "situation": "cardiologist: echo?", "questions": [{"q": "Echo / LVEF", "expect": "found", "tokens": ["lvef|ejection", "60"], "docs": ["12340012"]}]},
+    {"id": "c04b", "group": "common", "style": "question", "situation": "Cardiologist: when was her last echocardiogram and what did it show?", "questions": [{"q": "Echo / LVEF", "expect": "found", "tokens": ["lvef|ejection", "60"], "docs": ["12340012"]}]},
+    {"id": "c04c", "group": "common", "style": "long", "situation": "Internist: I need her cardiac pump function from the most recent heart ultrasound", "questions": [{"q": "Echo / LVEF", "expect": "found", "tokens": ["lvef|ejection", "60"], "docs": ["12340012"]}]},
+
+    {"id": "c05a", "group": "common", "style": "terse", "situation": "radiologist: contrast allergy?", "questions": [{"q": "Contrast allergy", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "c05b", "group": "common", "style": "question", "situation": "Radiographer: has she reacted to contrast media before?", "questions": [{"q": "Contrast allergy", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+    {"id": "c05c", "group": "common", "style": "typo", "situation": "radiolgist, KM alergy?", "questions": [{"q": "Contrast allergy", "expect": "found", "tokens": ["contrast"], "docs": ["12340012", "12340018"]}]},
+
+    {"id": "c06a", "group": "common", "style": "terse", "situation": "cardiologist: PM/ICD?", "questions": [{"q": "Pacemaker", "expect": "not_documented", "absent": ["pacemaker implant", "schrittmacher"], "need": "pacemaker|device"}]},
+    {"id": "c06b", "group": "common", "style": "question", "situation": "Radiologist before MRI: does she have a pacemaker or any implanted device?", "questions": [{"q": "Pacemaker", "expect": "not_documented", "absent": ["pacemaker implant", "schrittmacher"], "need": "pacemaker|device"}]},
+    {"id": "c06c", "group": "common", "style": "typo", "situation": "GP: does she have a pace maker?", "questions": [{"q": "Pacemaker", "expect": "not_documented", "absent": ["pacemaker implant", "schrittmacher"], "need": "pacemaker|device"}]},
+
+    {"id": "c07a", "group": "common", "style": "terse", "situation": "nephrologist: eGFR / creatinine?", "questions": [{"q": "Kidney function", "expect": "not_documented", "absent": ["creatinin", "egfr"], "need": "kidney|renal"}]},
+    {"id": "c07b", "group": "common", "style": "question", "situation": "Pharmacist: how is her renal function, for metformin dosing?", "questions": [{"q": "Kidney function", "expect": "not_documented", "absent": ["creatinin", "egfr"], "need": "kidney|renal"}]},
+    {"id": "c07c", "group": "common", "style": "long", "situation": "Radiologist: before contrast I need her latest kidney values", "questions": [{"q": "Kidney function", "expect": "not_documented", "absent": ["creatinin", "egfr"], "need": "kidney|renal"}]},
+
+    {"id": "c08a", "group": "common", "style": "terse", "situation": "GP: smoker?", "questions": [{"q": "Smoking", "expect": "not_documented", "absent": ["pack year", "raucher"], "need": "smok|nicotin|tobacco"}]},
+    {"id": "c08b", "group": "common", "style": "question", "situation": "Pulmonologist: does she smoke or has she ever smoked?", "questions": [{"q": "Smoking", "expect": "not_documented", "absent": ["pack year", "raucher"], "need": "smok|nicotin|tobacco"}]},
+    {"id": "c08c", "group": "common", "style": "typo", "situation": "anaesthetist: any nicotine use / smokng history?", "questions": [{"q": "Smoking", "expect": "not_documented", "absent": ["pack year", "raucher"], "need": "smok|nicotin|tobacco"}]},
+
+    {"id": "c09a", "group": "common", "style": "terse", "situation": "geriatrician: falls?", "questions": [{"q": "Falls", "expect": "not_documented", "absent": ["sturz"], "need": "fall|mobility"}]},
+    {"id": "c09b", "group": "common", "style": "question", "situation": "Physiotherapist: has she had any falls recently?", "questions": [{"q": "Falls", "expect": "not_documented", "absent": ["sturz"], "need": "fall|mobility"}]},
+    {"id": "c09c", "group": "common", "style": "long", "situation": "Ward nurse doing the admission: I want to know her fall risk and whether she ever fell", "questions": [{"q": "Falls", "expect": "not_documented", "absent": ["sturz"], "need": "fall|mobility"}]},
+
+    {"id": "c10a", "group": "common", "style": "terse", "situation": "ophthalmologist: eye findings?", "questions": [{"q": "Eye findings", "expect": "found", "tokens": ["retinopathy"], "docs": ["12340011", "12340012"]}]},
+    {"id": "c10b", "group": "common", "style": "question", "situation": "Ophthalmologist: what did the last eye exam show?", "questions": [{"q": "Eye findings", "expect": "found", "tokens": ["retinopathy"], "docs": ["12340011", "12340012"]}]},
+    {"id": "c10c", "group": "common", "style": "typo", "situation": "eye doctor: retinopaty?", "questions": [{"q": "Eye findings", "expect": "found", "tokens": ["retinopathy"], "docs": ["12340011", "12340012"]}]},
+
+    {"id": "c11a", "group": "common", "style": "terse", "situation": "neurologist: prior TIA/stroke?", "questions": [{"q": "Stroke / TIA history", "expect": "found", "tokens": ["amaurosis|vision loss|visual disturbance"], "docs": ["12340011", "12340012"]}]},
+    {"id": "c11b", "group": "common", "style": "question", "situation": "Neurologist: any history of stroke or transient ischaemic attack?", "questions": [{"q": "Stroke / TIA history", "expect": "found", "tokens": ["amaurosis|vision loss|visual disturbance"], "docs": ["12340011", "12340012"]}]},
+    {"id": "c11c", "group": "common", "style": "typo", "situation": "neurologist: previous cerebrovasculer events?", "questions": [{"q": "Stroke / TIA history", "expect": "found", "tokens": ["amaurosis|vision loss|visual disturbance"], "docs": ["12340011", "12340012"]}]},
+
+    {"id": "c12a", "group": "common", "style": "terse", "situation": "diabetologist: DM type?", "questions": [{"q": "Diabetes type", "expect": "found", "tokens": ["diabetes", "type ii|type 2"], "docs": ["12340011", "12340012", "12340014", "12340018"]}]},
+    {"id": "c12b", "group": "common", "style": "question", "situation": "Endocrinologist: what kind of diabetes does she have?", "questions": [{"q": "Diabetes type", "expect": "found", "tokens": ["diabetes", "type ii|type 2"], "docs": ["12340011", "12340012", "12340014", "12340018"]}]},
+    {"id": "c12c", "group": "common", "style": "typo", "situation": "GP: is she diabetic?", "questions": [{"q": "Diabetes type", "expect": "found", "tokens": ["diabetes", "type ii|type 2"], "docs": ["12340011", "12340012", "12340014", "12340018"]}]},
+
+    {"id": "c13a", "group": "common", "style": "terse", "situation": "cardiologist: BP values?", "questions": [{"q": "Blood pressure", "expect": "found", "tokens": ["blood pressure", "mmhg"], "docs": ["12340010", "12340012", "12340014", "12340018"]}]},
+    {"id": "c13b", "group": "common", "style": "question", "situation": "GP: what were her recent blood pressure readings?", "questions": [{"q": "Blood pressure", "expect": "found", "tokens": ["blood pressure", "mmhg"], "docs": ["12340010", "12340012", "12340014", "12340018"]}]},
+    {"id": "c13c", "group": "common", "style": "long", "situation": "Nephrologist: I need her 24-hour ambulatory blood pressure results", "questions": [{"q": "Blood pressure", "expect": "found", "tokens": ["blood pressure", "mmhg"], "docs": ["12340010", "12340012", "12340014", "12340018"]}]},
+
+    {"id": "c14a", "group": "common", "style": "terse", "situation": "cardiologist: ECG / HR?", "questions": [{"q": "ECG / heart rate", "expect": "found", "tokens": ["heart rate"], "docs": ["12340009", "12340012", "12340014", "12340018"]}]},
+    {"id": "c14b", "group": "common", "style": "question", "situation": "Anaesthetist: what does her ECG show?", "questions": [{"q": "ECG / heart rate", "expect": "found", "tokens": ["heart rate"], "docs": ["12340009", "12340012", "12340014", "12340018"]}]},
+    {"id": "c14c", "group": "common", "style": "typo", "situation": "cardiolgist: any arrythmia on holter?", "questions": [{"q": "ECG / heart rate", "expect": "found", "tokens": ["heart rate|arrhythmia|sinus"], "docs": ["12340009", "12340012", "12340014", "12340018"]}]},
+
+    {"id": "c15a", "group": "common", "style": "terse", "situation": "dietitian: BMI?", "questions": [{"q": "BMI", "expect": "found", "tokens": ["bmi", "22.8"], "docs": ["12340018"]}]},
+    {"id": "c15b", "group": "common", "style": "question", "situation": "Anaesthetist: what is her body mass index?", "questions": [{"q": "BMI", "expect": "found", "tokens": ["bmi", "22.8"], "docs": ["12340018"]}]},
+    {"id": "c15c", "group": "common", "style": "typo", "situation": "nurse: curent BMI?", "questions": [{"q": "BMI", "expect": "found", "tokens": ["bmi", "22.8"], "docs": ["12340018"]}]},
+
+    {"id": "c16a", "group": "common", "style": "terse", "situation": "anaesthetist: height?", "questions": [{"q": "Height", "expect": "found", "tokens": ["height", "170|171"], "docs": ["12340012", "12340014", "12340018"]}]},
+    {"id": "c16b", "group": "common", "style": "question", "situation": "Pharmacist: how tall is she?", "questions": [{"q": "Height", "expect": "found", "tokens": ["height", "170|171"], "docs": ["12340012", "12340014", "12340018"]}]},
+    {"id": "c16c", "group": "common", "style": "typo", "situation": "nurse: body hight?", "questions": [{"q": "Height", "expect": "found", "tokens": ["height", "170|171"], "docs": ["12340012", "12340014", "12340018"]}]},
+
+    {"id": "c17a", "group": "common", "style": "terse", "situation": "cardiologist: statin?", "questions": [{"q": "Statin", "expect": "found", "tokens": ["simvastatin"], "docs": ["12340012", "12340018"]}]},
+    {"id": "c17b", "group": "common", "style": "question", "situation": "GP: is she on cholesterol medication?", "questions": [{"q": "Statin", "expect": "found", "tokens": ["simvastatin"], "docs": ["12340012", "12340018"]}]},
+    {"id": "c17c", "group": "common", "style": "typo", "situation": "internist: lipid lowering therapie?", "questions": [{"q": "Statin", "expect": "found", "tokens": ["simvastatin"], "docs": ["12340012", "12340018"]}]},
+
+    {"id": "c18a", "group": "common", "style": "terse", "situation": "vascular surgeon: carotid findings?", "questions": [{"q": "Carotid", "expect": "found", "tokens": ["carotid", "60"], "docs": ["12340008", "12340011", "12340012"]}]},
+    {"id": "c18b", "group": "common", "style": "question", "situation": "Neurologist: how severe is the carotid stenosis?", "questions": [{"q": "Carotid", "expect": "found", "tokens": ["carotid", "60"], "docs": ["12340008", "12340011", "12340012"]}]},
+    {"id": "c18c", "group": "common", "style": "typo", "situation": "vascular surgon: degree of carotis stenosis?", "questions": [{"q": "Carotid", "expect": "found", "tokens": ["carotid", "60"], "docs": ["12340008", "12340011", "12340012"]}]},
+
+    {"id": "c19a", "group": "common", "style": "terse", "situation": "oncologist: cancer dx?", "questions": [{"q": "Cancer diagnosis", "expect": "found", "tokens": ["ductal"], "docs": ["12340016", "12340018"]}]},
+    {"id": "c19b", "group": "common", "style": "question", "situation": "Radiation oncologist: what cancer does she have?", "questions": [{"q": "Cancer diagnosis", "expect": "found", "tokens": ["ductal"], "docs": ["12340016", "12340018"]}]},
+    {"id": "c19c", "group": "common", "style": "typo", "situation": "gynaecologist: breast tumour histolgy?", "questions": [{"q": "Cancer diagnosis", "expect": "found", "tokens": ["ductal"], "docs": ["12340016", "12340018"]}]},
+
+    {"id": "c20a", "group": "common", "style": "terse", "situation": "ward nurse: OP date?", "questions": [{"q": "Planned operation", "expect": "found", "tokens": ["quadrantectomy", "16.05.2016|2016-05-16"], "docs": ["12340018"]}]},
+    {"id": "c20b", "group": "common", "style": "question", "situation": "Anaesthetist: when is her operation scheduled?", "questions": [{"q": "Planned operation", "expect": "found", "tokens": ["quadrantectomy", "16.05.2016|2016-05-16"], "docs": ["12340018"]}]},
+    {"id": "c20c", "group": "common", "style": "typo", "situation": "gynecologist: planed surgery?", "questions": [{"q": "Planned operation", "expect": "found", "tokens": ["quadrantectomy", "16.05.2016|2016-05-16"], "docs": ["12340018"]}]},
+
+    {"id": "c21a", "group": "common", "style": "terse", "situation": "oncologist: HER2?", "questions": [{"q": "HER2", "expect": "found", "tokens": ["her2", "neg"], "docs": ["12340016", "12340018"]}]},
+    {"id": "c21b", "group": "common", "style": "question", "situation": "Medical oncologist: is the tumour HER2 positive?", "questions": [{"q": "HER2", "expect": "found", "tokens": ["her2", "neg"], "docs": ["12340016", "12340018"]}]},
+    {"id": "c21c", "group": "common", "style": "typo", "situation": "oncolgist: her-2 status?", "questions": [{"q": "HER2", "expect": "found", "tokens": ["her2", "neg"], "docs": ["12340016", "12340018"]}]},
+
+    {"id": "c22a", "group": "common", "style": "terse", "situation": "rheumatologist: osteoporosis meds?", "questions": [{"q": "Bone medication", "expect": "found", "tokens": ["alendron"], "docs": ["12340012", "12340018"]}]},
+    {"id": "c22b", "group": "common", "style": "question", "situation": "Dentist: is she on bisphosphonates?", "questions": [{"q": "Bone medication", "expect": "found", "tokens": ["alendron"], "docs": ["12340012", "12340018"]}]},
+    {"id": "c22c", "group": "common", "style": "typo", "situation": "GP: alendronate dose?", "questions": [{"q": "Bone medication", "expect": "found", "tokens": ["alendron"], "docs": ["12340012", "12340018"]}]},
+
+    {"id": "c23a", "group": "common", "style": "terse", "situation": "geriatrician: cognition / MMSE?", "questions": [{"q": "Cognition", "expect": "found", "tokens": ["mmse", "30"], "docs": ["12340014"]}]},
+    {"id": "c23b", "group": "common", "style": "question", "situation": "Neurologist: any cognitive impairment documented?", "questions": [{"q": "Cognition", "expect": "found", "tokens": ["mmse", "30"], "docs": ["12340014"]}]},
+    {"id": "c23c", "group": "common", "style": "typo", "situation": "psychiatrist: mini mental score?", "questions": [{"q": "Cognition", "expect": "found", "tokens": ["mmse", "30"], "docs": ["12340014"]}]},
+
+    {"id": "c24a", "group": "common", "style": "terse", "situation": "geneticist: family hx?", "questions": [{"q": "Family history", "expect": "found", "tokens": ["family history"], "docs": ["12340014"]}]},
+    {"id": "c24b", "group": "common", "style": "question", "situation": "Gynaecologist: is there any breast cancer in her family?", "questions": [{"q": "Family history", "expect": "found", "tokens": ["family history"], "docs": ["12340014"]}]},
+    {"id": "c24c", "group": "common", "style": "typo", "situation": "oncologist: familiy history?", "questions": [{"q": "Family history", "expect": "found", "tokens": ["family history"], "docs": ["12340014"]}]},
+
+    {"id": "c25a", "group": "common", "style": "terse", "situation": "surgeon: axillary nodes?", "questions": [{"q": "Lymph nodes", "expect": "found", "tokens": ["lymph"], "docs": ["12340014", "12340018"]}]},
+    {"id": "c25b", "group": "common", "style": "question", "situation": "Radiation oncologist: are the axillary lymph nodes involved?", "questions": [{"q": "Lymph nodes", "expect": "found", "tokens": ["lymph|n0"], "docs": ["12340014", "12340016", "12340018"]}]},
+    {"id": "c25c", "group": "common", "style": "typo", "situation": "breast surgeon: lymphnode status?", "questions": [{"q": "Lymph nodes", "expect": "found", "tokens": ["lymph|n0"], "docs": ["12340014", "12340016", "12340018"]}]},
+
+    {"id": "c26a", "group": "common", "style": "terse", "situation": "neurologist: head CT?", "questions": [{"q": "Head CT", "expect": "found", "tokens": ["head ct"], "docs": ["12340012"]}]},
+    {"id": "c26b", "group": "common", "style": "question", "situation": "Radiologist: has she had a CT scan of the brain?", "questions": [{"q": "Head CT", "expect": "found", "tokens": ["head ct"], "docs": ["12340012"]}]},
+    {"id": "c26c", "group": "common", "style": "typo", "situation": "ED doctor: previous cranial imaging?", "questions": [{"q": "Head CT", "expect": "found", "tokens": ["head ct"], "docs": ["12340012"]}]},
+
+    {"id": "c27a", "group": "common", "style": "terse", "situation": "dentist: anticoagulants?", "questions": [{"q": "Antithrombotic", "expect": "found", "tokens": ["acetylsalicylic|thrombo ass|aspirin", "100"], "docs": ["12340011", "12340012", "12340018"]}]},
+    {"id": "c27b", "group": "common", "style": "question", "situation": "Gastroenterologist before endoscopy: is she on antiplatelets?", "questions": [{"q": "Antithrombotic", "expect": "found", "tokens": ["acetylsalicylic|thrombo ass|aspirin", "100"], "docs": ["12340011", "12340012", "12340018"]}]},
+    {"id": "c27c", "group": "common", "style": "typo", "situation": "surgeon: bloodthiners?", "questions": [{"q": "Antithrombotic", "expect": "found", "tokens": ["acetylsalicylic|thrombo ass|aspirin", "100"], "docs": ["12340011", "12340012", "12340018"]}]},
+
+    {"id": "c28a", "group": "common", "style": "terse", "situation": "liaison nurse: home support?", "questions": [{"q": "Social support", "expect": "found", "tokens": ["support"], "docs": ["12340018"]}]},
+    {"id": "c28b", "group": "common", "style": "question", "situation": "Discharge nurse: does she have support at home?", "questions": [{"q": "Social support", "expect": "found", "tokens": ["support"], "docs": ["12340018"]}]},
+    {"id": "c28c", "group": "common", "style": "typo", "situation": "case manager nurse: social situaton?", "questions": [{"q": "Social support", "expect": "found", "tokens": ["support"], "docs": ["12340018"]}]},
+
+    {"id": "c29a", "group": "common", "style": "terse", "situation": "anaesthetist: INR / coag?", "questions": [{"q": "Coagulation", "expect": "not_documented", "absent": ["inr ", "ptt"], "need": "coag|bleeding"}]},
+    {"id": "c29b", "group": "common", "style": "question", "situation": "Surgeon: are her clotting tests normal?", "questions": [{"q": "Coagulation", "expect": "not_documented", "absent": ["inr ", "ptt"], "need": "coag|bleeding|clotting"}]},
+    {"id": "c29c", "group": "common", "style": "typo", "situation": "anaesthetist: coagulaton values?", "questions": [{"q": "Coagulation", "expect": "not_documented", "absent": ["inr ", "ptt"], "need": "coag|bleeding"}]},
+
+    {"id": "c30a", "group": "common", "style": "terse", "situation": "GP: alcohol?", "questions": [{"q": "Alcohol", "expect": "not_documented", "absent": ["alkohol", "units per week"], "need": "alcohol|smok"}]},
+    {"id": "c30b", "group": "common", "style": "question", "situation": "Hepatologist: how much alcohol does she drink?", "questions": [{"q": "Alcohol", "expect": "not_documented", "absent": ["alkohol", "units per week"], "need": "alcohol|smok"}]},
+    {"id": "c30c", "group": "common", "style": "typo", "situation": "anaesthetist: alcohol consumtion?", "questions": [{"q": "Alcohol", "expect": "not_documented", "absent": ["alkohol", "units per week"], "need": "alcohol|smok"}]}
+  ]
+}

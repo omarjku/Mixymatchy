@@ -54,6 +54,9 @@
   },
   "B02": {
    "en": [
+    "tumor board",
+    "after the tumor board",
+    "tumorboard",
     "breast surgery planning",
     "operative planning",
     "lumpectomy",
@@ -165,6 +168,12 @@
   },
   "B06": {
    "en": [
+    "f/u",
+    "follow up",
+    "followups",
+    "carried out",
+    "took place",
+    "ever performed",
     "open follow-ups",
     "pending follow-up",
     "pending recommendations",
@@ -2439,10 +2448,91 @@
  },
  "topics": [
   {
+   "id": "antihypertensive",
+   "label": "Blood pressure medication",
+   "terms": {
+    "en": [
+     "bp meds",
+     "bp medication",
+     "bp medications",
+     "bp drugs",
+     "bp tablets",
+     "blood pressure meds",
+     "blood pressure medication",
+     "blood pressure medications",
+     "blood pressure drug",
+     "blood pressure drugs",
+     "blood pressure tablets",
+     "antihypertensive",
+     "antihypertensives",
+     "antihypertensive medication",
+     "antihypertensive drug",
+     "antihypertensive therapy"
+    ],
+    "de": [
+     "Blutdruckmedikament",
+     "Blutdruckmedikamente",
+     "Blutdrucktabletten",
+     "Antihypertensivum",
+     "Antihypertensiva",
+     "blutdrucksenkend"
+    ],
+    "intl": []
+   },
+   "slots": [
+    "med_antihypertensive"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "followup_done",
+   "label": "Recommended follow-up: done or not",
+   "terms": {
+    "en": [
+     "follow-up",
+     "follow up",
+     "followup",
+     "follow-ups",
+     "follow ups",
+     "followups",
+     "f/u",
+     "ever performed",
+     "ever carried out",
+     "carried out",
+     "took place",
+     "ever done",
+     "check-up done",
+     "control examination"
+    ],
+    "de": [
+     "Kontrolle gemacht",
+     "Kontrolluntersuchung",
+     "Nachkontrolle",
+     "Verlaufskontrolle",
+     "Wiedervorstellung",
+     "durchgeführt"
+    ],
+    "intl": []
+   },
+   "slots": [
+    "discharge_followups",
+    "followup_done"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
    "id": "bone",
    "label": "Bone health (osteoporosis, bone drugs)",
    "terms": {
     "en": [
+     "alendronate",
+     "alendronic acid",
+     "osteoporosis medication",
+     "bone medication",
      "bone",
      "bones",
      "bone health",
@@ -2525,6 +2615,12 @@
    "label": "Cognition (MMSE, dementia)",
    "terms": {
     "en": [
+     "mini mental",
+     "mini-mental score",
+     "mental status",
+     "cognitive screening",
+     "cognitive impairment",
+     "mmst",
      "cognition",
      "cognitive",
      "memory",
@@ -2600,6 +2696,9 @@
    "label": "Social situation and support",
    "terms": {
     "en": [
+     "home support",
+     "lives with",
+     "living arrangements",
      "social situation",
      "social history",
      "social support",
@@ -2662,6 +2761,13 @@
    "label": "Current medication",
    "terms": {
     "en": [
+     "meds",
+     "current meds",
+     "med list",
+     "medication list",
+     "medicine list",
+     "regular medication",
+     "home medication",
      "medication",
      "medications",
      "medicines",
@@ -2715,6 +2821,10 @@
    "label": "Blood pressure",
    "terms": {
     "en": [
+     "blood pressure values",
+     "blood pressure readings",
+     "bp values",
+     "bp readings",
      "blood pressure",
      "bp",
      "bp peaks",
@@ -2902,6 +3012,14 @@
    "label": "Head imaging (CT / MRI)",
    "terms": {
     "en": [
+     "cranial imaging",
+     "cranial ct",
+     "cerebral imaging",
+     "brain scan",
+     "head scan",
+     "cct",
+     "ct of the brain",
+     "ct scan of the brain",
      "head ct",
      "brain ct",
      "ct head",
@@ -2991,6 +3109,13 @@
    "label": "Diabetes and glucose-lowering treatment",
    "terms": {
     "en": [
+     "dm",
+     "dm2",
+     "t2dm",
+     "niddm",
+     "diabetes type",
+     "type of diabetes",
+     "kind of diabetes",
      "diabetes",
      "diabetic",
      "blood sugar",
@@ -3289,6 +3414,21 @@
    "label": "Planned procedure and date",
    "terms": {
     "en": [
+     "tumour board",
+     "tumor board",
+     "tumourboard",
+     "tumorboard",
+     "board recommendation",
+     "mdt recommendation",
+     "op date",
+     "date of op",
+     "surgery scheduled",
+     "operation scheduled",
+     "when is surgery",
+     "when is the operation",
+     "when is her operation",
+     "when is her surgery",
+     "planned op",
      "planned operation",
      "planned surgery",
      "planned procedure",
@@ -3307,6 +3447,10 @@
      "what happens next"
     ],
     "de": [
+     "Tumorkonferenz",
+     "Tumorboard",
+     "OP-Termin",
+     "Operationstermin",
      "geplante Operation",
      "geplante OP",
      "OP-Termin",
@@ -3652,6 +3796,11 @@
    "label": "Lipids and lipid-lowering treatment",
    "terms": {
     "en": [
+     "lipid lowering",
+     "lipid-lowering",
+     "cholesterol lowering",
+     "cholesterol medication",
+     "lipid medication",
      "cholesterol",
      "ldl",
      "hdl",
@@ -3788,6 +3937,10 @@
    "label": "Stroke / TIA history",
    "terms": {
     "en": [
+     "cerebrovascular event",
+     "cerebrovascular events",
+     "cva",
+     "apoplexy",
      "stroke",
      "tia",
      "transient ischaemic attack",
@@ -3966,6 +4119,11 @@
    "label": "Axillary lymph nodes",
    "terms": {
     "en": [
+     "lymphnode",
+     "lymphnodes",
+     "lymph node status",
+     "node status",
+     "nodes",
      "lymph nodes",
      "lymph node",
      "axilla",
@@ -4481,6 +4639,13 @@
    "label": "Family history",
    "terms": {
     "en": [
+     "family hx",
+     "fhx",
+     "in her family",
+     "in the family",
+     "runs in the family",
+     "family members",
+     "relatives with",
      "family history",
      "hereditary",
      "familial",
@@ -4489,6 +4654,7 @@
      "genetic counselling"
     ],
     "de": [
+     "Familienanamnese",
      "Familienanamnese",
      "familiäre Belastung",
      "BRCA",
