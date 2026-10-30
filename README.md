@@ -16,7 +16,7 @@ Second Look answers with one screen: only the facts that task needs, each linked
 ![Python](https://img.shields.io/badge/Python-FastAPI-141831?style=flat-square&logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React%2019-Vite%20·%20Tailwind%204-141831?style=flat-square&logo=react&logoColor=61DAFB)
 
-<img src="docs/media/second-look.webp" alt="Animation: eight letters about one patient; a contradiction between two of them lights up in red. Second Look's logo lands. On a phone, an anaesthetist picks a role and types a pre-operative task; one screen of facts appears, each with its source sentence highlighted in the original letter. The same patient gives the surgeon and the emergency physician different screens. Results: 15 of 15 answers correct, 0 invented facts, 100 percent traceable, the slowest screen in 144 milliseconds." width="100%">
+<img src="docs/media/second-look.webp" alt="Animation: eight letters about one patient; an error copied from one letter to the next and a weight that vanishes. Second Look's logo lands. On a phone, an anaesthetist picks a role and types a pre-operative task; one screen of facts appears, and a tap opens the cited sentence highlighted in the original letter. Overview, history and dashboard views follow, then a contradiction between two letters about a penicillin allergy. Results: 15 of 15 answers correct, 0 invented facts, 100 percent of facts linked to their source, the slowest screen in 144 milliseconds." width="100%">
 
 **[▶ Watch the film with sound](docs/media/second-look.mp4)** · <sub>Animated from the real app running on its invented demo patient. No patient data is shown.</sub>
 
