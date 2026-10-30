@@ -11,7 +11,7 @@ import numpy as np
 
 SR = 48_000
 DURATION = 30.0
-TAPS = [4.4, 6.7, 15.6, 21.0, 22.0]
+TAPS = [3.3, 5.3, 12.0, 16.75, 17.5, 20.95]
 
 
 def pad(t: np.ndarray) -> np.ndarray:
