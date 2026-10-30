@@ -21,8 +21,7 @@ from .understand import _phrase_rx, _you_are_spans, extract_modifiers, fold, nor
 FUZZY_THRESHOLD = 0.85        # fixed, per the guide; only aliases of 5+ characters are fuzzy-matched
 SAFETY_RULES = {"R01", "R02", "R03", "R10", "R17"}   # allergies, blood thinners, contrast reaction/metformin: add at P1
 PRIO_RANK = {"P1": 1, "P2": 2, "P3": 3}
-LLM_MAX_WITHOUT_RULES = 2    # bundles the LLM may choose when the rules matched no task
-LLM_EXTRA_WITH_RULES = 1     # bundles the LLM may add when the rules matched a task (up to 3 when they did not)
+LLM_MAX_BUNDLES = 1          # bundles the LLM may add in any path (never a role: the role comes from the rules)
 
 
 # Rules whose when_task/when_fact the engine evaluates on the facts.  when_task is satisfied by the rule
@@ -378,9 +377,9 @@ def _bundle_words(kb, bid):
 
 
 def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=None, force_role=None, llm_pending=None):
-    """Rules routing; with the LLM on, its reading (started in parallel: engine/llm.start, or here) is primary:
-    for request_kind 'clinical_task' with a valid role its role and bundles replace the rules' routing.  The
-    authorisation decision itself (incl. the deterministic veto) is made in engine/llm_gate.py."""
+    """Rules routing; with the LLM on (started in parallel: engine/llm.start, or here) the model may add one
+    bundle for a 'clinical_task' when the rules found a role.  It never supplies the role.  The authorisation
+    decision (rules gate + LLM restrictions + deterministic veto) is made in engine/llm_gate.py / screen.py."""
     if use_llm and llm_pending is None:
         from .focus import concepts as record_concepts
         llm_pending = llm.start(text, kb, record_concepts(store)[0])
@@ -404,28 +403,20 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
                 llm_focus = {"concepts": list(prop["focus_concepts"]), "reason": llm_reason}
             rid = prop.get("role_id")
             llm_b = [x for x in prop.get("bundle_ids") or [] if x in kb.bundle_by_id and x != kb.fallback_bundle]
-            if llm_kind == "clinical_task":
-                if rid in kb.role_by_id and rid != role_id and method in ("none", "fuzzy"):
-                    # the model's role only where the rules found none (or only a fuzzy one)
-                    role_id, role, alias, method = rid, kb.role_by_id[rid], None, "llm"
-                    t_task = t
-                    matched = match_bundles(t_task, kb)
-                    chosen = choose_bundles(matched, role)
-                    llm_used = True
+            if llm_kind == "clinical_task" and role is not None:
+                # the requester's role always comes from the rules (exact or fuzzy); the model never supplies
+                # it.  The model adds at most ONE bundle: with a rules task only one whose own tag words appear
+                # in the request; without a rules task its single best reading (no dumps)
                 if chosen:
-                    # the rules found the task: their bundles stay; the model adds at most one more, and only
-                    # one whose own tag words appear in the request (no dumps)
                     words = set(re.findall(r"[^\W\d_][\w-]{4,}", fold(t_task)))
-                    extra = [x for x in llm_b if x not in chosen and words & _bundle_words(kb, x)][:LLM_EXTRA_WITH_RULES]
-                    if extra:
-                        chosen = sorted(set(chosen) | set(extra), key=lambda x: int(x[1:]))
-                        how = "kb_alias_tags+llm"
-                        llm_note = "AI reading added %s" % ", ".join(extra)
-                        llm_used = True
-                elif llm_b:  # the rules found no task: the model's reading of the task (at most two bundles)
-                    chosen = sorted(llm_b[:LLM_MAX_WITHOUT_RULES], key=lambda x: int(x[1:]))
-                    how = "kb_llm"
-                    llm_note = "AI reading: %s" % ", ".join(chosen)
+                    extra = [x for x in llm_b if x not in chosen and words & _bundle_words(kb, x)]
+                else:
+                    extra = list(llm_b)
+                extra = extra[:LLM_MAX_BUNDLES]
+                if extra:
+                    how = "kb_alias_tags+llm" if chosen else "kb_llm"
+                    chosen = sorted(set(chosen) | set(extra), key=lambda x: int(x[1:]))
+                    llm_note = "AI reading added %s" % ", ".join(extra)
                     llm_used = True
     note = None
     if force_bundles:  # screen.py: a recognised role's own task when the wording is not recognised

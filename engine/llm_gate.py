@@ -5,8 +5,8 @@ decides whether the request gets data; the rules are the fallback when it did no
 error, budget stop).  Deny wins on either side: the rules VETO the LLM when they see a non-clinical
 self-identity (engine/clinical.py: lexicon, deny-wins identity, policy, purpose, withdrawn claims), a greeting /
 filler-only or injection-only request, or another patient (handled before routing).  The LLM can refuse what the
-rules would allow; it can only open the record for request_kind 'clinical_task' with a role it read from the
-text, and never past a veto.
+rules would allow; it can never supply a missing role, and it opens the record only for request_kind
+'clinical_task' with a role the RULES found, never past a veto.
 """
 import re
 
@@ -42,15 +42,17 @@ def veto(gate, req, aliases=()):
     return None
 
 
-def decide(u, gate, req, aliases=(), rules_task=False, app_items=()):
+def decide(u, gate, req, aliases=(), rules_task=False, app_items=(), rules_actionable=False):
     """-> None (no LLM reading, or the rules decide) or (verdict, reason, vetoed_by).
     verdict: 'veto' (rules refuse; the rules path produces the refusal screen), 'refuse', 'spam', 'no_task',
     'no_role' or 'data'.
 
     The model RESTRICTS freely (non_clinical_requester, spam_or_abuse, other_patient); it can say 'no task' only
     when the rules found no task either; and where the rules found both a role and a task, the rules route the
-    request (the model may add one bundle in engine/route.py).  Its own role and task open the record only where
-    the rules found none."""
+    request (the model may add one bundle in engine/route.py).  Data always needs a requester role found by the
+    rules' clinical gate (exact or fuzzy); without one the answer is 'no_role' (who is asking) whatever the model
+    says; without any clinical content word the rules can see (engine/intent.py) the answer is 'no_task'.  With a
+    rules role and vague clinical wording the model's kind decides between data and 'no_task'."""
     kind = u.get("llm_kind")
     if not kind:
         return None
@@ -67,14 +69,14 @@ def decide(u, gate, req, aliases=(), rules_task=False, app_items=()):
         return "refuse", why, None
     if kind == "spam_or_abuse":
         return "spam", why, None
-    if rules_role and rules_task:  # the rules found who asks and what for: they route (the model only restricts)
+    if not rules_role:  # SECURITY: the requester's role must come from the rules' clinical gate; the model can
+        return "no_role", why, None  # never supply a missing role, whatever it answers
+    if not rules_actionable:  # SECURITY: no clinical content the rules can see (greeting + role, filler): no data
+        return "no_task", why, None
+    if rules_task:  # the rules found who asks and what for: they route (the model only restricts / adds one)
         return None
     if kind == "no_task":
-        if rules_task:
-            return None
-        return ("no_task" if (u.get("llm_role") or rules_role) else "no_role"), why, None
+        return "no_task", why, None
     if kind == "clinical_task":
-        if u.get("llm_role") or rules_role:
-            return "data", why, None
-        return "no_role", why, None
+        return "data", why, None
     return None
