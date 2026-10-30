@@ -9,6 +9,10 @@ python3 -m unittest security.test_security -v  # 24 tests
 
 Open `http://localhost:8700/?idle=5` to shorten the client idle lock to 5 s for a live demo.
 
+## In the app (FastAPI)
+
+The deployed app does not run `server.py`. `backend/app/auth.py` mounts the same `/auth/*` API inside FastAPI around `AuthService`, and `/briefing`, `/documents` and `/segments` depend on `require_unlocked` (401 = sign in, 423 = PIN). Each of those calls writes a `data_access` audit line (task text only as SHA-256). `/health` stays public. The mobile app bundles verbatim copies of `web/second-look-lock.js` and `web/lock.css` in `mobile/src/second-look/` (a test checks they match; re-copy after editing). Users come from `SECOND_LOOK_USERS`, else the secret file `/etc/secrets/users.json`, else `users.example.json`. `SECOND_LOOK_IDLE_SECONDS` overrides the server idle lock; `?idle=10` in the app URL shortens the client idle lock for a demo.
+
 ## Demo credentials
 
 | Staff ID | Password | PIN | Role |
