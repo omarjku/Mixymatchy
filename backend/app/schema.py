@@ -43,6 +43,7 @@ class Fact(BaseModel):
     segment_ids: list[str] = Field(min_length=1)
     trust: Trust = "single"
     collapsed: bool = False      # short view: behind "+N more" on its card (still linked, never dropped)
+    since: Optional[str] = None  # key facts: first letter that documents the same statement (e.g. a drug since 2015)
 
 
 class Finding(BaseModel):
@@ -110,6 +111,21 @@ class NeedResult(BaseModel):
     checklist: list[ChecklistItem] = []
     label_panel: list[dict] = []  # rule R22: listed contraindications beside patient facts (never a verdict)
     more: int = 0                # list cards in the short view: further items shown in the long view
+    key: bool = False            # answered by a key-fact line (docs/DECISIONS.md 20); the card itself is 'details'
+
+
+class KeyFact(BaseModel):
+    """One answer-first line (docs/DECISIONS.md 20): the best current answer to one P1 need (or the safety core,
+    the not-documented needs, the first contradiction). Values are the engine's own items, each linked."""
+    kind: Literal["safety", "need", "not_documented", "conflict"]
+    needs: list[str] = []        # need ids this line answers (two when merged, every one for not_documented)
+    label: str                   # need label(s), e.g. "Antiplatelets and anticoagulants"
+    facts: list[Fact] = []       # the chosen items (latest / most relevant), each with its segment_ids
+    computed: list[Computed] = []  # e.g. age from the date of birth, weight change, 'no record after ...'
+    text: Optional[str] = None   # sex / not-documented need labels / contradiction title (no patient value invented)
+    segment_ids: list[str] = []  # passages of `text` (sex passage, both sides of a contradiction)
+    more: int = 0                # further items of these needs, shown under 'Show more'
+    trust: Optional[str] = None
 
 
 class Briefing(BaseModel):
@@ -117,7 +133,9 @@ class Briefing(BaseModel):
     role: str
     task: str
     as_of: str
-    needs: list[NeedResult]
+    needs: list[NeedResult]      # full cards: the 'Show more / Details' part of an answer-first screen
+    key_facts: list[KeyFact] = []  # answer-first block shown by default (empty: gated / not-applicable screens)
+    layout: Literal["answer_first", "cards"] = "cards"  # answer_first: everything except key_facts is details
     blind_spot: list[Fact] = []  # task facts missing from the latest letter
     findings: list[Finding] = []
     stats: dict = {}             # always computed from the briefing itself, never typed in

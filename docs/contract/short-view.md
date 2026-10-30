@@ -5,6 +5,9 @@ No second request is needed to show the "Also relevant" section.
 
 | Field | Meaning |
 |---|---|
+| `key_facts[]` | **answer-first block, shown by default** (docs/DECISIONS.md 20): ordered lines, `kind` safety / need / not_documented / conflict, `label`, `facts[]` (chosen items, each with `segment_ids`, `date`, `since`), `computed[]`, `text` + `segment_ids` (sex, not-documented labels, contradiction title), `more` (further items in the details). At most 8 lines. Empty on gated / not-applicable screens. |
+| `layout` | `answer_first` when `key_facts` is filled: everything below is the "Show more" details; `cards` otherwise. |
+| `needs[].key` | true when a key-fact line answers this need. |
 | `needs[]` with `priority: "P1"` | main screen. The first two are always the **safety core**: `slot: "age_sex"` and `slot: "allergies"` (every clinical screen, short and long). |
 | `needs[]` with `priority: "P2"` | the **Also relevant** group (decision 4). Ordered after all P1 needs; at most 6, in the knowledge base's P2 order; the whole short screen never exceeds 16 cards. |
 | `routing.also_relevant` | the `need` ids of that group, in display order (same as the P2 needs). |

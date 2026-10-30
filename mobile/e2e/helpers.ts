@@ -7,15 +7,6 @@ import { expect, type Page } from "@playwright/test";
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 export const BACKEND_URL = process.env.E2E_BACKEND_URL ?? "http://127.0.0.1:8011";
 
-export const ROLE = {
-  anaesthetist: /^(Anaesthetist|Anästhesie)$/,
-  surgeon: /^(Surgeon|Chirurgie)$/,
-  gp: /^(GP|General practitioner|Hausarztpraxis)$/,
-  emergency: /^(Emergency|Notaufnahme)$/,
-  other: /^(Other role|Andere Rolle)$/,
-} as const;
-export type RoleKey = keyof typeof ROLE;
-
 // Demo user (security/README.md): every page load needs a sign-in, the API needs the Bearer token.
 export const DEMO_USER = { staff_id: "dr.demo", password: "SecondLook-demo-2026" };
 
@@ -33,7 +24,7 @@ async function apiToken(): Promise<string> {
   return ((await r.json()) as { token: string }).token;
 }
 
-export const FACTS_HEADING = /What you need|Erforderliche Angaben/;
+export const FACTS_HEADING = /Key facts|Das Wichtigste/;
 export const RESULT_READY = '[data-read-as]';
 export const SOURCE_BUTTON = /^(Source|Quelle)$/;
 
@@ -93,12 +84,11 @@ export function trackErrors(page: Page): string[] {
   return errors;
 }
 
-// Start screen -> role chip -> type task -> submit; resolves when the facts heading is visible.
-// Returns the time from submit to the facts heading in ms.
-export async function submitSituation(page: Page, role: RoleKey, text: string): Promise<number> {
+// Start screen -> type who you are and what you need (one free-text field, sent as typed) -> submit;
+// resolves when the "read as" line is visible. Returns the time from submit to that line in ms.
+export async function submitSituation(page: Page, text: string): Promise<number> {
   await page.goto("/", { waitUntil: "networkidle" });
   await signIn(page);
-  await page.getByRole("button", { name: ROLE[role] }).click();
   const box = page.locator("textarea, input").first();
   await box.fill(text);
   const start = Date.now();

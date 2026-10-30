@@ -4,13 +4,14 @@ Playwright suite for docs/FRONTEND.md §6. Runs against the real backend; no moc
 
 | Spec | Checks |
 |---|---|
-| expected answers | for each of the 5 situations (title + description from `cases/situations.md`, role chip per case), every answer item in `eval/answer_keys.json` is visible on the results screen without clicking |
+| expected answers | for each of the 5 situations (title + description from `cases/situations.md`, typed as one sentence), every answer item in `eval/answer_keys.json` is in the Key facts block (details collapsed, <= 8 lines); "Show more" opens the full cards |
+| start screen | one free-text field, no role / example chips, the sentence is sent to /briefing exactly as typed |
 | source links | up to 6 source buttons per situation open the full letter with the cited passage marked, in view, and verbatim in a document |
 | source viewer | several passages: all marked, Next steps between them; desktop opens a side pane |
 | contradictions | both passages side by side, each opens its letter |
 | language toggle | English default, DE toggle and back |
-| banners | not authorised (firefighter), no task (chip Anaesthetist + "hi": needs_task banner, no patient card), not applicable (prostate, female patient), unknown role label (never GP), suggestions for an unrecognised task |
-| speed | submit to "What you need / Erforderliche Angaben" visible < 2 s |
+| banners | not authorised (firefighter, plain message, no example chips), no task ("Anaesthetist: hi": needs_task banner, no patient card), not applicable (prostate, female patient), unknown role label (never GP), suggestions for an unrecognised task |
+| speed | submit to the "read as" line visible < 2 s |
 | unseen situations | the 15 situations in `eval/unseen_situations.json`, typed via "Other role / Andere Rolle", render with no console or page errors |
 | accessibility | axe (WCAG 2 A/AA) on the start and results screens: no serious or critical violations |
 

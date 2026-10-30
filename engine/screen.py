@@ -494,9 +494,13 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     by_pr = {}
     for s_ in u["slots"]:
         by_pr[s_["priority"]] = by_pr.get(s_["priority"], 0) + 1
+    from .keyfacts import key_facts  # answer-first lines (docs/DECISIONS.md 20); the cards stay as details
+    kf = key_facts(st, k, cards, focus, contra_out, patient,
+                   " ".join([u.get("task_text") or req["task"] or ""] + list(u.get("task_labels") or [])), as_of, mode)
     return {
         "understood": u,
         "rulebook": "kb",
+        "key_facts": kf,
         "detail": detail,
         "screen_mode": mode,
         "patient": patient,

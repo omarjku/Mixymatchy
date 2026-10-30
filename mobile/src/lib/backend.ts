@@ -1,5 +1,5 @@
 import { secureFetch } from "@/second-look";
-import type { Contradiction, Fact, FactRow, FactTrust, PatientBrief, RecordGap, SourceCitation } from "@/types/fact";
+import type { Contradiction, Fact, FactRow, FactTrust, KeyFactLine, PatientBrief, RecordGap, SourceCitation } from "@/types/fact";
 
 // Backend contract (backend/app/schema.py, docs/INTEGRATION.md) and the mapping into the app's PatientBrief.
 // Rule: every clinical string shown comes from the backend; this file only rearranges it.
@@ -20,6 +20,7 @@ interface BackendFact {
   segment_ids: string[];
   trust: BackendTrust;
   collapsed?: boolean; // short view: behind "+N more" on its card
+  since?: string | null; // key facts: first letter documenting the same statement
 }
 
 interface BackendComputed {
@@ -62,8 +63,22 @@ interface BackendFinding {
   on_screen?: boolean;
 }
 
+interface BackendKeyFact {
+  kind: KeyFactLine["kind"];
+  needs: string[];
+  label: string;
+  facts: BackendFact[];
+  computed: BackendComputed[];
+  text?: string | null;
+  segment_ids: string[];
+  more: number;
+  trust?: string | null;
+}
+
 export interface BackendBriefing {
   situation: string;
+  key_facts?: BackendKeyFact[];
+  layout?: "answer_first" | "cards";
   role: string;
   as_of: string;
   needs: BackendNeed[];
@@ -143,6 +158,11 @@ function segmentIdsOf(briefing: BackendBriefing): string[] {
     need.reason_segment_ids.forEach((s) => ids.add(s));
   }
   briefing.blind_spot.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
+  for (const k of briefing.key_facts ?? []) {
+    k.facts.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
+    k.computed.forEach((c) => c.segment_ids.forEach((s) => ids.add(s)));
+    k.segment_ids.forEach((s) => ids.add(s));
+  }
   briefing.findings.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
   const passage = briefing.routing?.applicability?.passage;
   if (passage) ids.add(passage);
@@ -272,6 +292,37 @@ function historyOf(facts: BackendFact[]): NonNullable<Fact["history"]> {
     .map((f) => ({ date: f.date ?? "", value: f.value ?? "", unit: f.unit ?? undefined }));
 }
 
+const monthYear = (iso: string) => {
+  const [y, m] = iso.split("-");
+  return m && y ? `${m}/${y}` : iso;
+};
+
+// Key facts: the backend's chosen items as rows (value · date · since · Source); nothing rewritten.
+function keyFactLines(briefing: BackendBriefing, cite: Citer): KeyFactLine[] {
+  return (briefing.key_facts ?? []).map((k, i) => {
+    const id = `key:${i}:${k.needs.join("+") || k.kind}`;
+    const facts: FactRow[] = k.facts.map((f) => ({
+      id: `${id}:${f.id}`, text: factValue(f), date: f.date ? formatDate(f.date) : undefined,
+      // "since" only when it is an earlier month than the value's own date
+      since: f.since && f.date && f.since.slice(0, 7) < f.date.slice(0, 7) ? monthYear(f.since) : undefined,
+      sources: cite(f.segment_ids),
+    }));
+    const computed: FactRow[] = k.computed.map((c, j) => ({
+      id: `${id}:c${j}`, text: k.kind === "safety" ? c.value : `${c.label}: ${c.value}`,
+      sources: cite(c.segment_ids), computed: true, note: c.formula,
+    }));
+    const text: FactRow[] = k.text ? [{ id: `${id}:text`, text: k.text, sources: cite(k.segment_ids) }] : [];
+    // safety line reads "Age 57 years · female · Contrast media allergy (...)"; others: values, then calculations
+    const rows = k.kind === "safety" ? [...computed, ...text, ...facts] : [...facts, ...computed, ...text];
+    const tiers = k.facts.map((f) => trustOf[f.trust]);
+    const trust: FactTrust = k.kind === "not_documented" ? "not_documented"
+      : k.kind === "conflict" || tiers.includes("conflicting") ? "conflicting"
+      : tiers.length > 0 && tiers.every((x) => x === "outdated") ? "outdated"
+      : tiers.includes("consistent") ? "consistent" : "single";
+    return { id, kind: k.kind, label: k.label, rows, trust, more: k.more };
+  });
+}
+
 // P1 needs are the screen; the P2 needs listed in routing.also_relevant form the visible "Also relevant" group.
 export async function toPatientBrief(
   briefing: BackendBriefing,
@@ -312,6 +363,7 @@ export async function toPatientBrief(
     situation: briefing.situation,
     facts: briefing.needs.filter((n) => !isAlso(n)).flatMap((n) => needToFacts(n, cite)),
     alsoRelevant: alsoNeeds.flatMap((n) => needToFacts(n, cite)),
+    keyFacts: briefing.layout === "answer_first" ? keyFactLines(briefing, cite) : [],
     contradictions,
     gaps,
     stats: briefing.stats,

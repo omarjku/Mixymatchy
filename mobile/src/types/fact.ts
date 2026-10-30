@@ -56,6 +56,17 @@ export interface FactRow {
   collapsed?: boolean;
   computed?: boolean;         // calculated from documented values; note = formula
   note?: string;
+  since?: string;             // key facts: first letter that documents the same statement (dd.mm.yyyy)
+}
+
+// Answer-first screen (docs/DECISIONS.md 20): one compact line per P1 need, shown before everything else.
+export interface KeyFactLine {
+  id: string;
+  kind: "safety" | "need" | "not_documented" | "conflict";
+  label: string;              // need label(s), small, above the answer
+  rows: FactRow[];            // the answer: chosen facts, computed values, sex / contradiction text, each linked
+  trust: FactTrust;
+  more: number;               // further items of these needs under "Show more"
 }
 
 export interface TrendSummary {
@@ -104,5 +115,6 @@ export interface PatientBrief {
   applicabilityNote?: string | null;
   applicabilitySources?: SourceCitation[];
   alsoRelevant?: Fact[];          // P2 needs from the long view, shown under "Also relevant"
+  keyFacts?: KeyFactLine[];       // answer-first block; when present everything else sits behind "Show more"
   situation?: string;             // the exact sentence sent to the backend
 }

@@ -9,16 +9,6 @@ import { fetchBriefing, toPatientBrief } from "@/lib/backend";
 // VITE_MOCK=1 uses the invented mock briefs instead (never for the demo: they are not patient facts).
 export const USE_MOCK = import.meta.env.VITE_MOCK === "1";
 
-// The backend reads one free-text situation; the role chip becomes its English role name.
-const ROLE_EN: Record<RoleId, string> = {
-  anaesthetist: "Anaesthetist",
-  pharmacist: "Pharmacist",
-  surgeon: "Surgeon",
-  gp: "General practitioner",
-  emergency: "Emergency physician",
-  other: "", // the clinician typed role and task together
-};
-
 export const BRIEF_TIMEOUT_MS = 10_000; // grading ceiling: slowest situation must load in under 10 s
 const MOCK_DELAY_MS = 1_200;
 
@@ -35,9 +25,9 @@ export async function fetchPatientBrief(role: RoleId, task: string, signal?: Abo
   // and localStorage.removeItem("simulate") to go back to normal.
   const simulate = import.meta.env.DEV ? readSimulateFlag() : null;
   if (!USE_MOCK && !simulate) {
-    const situation = ROLE_EN[role] ? `${ROLE_EN[role]}, ${task}` : task;
-    // Short view: P1 needs plus the P2 "also relevant" group (routing.also_relevant), one request.
-    const briefing = await fetchBriefing(situation, "short", signal);
+    // The clinician's own sentence, sent as typed (who they are + what they need); the backend reads it.
+    // Short view: key facts + the full cards for "Show more", one request.
+    const briefing = await fetchBriefing(task, "short", signal);
     return toPatientBrief(briefing, role, task, signal);
   }
   await wait(simulate === "slow" ? BRIEF_TIMEOUT_MS + 5_000 : MOCK_DELAY_MS, signal);

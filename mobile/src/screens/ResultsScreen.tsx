@@ -22,7 +22,7 @@ import { getResults } from "@/lib/session";
 import { formatDate } from "@/lib/stats";
 import { speak, stopSpeaking, useVoiceAvailable } from "@/lib/speech";
 import { cn } from "@/lib/utils";
-import type { Fact, FactRow, GuidelineCitation, PatientBrief, SourceCitation } from "@/types/fact";
+import type { Fact, FactRow, GuidelineCitation, KeyFactLine, PatientBrief, SourceCitation } from "@/types/fact";
 import type { BriefRequest } from "@/types/request";
 import { KeepDoses } from "@/components/ui/KeepDoses";
 
@@ -49,6 +49,8 @@ export function ResultsScreen() {
   const [viewer, setViewer] = useState<Viewer | null>(null);
   const [guideline, setGuideline] = useState<{ guideline: GuidelineCitation; label: string } | null>(null);
   const [view, setView] = useState<View>("overview");
+  // Answer-first (docs/DECISIONS.md 20): key facts first, everything else behind one "Show more"
+  const [expanded, setExpanded] = useState(false);
 
   // Mock mode in English: the invented German demo data shown in English (letter quotes stay German)
   const brief = useMemo(
@@ -111,6 +113,10 @@ export function ResultsScreen() {
   const blindSpot = stats.blind_spot ?? 0;
   const taskConcepts = stats.task_concepts ?? 0;
   const otherIssues = stats.other_record_issues ?? 0;
+  const keyFacts = brief.keyFacts ?? [];
+  const answerFirst = !gated && keyFacts.length > 0;
+  const overview = !gated && view === "overview";
+  const showDetails = overview && (!answerFirst || expanded);
 
   return (
     <>
@@ -203,7 +209,6 @@ export function ResultsScreen() {
               >
                 <h2 className="text-[19px] font-semibold text-contradiction-deep">{t("results.notAuthorised.title")}</h2>
                 {brief.message && <p className="mt-2 text-[15px] leading-relaxed text-ink">{brief.message}</p>}
-                <Suggestions items={brief.suggestions ?? []} onPick={rerun} />
               </section>
             )}
 
@@ -219,7 +224,6 @@ export function ResultsScreen() {
                 <p className="mt-2 text-[15px] leading-relaxed text-ink">
                   {t(brief.roleMissing ? "results.needsRole.body" : "results.needsTask.body")}
                 </p>
-                <Suggestions items={brief.suggestions ?? []} onPick={rerun} />
               </section>
             )}
 
@@ -256,8 +260,28 @@ export function ResultsScreen() {
               </section>
             )}
 
+            {/* Answer first: one line per question the task asks, each with its source */}
+            {overview && answerFirst && (
+              <section id="facts-panel" aria-labelledby="key-facts-heading" data-key-facts>
+                <h2 id="key-facts-heading" className="mb-1 text-sm font-semibold text-ink-muted">
+                  {t("results.keyFacts")}
+                </h2>
+                <KeyFactList lines={keyFacts} onOpenSources={openSources} />
+                <button
+                  type="button"
+                  data-show-more
+                  aria-expanded={expanded}
+                  aria-controls="details-more"
+                  onClick={() => setExpanded((x) => !x)}
+                  className="mt-3 w-full rounded-full border border-line bg-surface px-4 py-2.5 text-[14px] font-medium text-primary-deep hover:bg-primary-soft focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {expanded ? t("results.showLess") : t("results.showMore")}
+                </button>
+              </section>
+            )}
+
             {/* Margin note: shown only when the dropped facts are on this screen */}
-            {!gated && view === "overview" && blindSpot > 0 && taskConcepts > 0 && droppedOnScreen > 0 && (
+            {showDetails && blindSpot > 0 && taskConcepts > 0 && droppedOnScreen > 0 && (
               <section data-blind-spot className="border-l-4 border-contradiction pl-4">
                 <h2 className="text-[15px] font-semibold text-contradiction-deep">{t("results.blindSpot.title")}</h2>
                 <p className="mt-0.5 text-[15px] text-ink">
@@ -266,7 +290,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {view === "overview" && contradictions.length > 0 && (
+            {showDetails && contradictions.length > 0 && (
               <section aria-labelledby="contradictions-heading">
                 <h2 id="contradictions-heading" className="mb-3 text-sm font-semibold text-contradiction-deep">
                   {t("results.contradictionsHeading")} ({contradictions.length})
@@ -297,8 +321,8 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!gated && view === "overview" && (
-              <section id="facts-panel" aria-labelledby="facts-heading">
+            {showDetails && (
+              <section id={answerFirst ? "details-more" : "facts-panel"} aria-labelledby="facts-heading">
                 <h2 id="facts-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.factsHeading")} ({brief.facts.length})
                 </h2>
@@ -316,7 +340,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!gated && view === "overview" && (brief.alsoRelevant?.length ?? 0) > 0 && (
+            {showDetails && (brief.alsoRelevant?.length ?? 0) > 0 && (
               <section aria-labelledby="also-heading" data-also-relevant>
                 <h2 id="also-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.alsoRelevant")} ({brief.alsoRelevant!.length})
@@ -325,7 +349,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!gated && view === "overview" && otherIssues > 0 && (
+            {showDetails && otherIssues > 0 && (
               <p className="text-sm text-ink-muted" data-other-issues>
                 {t("results.otherIssues", { n: otherIssues })}
               </p>
@@ -365,6 +389,61 @@ export function ResultsScreen() {
         </Modal>
       </main>
     </>
+  );
+}
+
+// Key facts: one compact row per line: small label, then the answer (value · date · since · Source) as short
+// as the letters allow. Never rewritten here: every row is a backend fact, calculation or flag, with its passages.
+function KeyFactList({ lines, onOpenSources }: {
+  lines: KeyFactLine[];
+  onOpenSources: (citations: SourceCitation[], index: number, title: string) => void;
+}) {
+  const label = (line: KeyFactLine) =>
+    line.kind === "safety" ? t("results.keySafety")
+      : line.kind === "not_documented" ? t("results.keyNotDocumented")
+      : line.kind === "conflict" ? t("results.keyConflict") : line.label;
+  return (
+    <ul className="divide-y divide-line border-y border-line">
+      {lines.map((line) => (
+        <li key={line.id} className="px-2 py-2" data-fact={line.id} data-key-fact={line.kind} data-trust={line.trust}>
+          <p className={cn("text-[12px] leading-tight",
+            line.kind === "conflict" ? "font-medium text-contradiction-deep"
+              : line.kind === "not_documented" ? "font-medium text-undocumented" : "text-ink-muted")}>
+            {label(line)}
+            {line.more > 0 && line.kind !== "conflict" && <span> · {t("results.keyMore", { n: line.more })}</span>}
+          </p>
+          {line.kind === "safety" ? (
+            // one line: "57 years · female · Contrast media allergy (...)", each part with its own source
+            <p className="pt-0.5 text-[15px] leading-relaxed">
+              {line.rows.map((row, i) => (
+                <span key={row.id} className="whitespace-normal">
+                  {i > 0 && <span className="text-ink-muted"> · </span>}
+                  <span className="font-semibold text-ink"><KeepDoses text={row.text} /></span>
+                  {row.sources.length > 0 && (
+                    <RowSource row={row} onPress={(r) => onOpenSources(r.sources, 0, label(line))} />
+                  )}
+                </span>
+              ))}
+            </p>
+          ) : (
+          <ul>
+            {line.rows.map((row) => (
+              <li key={row.id} className="flex items-start gap-2 pt-0.5">
+                <p className="min-w-0 flex-1 text-[15px] leading-snug">
+                  <span className="font-semibold text-ink"><KeepDoses text={row.text} /></span>
+                  {row.date && <span className="text-[13px] text-ink-muted"> · {row.date}</span>}
+                  {row.since && <span className="text-[13px] text-ink-muted"> · {t("results.since", { d: row.since })}</span>}
+                </p>
+                {row.sources.length > 0 && (
+                  <RowSource row={row} onPress={(r) => onOpenSources(r.sources, 0, label(line))} />
+                )}
+              </li>
+            ))}
+          </ul>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -438,6 +517,10 @@ function briefToSpeech(brief: PatientBrief): string {
   if (brief.screenMode === "needs_task") return [sentence(t("results.needsTask.title")), sentence(t("results.needsTask.body"))].join(" ");
   const parts = [sentence(brief.patientLabel), sentence(brief.taskLabel ?? brief.task)];
   if (brief.screenMode === "not_authorised") return [...parts, sentence(brief.message ?? "")].join(" ");
+  if (brief.keyFacts?.length) {  // answer first: read what the screen shows by default
+    for (const k of brief.keyFacts) parts.push(sentence(`${k.label}: ${k.rows.map((r) => r.text).join("; ")}`));
+    return parts.join(" ");
+  }
   for (const c of brief.contradictions) parts.push(sentence(`${t("speech.contradiction")}: ${c.factLabel}`));
   for (const f of brief.facts) {
     if (f.trust === "not_documented") parts.push(sentence(`${f.label}: ${t("speech.notDocumented")}`));
