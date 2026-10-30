@@ -2,9 +2,15 @@
 # Container entrypoint: unpack the patient data from a secret env var (it is never in git), then serve.
 set -e
 TARGET=data/patient-0000-0001
+# The data can come as an env var or as a secret file (Render "Secret Files" mount at /etc/secrets/).
+if [ -z "$DATA_ZIP_B64" ]; then
+  for f in /etc/secrets/DATA_ZIP_B64 /etc/secrets/DATA_ZIP_B64.txt ./DATA_ZIP_B64; do
+    if [ -s "$f" ]; then DATA_ZIP_B64=$(cat "$f"); echo "start.sh: read DATA_ZIP_B64 from $f"; break; fi
+  done
+fi
 if [ ! -d "$TARGET/documents" ]; then
   if [ -z "$DATA_ZIP_B64" ]; then
-    echo "start.sh: DATA_ZIP_B64 is not set and $TARGET is missing; add the variable in the host's settings." >&2
+    echo "start.sh: DATA_ZIP_B64 is not set and $TARGET is missing; add it as an env var or as the secret file /etc/secrets/DATA_ZIP_B64." >&2
     exit 1
   fi
   echo "start.sh: DATA_ZIP_B64 has ${#DATA_ZIP_B64} characters; unpacking"
