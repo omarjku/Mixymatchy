@@ -69,7 +69,7 @@ Measured on the organisers' five situations and 15 questions ([`docs/SUBMISSION.
 | Traceability | 100 % | **100 %** by construction: every fact cites its passage, 0 invariant violations |
 | Invented facts | 0 | **0**: a fact whose quote is not verbatim in its passage never reaches the API, and model-written sentences get every value substituted by code |
 | Contradictions, net of false alarms | ≥ 5 | **5 real, 0 known false alarms**, plus 3 documentation notes kept apart |
-| Slowest screen | < 10 s | rules path **144 ms** at the API, **453 ms** on the phone (measured 30 Oct, before the answer-first screen); with the AI answer a hard **5 s** deadline |
+| Slowest screen | < 10 s | rules path **144 ms** at the API, **453 ms** on the phone (measured 30 Oct, before the answer-first screen); with the AI answer a hard **4 s** deadline |
 
 ### Beyond the official questions
 
@@ -100,7 +100,7 @@ flowchart LR
         G --> F["Fill<br/>latest value · not documented ·<br/>not applicable · computed values"]
         FS --> F
         F --> A["Answer first<br/>answer lines or key facts,<br/>rest behind Show more"]
-        RQ -. "AI on" .-> V2["v2: Haiku picks slots,<br/>writes a sentence template;<br/>code fills every value"]
+        RQ -. "AI on" .-> V2["One cached Haiku call<br/>picks facts, writes a sentence template;<br/>code fills every value"]
         FS --> V2
         V2 --> A
     end
@@ -117,7 +117,7 @@ flowchart LR
 | Routing knowledge base | `rulebook/kb/`, `rulebook/kb_overlay.json` | Written by the medical team: 20 roles, 18 task bundles, 63 fact slots with priorities P1–P3, 22 rules, 21 guideline sources. The overlay adds 21 roles and 55 named topics, each marked `TODO-cite` for review. No patient facts. |
 | Request and gates | `engine/request.py`, `clinical.py`, `intent.py`, `llm_gate.py` | Blanks injected instructions and refuses requests about another patient. Patient data only for a clinical requester with a task; greetings and role-only requests get none. The model can narrow these decisions, never widen them. |
 | Answers | `engine/ask.py`, `keyfacts.py`, `answers.py` | Specific questions answered first, or "Nothing found" with the words searched. Up to 8 key-fact lines, or up to 4 answer lines whose every word is checked against an allowlist built from that line's own facts. |
-| v2 answer | `engine/screen_v2.py`, `understand_v2.py`, `evidence.py`, `cited.py` | With the AI on: Haiku chooses what the question needs and writes a sentence template; code substitutes every name, value, dose, schedule, date and side, checks the glue words and that every required fact is placed, and falls back to a compact template on any failure. |
+| AI answer | `engine/screen_v2.py`, `onecall.py`, `evidence.py`, `cited.py` | With the AI on: one cached Haiku call picks the facts the question needs and writes a sentence template; code substitutes every name, value, dose, schedule, date and side, checks the glue words, appends any required answer the model left out, and falls back to a compact template on any failure. |
 | API | `backend/app/` | FastAPI: the `Briefing` schema, documents and passages for the source viewer, sign-in and PIN lock, an optional start-up self-test (`EVAL_ON_START`), and it serves the built app. |
 | Phone app | `mobile/` | React 19, Vite, Tailwind 4, Motion. Answer first with numbered sources, Show more, Overview / Details / History, a source viewer that highlights the cited words, English and German, dark mode, read aloud. |
 | Evaluation | `eval/` | Official answers on the fact store and over HTTP, invariants (quotes verbatim, every number inside its quote), key facts, answer lines, v2 answers, paraphrases, hold-out and red team. |
@@ -130,11 +130,11 @@ The core is deterministic. The AI layer is **off by default** and needs `SECOND_
 |---|---|---|
 | Extracting facts | Rules, with IBM's extraction as an index; every quote validated in code | No model |
 | Understanding the request | Rules always. With the AI on, Haiku also reads the request in parallel | Rules path: the model may refuse a request or add one task bundle; it never sets the role or opens the record. 2.5 s deadline, then the rules answer alone |
-| Writing the answer (v2, the default when the AI is on) | Haiku returns a sentence **template** with placeholders such as `{F3.dose}` | Code fills every value from the verified facts, checks that only allowlisted glue words remain, that every required fact is placed and that there are at most 2 sentences. Any failure, a timeout or the hard 5 s deadline gives a compact template instead |
+| Writing the answer (the default when the AI is on) | One Haiku call, run in parallel with the rules, sees the request and the fact store and returns the fact IDs it needs plus a sentence **template** with placeholders such as `{F0247.dose}` | Code fills every value from the verified facts and allows only allowlisted glue words, at most 2 sentences and 300 characters. A task's required answers are added by code if the model left them out, and a "not documented" topic is shown only if no fact mentions it. A failure, a timeout or the hard 4 s deadline gives a compact template instead |
 | Answer lines (rules path) | The rules pick the facts; Haiku may phrase them | Every token must come from that line's facts or a fixed connector list; units, value-date pairs, schedules and sides are checked; otherwise a template |
 | "Not documented", contradictions, calculations, who may see data | Code only | The model never decides any of these |
 
-A budget guard caps spend at €4 and 3,000 calls a day by default (`/health` shows usage), and repeated requests hit a cache. **What is sent to Anthropic when the AI is on:** the request text, the record's concept labels, and for the answer the facts behind it, including each fact's verbatim German quote. No guideline text is sent to a model.
+A budget guard caps spend at €4 and 3,000 calls a day by default (`/health` shows usage), and repeated requests hit a cache. **What is sent to Anthropic when the AI is on:** the request text and, in a prompt-cached block reused across requests, every fact in the store as one compact line (date, status, label with value, dose and schedule); on the rules path also the record's concept labels and the facts behind each answer line. No guideline text is sent to a model.
 
 ## What every screen guarantees
 
@@ -164,7 +164,7 @@ Environment variables keep the project's earlier internal prefix `SECOND_LOOK_`.
 | Variable | Effect |
 |---|---|
 | `SECOND_LOOK_LLM=1` + `ANTHROPIC_API_KEY` | Turns the AI layer on (model: `SECOND_LOOK_LLM_MODEL`, default `claude-haiku-5-5`) |
-| `SECOND_LOOK_ROUTER=v1` / `v2` | Force the rules path or the v2 answer (default: v2 when the AI layer is on) |
+| `SECOND_LOOK_ROUTER=v1` / `v2` | Force the rules path or the AI answer (default: the AI answer when the AI layer is on) |
 | `SECOND_LOOK_ANSWERS_LLM=0` | Keep the AI for understanding only; answers use templates |
 | `SECOND_LOOK_LLM_BUDGET_EUR`, `SECOND_LOOK_LLM_MAX_CALLS_PER_DAY` | Daily spend and call caps (defaults 4.0 and 3000) |
 | `SECOND_LOOK_AUTH=0` | Turns sign-in and the PIN lock off (demo only) |
@@ -191,7 +191,7 @@ Most engine tests need the organisers' data. Test layers and every run are docum
 ```
 pipeline/     fact store build (passages, extractors, IBM linker)
 compare/      contradictions, dropped facts, follow-ups
-engine/       request check, gates, route, fill, questions, key facts, answer lines, v2 answer, AI layer
+engine/       request check, gates, route, fill, questions, key facts, answer lines, AI answer (onecall.py)
 rulebook/     routing knowledge base (kb/), overlay, question lexicon, clinical roles
 backend/      FastAPI app (app/), sign-in and PIN lock (auth.py), tests
 mobile/       the phone app (React 19 + Vite), Playwright e2e
@@ -207,10 +207,10 @@ docs/         challenge, plan, decisions, milestones, testing, submission
 ## Limitations
 
 - **One record.** Built and measured on the challenge's single patient (eight letters). New patients need the offline build first.
-- **The v2 answer does not check who is asking.** With the AI layer on, v2 refuses empty, greeting, spam and injection-only requests and other patients, but answers a clinical question from anyone. The clinical-role gate applies on the rules path (`SECOND_LOOK_ROUTER=v1`). In a hospital the role would come from the sign-in.
+- **The AI answer does not check who is asking.** With the AI layer on, it refuses empty, greeting, spam and injection-only requests and other patients, but answers a clinical question from anyone. The clinical-role gate applies on the rules path (`SECOND_LOOK_ROUTER=v1`). In a hospital the role would come from the sign-in.
 - **Unfamiliar requests are the weak spot.** The independent hold-out is at 58 % without the AI; unusual roles and requests in other languages fail most often.
 - **The knowledge base is a draft.** Guideline citations marked `TODO-cite` and a full clinician review are pending.
-- **Latency was last measured before the answer-first screen.** The AI answer has a hard 5 s deadline; no live v2 timing is committed yet.
+- **Latency was last measured before the answer-first screen.** The AI answer has a hard 4 s deadline; live timings go to the host logs, not to git.
 - **No licence file yet.**
 
 ## Team
