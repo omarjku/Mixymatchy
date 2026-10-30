@@ -75,7 +75,7 @@ class TestRequestAndValidation(LLMTestBase):
         fake = self.client({"role_id": "gp", "bundle_ids": ["B03"], "reason": "GP reviewing diabetes"})
         prop, info = llm.propose("GP here, sugar check", self.kb)
         self.assertEqual(prop, {"role_id": "gp", "bundle_ids": ["B03"], "reason": "GP reviewing diabetes",
-                                "focus_concepts": []})
+                                "focus_concepts": [], "actionable_clinical_task": None, "task_reason": ""})
         self.assertTrue(info["called"])
         kw = fake.calls[0]
         self.assertEqual(kw["model"], "claude-haiku-5-5")
@@ -255,6 +255,68 @@ class TestMergeAndGate(LLMTestBase):
 
 
 @unittest.skipUnless(HAS_DATA, "no patient data")
+class TestTaskCheck(LLMTestBase):
+    """actionable_clinical_task (docs/DECISIONS.md 19): the model may only restrict, never open the record."""
+    def screen(self, text):
+        return build_screen(text, use_llm=True, detail="short", rulebook="kb")
+
+    def test_schema_and_validation(self):
+        fake = self.client({"role_id": "anaesthetist", "bundle_ids": [], "reason": "greeting",
+                            "actionable_clinical_task": False, "task_reason": "greeting only"})
+        prop, _ = llm.propose("Anaesthetist, hi", self.kb)
+        self.assertIs(prop["actionable_clinical_task"], False)
+        self.assertEqual(prop["task_reason"], "greeting only")
+        schema = fake.calls[0]["output_config"]["format"]["schema"]
+        self.assertEqual(schema["properties"]["actionable_clinical_task"], {"type": "boolean"})
+        self.assertIn("actionable_clinical_task", schema["required"])
+        self.client({"role_id": "gp", "bundle_ids": [], "reason": "", "actionable_clinical_task": "no"})
+        self.assertIsNone(llm.propose("GP, x", self.kb)[0]["actionable_clinical_task"])  # not a bool: ignored
+
+    @unittest.skipUnless(HAS_DATA, "no patient data")
+    def test_llm_false_restricts_role_default(self):
+        text = "Cardiologist, she is coming in tomorrow, any risks?"
+        self.assertNotEqual(build_screen(text, use_llm=False, rulebook="kb")["screen_mode"], "needs_task")
+        self.client({"role_id": "anaesthetist", "bundle_ids": [], "reason": "vague",
+                     "actionable_clinical_task": False, "task_reason": "no task named"})
+        s = self.screen(text)
+        if s["understood"].get("bundles_matched"):
+            self.skipTest("rules recognise a KB task in this wording; the LLM cannot restrict it")
+        self.assertEqual(s["screen_mode"], "needs_task")
+        self.assertEqual(s["cards"], [])
+        self.assertEqual(s["proof_bar"]["facts_shown"], 0)
+        self.assertTrue(s["understood"]["llm_used"])
+
+    @unittest.skipUnless(HAS_DATA, "no patient data")
+    def test_llm_false_cannot_remove_a_rules_task(self):
+        text = "Anaesthetist, pre-op check before breast surgery"
+        self.client({"role_id": "anaesthetist", "bundle_ids": [], "reason": "",
+                     "actionable_clinical_task": False, "task_reason": "wrong"})
+        self.assertEqual(self.screen(text)["screen_mode"], "task")
+
+    @unittest.skipUnless(HAS_DATA, "no patient data")
+    def test_llm_true_never_opens_needs_task_or_gate(self):
+        self.client({"role_id": "anaesthetist", "bundle_ids": ["B01", "B07"], "reason": "pre-op",
+                     "actionable_clinical_task": True, "task_reason": "pre-op check"})
+        for text, mode in (("Anaesthetist, hi", "needs_task"), ("Anaesthetist", "needs_task"),
+                           ("hi", "not_authorised"), ("Journalist, pre-op check", "not_authorised")):
+            s = self.screen(text)
+            with self.subTest(text=text):
+                self.assertEqual(s["screen_mode"], mode)
+                self.assertEqual(s["cards"], [])
+                self.assertEqual(s["proof_bar"]["facts_shown"], 0)
+
+    @unittest.skipUnless(HAS_DATA, "no patient data")
+    def test_timeout_and_error_give_rules_result(self):
+        os.environ["SECOND_LOOK_LLM_TIMEOUT"] = "0.2"
+        text = "Cardiologist, she is coming in tomorrow, any risks?"
+        rules = build_screen(text, use_llm=False, rulebook="kb")["screen_mode"]
+        self.client({"role_id": "anaesthetist", "bundle_ids": [], "reason": "",
+                     "actionable_clinical_task": False, "task_reason": ""}, delay=1.0)
+        self.assertEqual(self.screen(text)["screen_mode"], rules)
+        self.client("not json")
+        self.assertEqual(self.screen(text + " ")["screen_mode"], rules)
+
+
 class TestFocusConcepts(LLMTestBase):
     """focus_concepts: an enum of the record's concept labels; validated in code; promoted after the gate."""
 

@@ -11,6 +11,12 @@ Decision, deterministic, after KB routing (engine/route.py):
      sex-specific examination (rulebook/applicability.json), implies a clinical context -> clinical.
      Anything else ('tell me everything about her', empty text) -> not authorised.
 
+  0. Overrides both: a non-clinical self-description anywhere in the text ('I am a nurse and her neighbour',
+     'I'm a doctor (I actually deliver pizza)', 'Ärztin, eigentlich Journalistin') -> not authorised.  A
+     first-person cue (I am / I'm / ich bin / je suis / soy / sono / ben / أنا ...) followed by the non-clinical
+     term with only filler or role words in between, or 'actually / really / eigentlich / en fait ...' right
+     beside the term in a first-person request.  Mentioning someone else ('her husband called') does not count.
+
 Not authorised = zero patient facts on screen.  This is a demo safeguard: real deployments authorise by
 the logged-in user's role, never by what someone types.
 """
@@ -99,6 +105,51 @@ def is_clinical_word(w):
         (not excluded_word(w) and any(p.search(w) for p in lex["patterns"]))
 
 
+# ----------------------------------------------------------------- self-description (any position)
+_SELF = re.compile(r"(?<![\w'])(i am|i'm|i work as|i work for|i work at|i actually|i really|my job is|"
+                   r"my profession is|by profession|ich bin|bin ich|ich arbeite als|ich arbeite bei|ich arbeite fur|"
+                   r"beruflich|je suis|je travaille comme|je travaille pour|soy|trabajo como|trabajo para|sono|"
+                   r"lavoro come|lavoro per|ben|benim|انا)(?![\w'])")
+_REALLY = re.compile(r"(?<![\w'])(actually|really|in fact|in reality|honestly|eigentlich|tatsachlich|"
+                     r"in wirklichkeit|en fait|en realite|en realidad|in realta|aslinda|في الحقيقة)(?![\w'])")
+# words that may stand between the cue and the non-clinical term ('I am a nurse and her neighbour')
+_GAP_OK = set("""a an the her his their its my also too as well and or but just only now currently actually really
+in fact for at with from by deliver delivers drive drives write writes work works sell sells run runs own
+ein eine einer einem einen der die das ihr ihre ihrer sein seine auch und oder nur eigentlich tatsachlich
+beim bei fur als von un une le la les sa son et aussi en el los las su y tambien il lo gli sua e anche bir ve
+de da ayrica""".split())
+_ARTICLES = {"a", "an", "the", "ein", "eine", "un", "une", "una", "uno", "bir"}
+
+
+def _gap_ok(t, a, b, clin_spans, allowed):
+    """Every token of t[a:b] is an allowed filler word or lies inside a clinical / role span; no clause break."""
+    if re.search(r"[,;.:!?()]", t[a:b]):
+        return False
+    for m in re.finditer(r"[^\W_][\w'-]*", t[a:b]):
+        s0, e0 = a + m.start(), a + m.end()
+        if m.group(0) in allowed or any(cs <= s0 and e0 <= ce for cs, ce in clin_spans):
+            continue
+        return False
+    return True
+
+
+def self_described_non_clinical(t, non_hits, clin_spans):
+    """-> the non-clinical term the requester uses about themselves, or None (t: folded, normalised text)."""
+    selfs = list(_SELF.finditer(t))
+    if not selfs:
+        return None
+    reallys = list(_REALLY.finditer(t))
+    for s, e, term, _k in non_hits:
+        for m in selfs:  # 'I am (a nurse and) her neighbour'
+            if m.end() <= s and s - m.end() <= 80 and _gap_ok(t, m.end(), s, clin_spans, _GAP_OK):
+                return term
+        for m in reallys:  # 'eigentlich Journalistin', 'a journalist really' (first-person request only)
+            if (m.end() <= s and _gap_ok(t, m.end(), s, (), _ARTICLES) or
+                    m.start() >= e and _gap_ok(t, e, m.start(), (), set())):
+                return term
+    return None
+
+
 def _label(term):
     return term[:1].upper() + term[1:]
 
@@ -114,6 +165,9 @@ def classify(text, kb_alias=None, task_evidence=False, kb_role=False):
                  for m in re.compile("(?<![%s])%s" % (L, re.escape(fold(norm_text(kb_alias))))).finditer(t)]
     non = [(s, e, term, "not_clinical") for s, e, term in _hits(t, lex["non_clinical"])
            if not any(cs <= s and e <= ce and (ce - cs) > (e - s) for cs, ce, _t, _k in clin)]
+    selfd = self_described_non_clinical(t, non, [(cs, ce) for cs, ce, _t, _k in clin])
+    if selfd:  # a non-clinical self-description overrides any clinical claim, wherever it stands
+        return {"decision": "not_clinical", "clinical": False, "term": selfd, "label": None}
     # ties at one position: the longer span wins; equal spans: non-clinical wins (conservative)
     rank = {"not_clinical": 0, "kb_role": 1, "clinical_term": 2}
     allw = sorted(clin + non, key=lambda h: (h[0], -(h[1] - h[0]), rank[h[3]]))

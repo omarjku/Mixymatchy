@@ -302,30 +302,14 @@
    "lang": "en",
    "questions": [
     {
-     "q": "Which allergy is documented?",
-     "expect": "found",
-     "tokens": [
-      "contrast"
-     ],
-     "docs": [
-      "12340012",
-      "12340018"
-     ],
-     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+     "q": "Allergy shown without a task?",
+     "expect": "needs_task",
+     "answer": "no data: role only, the screen asks for the task (DECISIONS 19)"
     },
     {
-     "q": "Which blood thinner and dose?",
-     "expect": "found",
-     "tokens": [
-      "acetylsalicylic|thrombo ass|aspirin",
-      "100"
-     ],
-     "docs": [
-      "12340011",
-      "12340012",
-      "12340018"
-     ],
-     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+     "q": "Blood thinner shown without a task?",
+     "expect": "needs_task",
+     "answer": "no data: role only, the screen asks for the task (DECISIONS 19)"
     }
    ]
   },

@@ -14,6 +14,7 @@ Per question
                    slot matches it says 'not documented'
   not_applicable   the screen says not applicable (screen mode or a not_applicable card)
   not_authorised   screen_mode not_authorised and zero needs, facts and findings
+  needs_task       screen_mode needs_task (no clinical task stated) and zero needs, facts and findings
 Per situation (all must hold for its questions to pass)
   invariants       every fact links to existing passages; every numeric value is in one of its quotes
   no dump          at most MAX_NEEDS cards (P1 + also relevant)
@@ -76,6 +77,8 @@ def screen_state(b) -> str:
     mode = b.routing.get("screen_mode")
     if mode == "not_authorised":
         return "refused"
+    if mode == "needs_task":
+        return "needs_task"
     if mode == "not_applicable" or (b.needs and all(n.status == "not_applicable" for n in b.needs)):
         return "not_applicable"
     return "normal"
@@ -107,6 +110,9 @@ def check_q(q, b):
     mode = b.routing.get("screen_mode")
     if q["expect"] == "not_authorised":
         ok = mode == "not_authorised" and not b.needs and not b.findings
+        return ok, "screen_mode=%s needs=%d" % (mode, len(b.needs))
+    if q["expect"] == "needs_task":
+        ok = mode == "needs_task" and not b.needs and not b.findings and not (b.stats or {}).get("facts_shown")
         return ok, "screen_mode=%s needs=%d" % (mode, len(b.needs))
     if q["expect"] == "not_applicable":
         ok = mode == "not_applicable" or any(n.status == "not_applicable" for n in b.needs)

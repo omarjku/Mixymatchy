@@ -167,6 +167,23 @@ test.describe("banners", () => {
     await expect(page.locator("text=/Consistent across letters|Verified/")).toHaveCount(0);
   });
 
+  test("no task, no data (chip Anaesthetist + 'hi'): banner, examples, nothing from the record", async ({ page }) => {
+    await submitSituation(page, "anaesthetist", "hi");
+    const banner = page.locator('[data-banner="needs_task"]');
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText(/Please describe your task|Bitte beschreiben Sie Ihre Aufgabe/);
+    await expect(banner.locator("[data-suggestions] button").first()).toBeVisible();
+    await expect(page.locator("[data-patient-card]")).toHaveCount(0);
+    await expect(page.getByRole("tablist")).toHaveCount(0);
+    await expect(page.locator("[data-fact]")).toHaveCount(0);
+    await expect(page.locator("button[data-source]")).toHaveCount(0);
+    await expect(page.locator('[data-banner="fallback"], [data-blind-spot], [data-other-issues]')).toHaveCount(0);
+    await expect(page.locator("main")).not.toContainText(/Patientin|female|weiblich|\b(19|20)\d\d\b/);
+    // an example re-runs as a real task
+    await banner.locator("[data-suggestions] button").first().click();
+    await expect(page.locator("[data-fact]").first()).toBeVisible({ timeout: 10_000 });
+  });
+
   test("not applicable: banner with evidence, never counted as consistent", async ({ page }) => {
     await submitSituation(page, "other", "Urologist, prostate cancer screening");
     const banner = page.locator('[data-banner="not_applicable"]');

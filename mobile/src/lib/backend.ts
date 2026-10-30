@@ -80,7 +80,8 @@ export interface BackendBriefing {
     other_record_issues?: number;
     also_relevant?: string[];
     anchor_date?: string;
-    // clinical gate: "not_authorised" = no clinical role stated; needs/findings are empty
+    // clinical gate: "not_authorised" = no clinical role stated; "needs_task" = clinical role but no task
+    // (greeting, filler, role only; docs/DECISIONS.md 19); needs/findings are empty in both
     screen_mode?: string | null;
     message?: string | null;
     suggestions?: string[];
@@ -322,6 +323,7 @@ export async function toPatientBrief(
     applicabilityNote: routing.applicability_note ?? null,
     applicabilitySources: passage ? cite([passage]) : [],
     // "As of" = the date of the latest document, the time anchor for "current" values
-    generatedAt: `${routing.anchor_date ?? briefing.as_of}T12:00:00`,
+    // gated screens (not_authorised / needs_task) carry no record date: today's date, never an invalid one
+    generatedAt: (routing.anchor_date ?? briefing.as_of) ? `${routing.anchor_date ?? briefing.as_of}T12:00:00` : new Date().toISOString(),
   };
 }

@@ -85,6 +85,9 @@ export function ResultsScreen() {
   const generatedAt = formatDate(brief.generatedAt) // same numeric format as every date in the brief;
   const mode = brief.screenMode ?? "task";
   const notAuthorised = mode === "not_authorised";
+  // No task, no data (docs/DECISIONS.md 19): a greeting or a bare role gets a banner, nothing from the record.
+  const needsTask = mode === "needs_task";
+  const gated = notAuthorised || needsTask;
   const stats = brief.stats ?? {};
 
   const openSources = (citations: SourceCitation[], index: number, title: string) =>
@@ -154,9 +157,9 @@ export function ResultsScreen() {
       >
         <div className="lg:grid lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start lg:gap-8">
           <aside className="lg:sticky lg:top-20">
-            {/* Not authorised: nothing from the record, not even the counts */}
-            {!notAuthorised && (
-              <header ref={setCardEl}>
+            {/* Not authorised / no task: nothing from the record, not even the counts */}
+            {!gated && (
+              <header ref={setCardEl} data-patient-card>
                 <PatientCard brief={brief} roleName={roleName} generatedAt={generatedAt} />
               </header>
             )}
@@ -167,7 +170,7 @@ export function ResultsScreen() {
               <span className="font-medium text-ink">{brief.taskLabel ?? brief.task}</span>
             </p>
 
-            {!notAuthorised && (
+            {!gated && (
               <div className="mt-3">
                 <ViewTabs
                   tabs={[
@@ -204,6 +207,18 @@ export function ResultsScreen() {
               </section>
             )}
 
+            {needsTask && (
+              <section
+                role="alert"
+                data-banner="needs_task"
+                className="rounded-lg border-2 border-primary bg-primary/10 p-5"
+              >
+                <h2 className="text-[19px] font-semibold text-primary-deep">{t("results.needsTask.title")}</h2>
+                <p className="mt-2 text-[15px] leading-relaxed text-ink">{t("results.needsTask.body")}</p>
+                <Suggestions items={brief.suggestions ?? []} onPick={rerun} />
+              </section>
+            )}
+
             {mode === "not_applicable" && (
               <section
                 role="status"
@@ -227,7 +242,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!notAuthorised && brief.routeNote && (
+            {!gated && brief.routeNote && (
               <section data-banner="fallback" className="rounded-lg border border-primary bg-primary/10 p-4">
                 <p className="text-[15px] font-medium text-primary-deep">{brief.routeNote}</p>
                 <Suggestions
@@ -238,7 +253,7 @@ export function ResultsScreen() {
             )}
 
             {/* Margin note: shown only when the dropped facts are on this screen */}
-            {!notAuthorised && view === "overview" && blindSpot > 0 && taskConcepts > 0 && droppedOnScreen > 0 && (
+            {!gated && view === "overview" && blindSpot > 0 && taskConcepts > 0 && droppedOnScreen > 0 && (
               <section data-blind-spot className="border-l-4 border-contradiction pl-4">
                 <h2 className="text-[15px] font-semibold text-contradiction-deep">{t("results.blindSpot.title")}</h2>
                 <p className="mt-0.5 text-[15px] text-ink">
@@ -264,7 +279,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!notAuthorised && view === "details" && (
+            {!gated && view === "details" && (
               <section id="facts-panel" aria-label={t("results.view.details")}>
                 <Suspense fallback={<Skeleton className="h-64 w-full rounded-lg" />}>
                   <DetailsView brief={brief} onOpenSources={openSources} />
@@ -272,13 +287,13 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!notAuthorised && view === "history" && (
+            {!gated && view === "history" && (
               <section id="facts-panel" aria-label={t("results.view.history")}>
                 <HistoryLog brief={brief} onOpenSources={openSources} />
               </section>
             )}
 
-            {!notAuthorised && view === "overview" && (
+            {!gated && view === "overview" && (
               <section id="facts-panel" aria-labelledby="facts-heading">
                 <h2 id="facts-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.factsHeading")} ({brief.facts.length})
@@ -297,7 +312,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!notAuthorised && view === "overview" && (brief.alsoRelevant?.length ?? 0) > 0 && (
+            {!gated && view === "overview" && (brief.alsoRelevant?.length ?? 0) > 0 && (
               <section aria-labelledby="also-heading" data-also-relevant>
                 <h2 id="also-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.alsoRelevant")} ({brief.alsoRelevant!.length})
@@ -306,7 +321,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!notAuthorised && view === "overview" && otherIssues > 0 && (
+            {!gated && view === "overview" && otherIssues > 0 && (
               <p className="text-sm text-ink-muted" data-other-issues>
                 {t("results.otherIssues", { n: otherIssues })}
               </p>
@@ -416,6 +431,7 @@ function Suggestions({ items, onPick }: { items: string[]; onPick: (s: string) =
 
 // Plain sentences for text to speech: patient, task, contradictions, then every fact with its trust label.
 function briefToSpeech(brief: PatientBrief): string {
+  if (brief.screenMode === "needs_task") return [sentence(t("results.needsTask.title")), sentence(t("results.needsTask.body"))].join(" ");
   const parts = [sentence(brief.patientLabel), sentence(brief.taskLabel ?? brief.task)];
   if (brief.screenMode === "not_authorised") return [...parts, sentence(brief.message ?? "")].join(" ");
   for (const c of brief.contradictions) parts.push(sentence(`${t("speech.contradiction")}: ${c.factLabel}`));
