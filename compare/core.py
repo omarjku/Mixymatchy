@@ -263,10 +263,17 @@ def rule_laterality(b):
         within = [d for d in docs_odd if any(c["doc"] == d and c["side"] == maj for c in main_claims)]
         cnt = collections.Counter(c["side"] for c in main_claims)
         if maj:
-            summary = "%s: %s in %s vs %s in %d other passage(s)%s" % (
-                main.replace("_", " ").capitalize(), odd[0]["side"].upper(),
-                ", ".join(sorted({c["pid"] for c in odd})), maj.upper(), cnt[maj],
-                " (incl. the same document)" if within else "")
+            maj_claims = [c for c in main_claims if c["side"] == maj]
+            first = sorted(maj_claims, key=lambda c: (b.doc_date(c["doc"]) or "", c["pid"]))[0]
+            n_maj = len({c["pid"] for c in maj_claims})
+            summary = "%s: %s says %s; %s%s say%s %s" % (
+                main.replace("_", " ").capitalize(),
+                " and ".join(doc_label(b, d) for d in docs_odd), odd[0]["side"].upper(),
+                doc_label(b, first["doc"]),
+                " and %d other passage(s)" % (n_maj - 1) if n_maj > 1 else "",
+                "" if n_maj > 1 else "s", maj.upper())
+            if within:
+                summary += " (%s also says %s elsewhere)" % (" and ".join(doc_label(b, d) for d in within), maj.upper())
         else:
             summary = "%s: side differs - %s" % (main.replace("_", " ").capitalize(),
                                                   " vs ".join("%s in %d passage(s)" % (s, n) for s, n in cnt.most_common()))
@@ -780,6 +787,42 @@ def propagation(b, contradiction):
 
 
 # --------------------------------------------------------------------------- assemble
+DOC_KINDS = (  # document title words -> plain English letter type (vocabulary, no patient content)
+    ("histolog", "histology report"), ("radiolog", "radiology report"), ("langzeit-ekg", "Holter ECG report"),
+    ("rr-messung", "24-h blood pressure report"), ("augen", "ophthalmology consult"),
+    ("ambulant", "outpatient letter"), ("patientenbrief", "discharge letter"), ("konsil", "consult report"),
+    ("befund", "report"),
+)
+
+
+def doc_label(b, doc_id):
+    """'discharge letter 28.06.2015' instead of a document id."""
+    d = b.docs.get(doc_id) or {}
+    title = (d.get("title") or "").lower()
+    kind = next((en for key, en in DOC_KINDS if key in title), d.get("title") or "document")
+    date = d.get("date") or ""
+    if re.match(r"\d{4}-\d{2}-\d{2}$", date):
+        date = "%s.%s.%s" % (date[8:10], date[5:7], date[:4])
+    return ("%s %s" % (kind, date)).strip()
+
+
+def readable(b, text):
+    """Replace raw passage and document ids in a sentence by letter type + date."""
+    text = re.sub(r"\bpassage (\d{8}):p\d{4}\b", r"a passage in \1", text)
+    text = re.sub(r"\bpassage (\d{8}:p\d{4})\b", r"\1", text)
+    text = re.sub(r"\bDocument\(s\) (\d{8})\b", r"The \1", text)
+    text = re.sub(r"\b(\d{8}):p\d{4}\b", lambda m: doc_label(b, m.group(1)) if m.group(1) in b.docs else m.group(0), text)
+    text = re.sub(r"\b(?:document\(s\) |document |in )?(\d{8})\b(?: \(\d{4}-\d{2}-\d{2}\))?",
+                  lambda m: (("in " if m.group(0).startswith("in ") else "") + doc_label(b, m.group(1)))
+                  if m.group(1) in b.docs else m.group(0), text)
+    text = re.sub(r"(\d{2})\.(\d{2})\.(\d{4}), \3-\2-\1", r"\1.\2.\3", text)  # date stated twice
+    text = text.replace("earlier a passage in", "an earlier passage in").replace(". a passage", ". A passage")
+    text = re.sub(r"^(The [^.]*) contradict themselves", r"\1 contradicts itself", text)
+    text = text.replace(" contradict themselves (both sides in one document)", " contradicts itself (both sides in one document)") \
+        if text.count("The ") else text
+    return text
+
+
 def compare(docs, passages, facts):
     b = Build(docs, passages, facts)
     contradictions = rule_laterality(b) + rule_bmi(b) + rule_event_dates(b) + rule_case_numbers(b)
@@ -798,6 +841,10 @@ def compare(docs, passages, facts):
                 by_key[k] = p
                 prop.append(p)
         c.pop("_chain", None)
+    for c in contradictions:  # readable titles: letter type + date, never raw ids (ids stay in claims)
+        for key in ("summary_en", "rationale"):
+            if c.get(key):
+                c[key] = readable(b, c[key])
     contradictions = [dict([("id", c["id"])] + [(k, v) for k, v in c.items() if k != "id"]) for c in contradictions]
     dropped, computed, bs_counts = blind_spots(b)
     for i, x in enumerate(dropped + computed, 1):

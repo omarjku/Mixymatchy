@@ -1,0 +1,519 @@
+{
+ "version": "overlay-0.1",
+ "status": "draft, hand-written by the engineering team; adds aliases and tags only, never slots, priorities or patient facts. The medical team's file rulebook/kb/routing_knowledge_base.json stays untouched; review and merge into it.",
+ "_notes": [
+  "bundle_tags: extra task phrases per bundle (EN/DE), matched like the KB's own tags.",
+  "role_aliases: extra names for existing KB roles.",
+  "roles: roles the KB does not have yet; same fields as KB roles (default_bundles = what the role usually needs when the task wording is not recognised)."
+ ],
+ "bundle_tags": {
+  "B01": {
+   "en": [
+    "pre-op check",
+    "preoperative",
+    "anesthesia",
+    "anaesthesia assessment",
+    "premedication",
+    "before the operation",
+    "fit for surgery"
+   ],
+   "de": [
+    "Prämedikation",
+    "Narkose",
+    "präoperativ",
+    "OP-Vorbereitung",
+    "Anästhesie"
+   ]
+  },
+  "B02": {
+   "en": [
+    "breast surgery planning",
+    "operative planning",
+    "lumpectomy",
+    "breast conserving surgery"
+   ],
+   "de": [
+    "OP-Planung",
+    "Tumorkonferenz",
+    "Quadrantenresektion",
+    "Brustoperation"
+   ]
+  },
+  "B03": {
+   "en": [
+    "diabetes",
+    "blood sugar",
+    "glucose",
+    "hba1c",
+    "diabetes control",
+    "metformin review"
+   ],
+   "de": [
+    "Diabetes",
+    "Blutzucker",
+    "Zucker",
+    "Diabeteskontrolle"
+   ]
+  },
+  "B04": {
+   "en": [
+    "vertigo",
+    "visual disturbance",
+    "stroke",
+    "blurry vision",
+    "giddiness"
+   ],
+   "de": [
+    "Schwindel",
+    "Notaufnahme",
+    "Sehstörung",
+    "Nachtdienst",
+    "Schlaganfall"
+   ]
+  },
+  "B05": {
+   "en": [
+    "contrast agent",
+    "contrast allergy",
+    "ct with contrast",
+    "contrast scan",
+    "iv contrast"
+   ],
+   "de": [
+    "Kontrastmittel",
+    "KM-Gabe",
+    "CT-Angiographie"
+   ]
+  },
+  "B06": {
+   "en": [
+    "open follow-ups",
+    "pending follow-up",
+    "pending recommendations",
+    "what is outstanding"
+   ],
+   "de": [
+    "offene Kontrollen",
+    "Nachsorge",
+    "Kontrolltermine"
+   ]
+  },
+  "B07": {
+   "en": [
+    "medication reconciliation",
+    "medication list",
+    "drug interactions",
+    "interaction check",
+    "medicines reconciliation",
+    "med review"
+   ],
+   "de": [
+    "Medikation",
+    "Medikamentenabgleich",
+    "Wechselwirkungen",
+    "Medikationsabgleich"
+   ]
+  },
+  "B08": {
+   "en": [
+    "nursing admission",
+    "discharge planning",
+    "shift handover",
+    "admission handover"
+   ],
+   "de": [
+    "Aufnahme",
+    "Entlassung",
+    "Übergabe",
+    "Pflegeanamnese",
+    "Entlassungsplanung"
+   ]
+  },
+  "B09": {
+   "en": [
+    "blood pressure",
+    "bp review",
+    "hypertension",
+    "bp check",
+    "heart function",
+    "cardiac review",
+    "echo review"
+   ],
+   "de": [
+    "Blutdruck",
+    "Hypertonie",
+    "Herzkontrolle",
+    "Bluthochdruck"
+   ]
+  },
+  "B10": {
+   "en": [
+    "weight review",
+    "weight",
+    "weight trend",
+    "bmi",
+    "nutritional assessment",
+    "diet review"
+   ],
+   "de": [
+    "Gewicht",
+    "Gewichtsverlust",
+    "Ernährung",
+    "Gewichtskontrolle"
+   ]
+  },
+  "B11": {
+   "en": [
+    "oncology",
+    "tamoxifen",
+    "aromatase inhibitor",
+    "adjuvant therapy planning"
+   ],
+   "de": [
+    "Chemotherapie",
+    "Hormontherapie",
+    "Onkologie"
+   ]
+  },
+  "B12": {
+   "en": [
+    "radiotherapy planning",
+    "radiation planning"
+   ],
+   "de": [
+    "Strahlentherapie",
+    "Bestrahlung"
+   ]
+  },
+  "B13": {
+   "en": [
+    "physio",
+    "mobility",
+    "exercise plan",
+    "after breast surgery rehab"
+   ],
+   "de": [
+    "Physiotherapie",
+    "Mobilisation",
+    "Reha"
+   ]
+  },
+  "B14": {
+   "en": [
+    "retinopathy",
+    "fundus",
+    "eye exam",
+    "eye examination",
+    "visual field",
+    "amaurosis fugax",
+    "hypertensive retinopathy"
+   ],
+   "de": [
+    "Augenkontrolle",
+    "Fundus",
+    "Augenuntersuchung",
+    "Netzhaut"
+   ]
+  },
+  "B15": {
+   "en": [
+    "tooth",
+    "dental extraction",
+    "cystoscopy",
+    "skin biopsy",
+    "small procedure"
+   ],
+   "de": [
+    "Zahnextraktion",
+    "Zahnarzt",
+    "Eingriff"
+   ]
+  },
+  "B16": {
+   "en": [
+    "handover from ambulance"
+   ],
+   "de": [
+    "Rettung",
+    "Notarzt-Übergabe"
+   ]
+  },
+  "B17": {
+   "en": [
+    "carotid ultrasound",
+    "carotid follow-up",
+    "stenosis",
+    "carotid doppler"
+   ],
+   "de": [
+    "Karotis",
+    "Carotis",
+    "Stenose",
+    "Duplex"
+   ]
+  }
+ },
+ "role_aliases": {
+  "anaesthetist": {
+   "en": [
+    "anesthesiologist",
+    "anaesthesia doctor"
+   ],
+   "de": [
+    "Anästhesist",
+    "Anästhesistin",
+    "Narkosearzt",
+    "Narkoseärztin"
+   ]
+  },
+  "surgeon": {
+   "en": [
+    "general surgeon",
+    "surgical team"
+   ],
+   "de": [
+    "Chirurg",
+    "Chirurgin"
+   ]
+  },
+  "gp": {
+   "en": [
+    "family medicine",
+    "general physician",
+    "primary care physician",
+    "house doctor"
+   ],
+   "de": [
+    "Hausarzt",
+    "Hausärztin",
+    "Allgemeinmediziner",
+    "Allgemeinmedizinerin"
+   ]
+  },
+  "ward_nurse": {
+   "en": [
+    "registered nurse",
+    "charge nurse",
+    "night nurse",
+    "oncology nurse",
+    "nursing staff",
+    "breast care nurse",
+    "diabetes nurse"
+   ],
+   "de": [
+    "Pflegekraft",
+    "Krankenschwester",
+    "Krankenpfleger",
+    "Pflegeperson",
+    "DGKP",
+    "Stationsschwester"
+   ]
+  },
+  "pharmacist": {
+   "en": [
+    "pharmacy technician"
+   ],
+   "de": [
+    "Apotheker",
+    "Apothekerin"
+   ]
+  },
+  "ophthalmologist": {
+   "en": [
+    "optometrist"
+   ],
+   "de": [
+    "Augenarzt",
+    "Augenärztin"
+   ]
+  },
+  "dentist": {
+   "en": [
+    "dental hygienist",
+    "orthodontist"
+   ],
+   "de": [
+    "Zahnarzt",
+    "Zahnärztin"
+   ]
+  },
+  "physio": {
+   "en": [
+    "physical therapist",
+    "occupational therapist"
+   ],
+   "de": [
+    "Physiotherapeut",
+    "Physiotherapeutin",
+    "Ergotherapeut"
+   ]
+  },
+  "dietitian": {
+   "en": [
+    "nutrition specialist"
+   ],
+   "de": [
+    "Diätologe",
+    "Diätologin",
+    "Ernährungsberater"
+   ]
+  },
+  "emergency_physician": {
+   "en": [
+    "emergency doctor",
+    "er physician",
+    "emergency medicine"
+   ],
+   "de": [
+    "Notfallmediziner",
+    "Notärztin",
+    "Notarzt"
+   ]
+  },
+  "medical_oncologist": {
+   "en": [
+    "oncology consultant"
+   ],
+   "de": [
+    "Onkologe",
+    "Onkologin"
+   ]
+  },
+  "cardiologist": {
+   "en": [],
+   "de": [
+    "Kardiologe",
+    "Kardiologin"
+   ]
+  },
+  "radiologist": {
+   "en": [],
+   "de": [
+    "Radiologe",
+    "Radiologin"
+   ]
+  },
+  "neurologist": {
+   "en": [],
+   "de": [
+    "Neurologe",
+    "Neurologin"
+   ]
+  },
+  "diabetologist": {
+   "en": [],
+   "de": [
+    "Diabetologe",
+    "Diabetologin",
+    "Endokrinologe"
+   ]
+  }
+ },
+ "roles": [
+  {
+   "id": "rheumatologist",
+   "name": "Rheumatologist",
+   "group": "Longitudinal care",
+   "aliases_en": [
+    "rheumatologist",
+    "rheumatology"
+   ],
+   "aliases_de": [
+    "Rheumatologe",
+    "Rheumatologin"
+   ],
+   "typical_situations": "Lupus (SLE) review; bone health; medication review.",
+   "default_bundles": [
+    "B07"
+   ],
+   "modifiers": [
+    {
+     "slot": "diagnoses_all",
+     "priority": "P1"
+    }
+   ],
+   "mindset": "Autoimmune disease, immunosuppression, bone health, drug interactions.",
+   "often_missing": "Lupus activity, serology and immunosuppressive treatment are not in the letters.",
+   "sources": [
+    "G18"
+   ]
+  },
+  {
+   "id": "urologist",
+   "name": "Urologist",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "urologist",
+    "urology"
+   ],
+   "aliases_de": [
+    "Urologe",
+    "Urologin"
+   ],
+   "typical_situations": "Urological consult or minor procedure.",
+   "default_bundles": [
+    "B15"
+   ],
+   "modifiers": [],
+   "mindset": "Bleeding risk, kidney-relevant drugs, allergies.",
+   "often_missing": "No urological findings in the letters.",
+   "sources": [
+    "G18"
+   ]
+  },
+  {
+   "id": "psychologist",
+   "name": "Psychologist / psycho-oncology",
+   "group": "Allied health and nursing",
+   "aliases_en": [
+    "psychologist",
+    "psycho-oncologist",
+    "psychooncologist",
+    "counsellor"
+   ],
+   "aliases_de": [
+    "Psychologe",
+    "Psychologin",
+    "Psychoonkologe",
+    "Psychoonkologin"
+   ],
+   "typical_situations": "Support after a cancer diagnosis.",
+   "default_bundles": [
+    "B18"
+   ],
+   "modifiers": [],
+   "mindset": "Diagnosis as told to the patient, social support, planned treatment.",
+   "often_missing": "Mental state and psychosocial history are not documented.",
+   "sources": [
+    "G18"
+   ]
+  },
+  {
+   "id": "social_worker",
+   "name": "Clinical social worker",
+   "group": "Allied health and nursing",
+   "aliases_en": [
+    "social worker",
+    "clinical social worker",
+    "case manager",
+    "discharge coordinator"
+   ],
+   "aliases_de": [
+    "Sozialarbeiter",
+    "Sozialarbeiterin",
+    "Entlassungsmanagement",
+    "Sozialdienst"
+   ],
+   "typical_situations": "Discharge planning and support at home.",
+   "default_bundles": [
+    "B08"
+   ],
+   "modifiers": [],
+   "mindset": "What happens next, admission and discharge dates, support at home.",
+   "often_missing": "Social situation beyond family support is not documented.",
+   "sources": [
+    "G18"
+   ]
+  }
+ ]
+}

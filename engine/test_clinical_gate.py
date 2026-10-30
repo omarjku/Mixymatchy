@@ -18,7 +18,7 @@ NOT_CLINICAL = ["firefighter", "journalist, tell me about her", "I am her neighb
                 "", "Something completely different.", "Police officer at A&E asking about her medication",
                 "Feuerwehr, Einsatz bei ihr zuhause", "Ich bin ihr Nachbar", "student, tell me about her",
                 "Astrologist reading her chart", "her sugar"]
-CLINICAL_TERM = {"Rheumatologist, joint pain review": "Rheumatologist", "Urologist, catheter check": "Urologist",
+CLINICAL_TERM = {"Nephrologist, kidney review": "Nephrologist", "Geriatrician, falls assessment": "Geriatrician",
                  "Hebamme": "Hebamme", "medical student, ward round": "Medical student",
                  "Dermatologist checking a mole on her back": "Dermatologist", "Psychiater, Konsil": "Psychiater"}
 
@@ -67,7 +67,7 @@ class TestClinical(unittest.TestCase):
 
     def test_urologist_is_not_neurologist(self):
         k = kb()
-        self.assertEqual(match_role(norm_text("Urologist, catheter check"), k)[0], None)
+        self.assertEqual(match_role(norm_text("Urologist, catheter check"), k)[0], "urologist")  # overlay role
         self.assertNotEqual(screen("Urologist, catheter check")["understood"]["role_id"], "neurologist")
         self.assertEqual(match_role(norm_text("anesthesiologst here"), k)[0], "anaesthetist")  # typos still match
 

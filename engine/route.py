@@ -19,6 +19,7 @@ FUZZY_THRESHOLD = 0.85        # fixed, per the guide; only aliases of 5+ charact
 SAFETY_RULES = {"R01", "R02", "R03", "R10", "R17"}   # allergies, blood thinners, contrast reaction/metformin: add at P1
 PRIO_RANK = {"P1": 1, "P2": 2, "P3": 3}
 
+
 # Rules whose when_task/when_fact the engine evaluates on the facts.  when_task is satisfied by the rule
 # being listed on a chosen bundle (bundles carry their rules); when_fact is checked here.
 ANTITHROMBOTIC = ("antiplatelet", "anticoagulant_vka", "anticoagulant_doac", "heparin")
@@ -268,7 +269,7 @@ def current_meds(store, as_of):
 
 # ----------------------------------------------------------------- entry point
 
-def route(text, kb, store, as_of, detail="long", use_llm=True):
+def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=None):
     t = norm_text(text)
     role_id, alias, method = match_role(t, kb)
     role = kb.role_by_id.get(role_id)
@@ -291,6 +292,10 @@ def route(text, kb, store, as_of, detail="long", use_llm=True):
             elif bids and set(bids) != set(chosen):
                 llm_note = "LLM proposed %s; alias/tag match kept" % bids
     note = None
+    if force_bundles:  # screen.py: a recognised role's own task when the wording is not recognised
+        chosen, how = list(force_bundles), "role_default"
+        note = "Task wording not recognised: showing what a %s usually needs (%s)." % (
+            role["name"], ", ".join(kb.bundle_by_id[b]["title"] for b in force_bundles))
     if not chosen:
         chosen = [kb.fallback_bundle]
         how = "fallback"

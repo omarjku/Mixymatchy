@@ -147,6 +147,8 @@ def _proof_and_contradictions(st, cards, contras):
     return contra_out, proof
 
 
+SAFETY_CORE = ("age_sex", "allergies")  # decision 7: on every clinical screen, short view too
+MAX_ALSO_RELEVANT = 5  # P2 cards in the short view's 'also relevant' group (the rest: long view)
 MAX_SUMMARY_CARDS = 6  # safety summary (unrecognised task / not applicable): never a dump
 OVERVIEW_RX = re.compile(r"(?<![a-zäöüß])(overview|summary|summarise|summarize|über(blick|sicht)|zusammenfassung)")
 
@@ -243,6 +245,13 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     u["clinical_gate"] = gate
     if not gate["clinical"]:
         return not_authorised_screen(u, gate, detail, t0)
+    defaults = [b for b in (role or {}).get("default_bundles") or [] if b in k.bundle_by_id and b != k.fallback_bundle]
+    if (u["tasks_from"] == "fallback" and len(defaults) == 1 and not app["items"]
+            and not OVERVIEW_RX.search(u.get("task_text") or "")):
+        # a recognised role with one typical task, task wording not recognised: that task, with a visible note
+        u = route(text, k, st, as_of, detail=detail, use_llm=False, force_bundles=defaults)
+        u.update(as_of_date=as_of, anchor_date=anchor, clinical_gate=gate)
+        info = u.pop("slot_info")
     if not role and gate["decision"] == "clinical_term":
         u["role_label"] = gate["label"]
         u["role_match"] = {"method": "clinical_lexicon", "matched": gate["term"]}
@@ -285,6 +294,11 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         if app["sex"] is None and app["items"]:
             u["applicability_note"] = "The record does not state the patient's sex; check applicability yourself."
         back = [A.record_check_card(st, r, chk, as_of, contras) for r in app["applicable"] for chk in r["record_checks"]]
+    if mode == "task":  # safety core on every clinical screen: age/sex and allergies first
+        slots = list(dict.fromkeys([x for x in SAFETY_CORE if x in k.slot_by_id] + slots))
+        for x in SAFETY_CORE:
+            if x in k.slot_by_id:
+                _ensure_info(k, info, x, "safety core")
     u["slots_shown"] = slots
     u["screen_mode"] = mode
     u["applicability"] = {k_: app[k_] for k_ in ("sex", "passage", "word")}
@@ -293,6 +307,17 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     ctx = {"as_of": as_of, "anchor": as_of, "patient": patient, "text": text, "slot_info": info,
            "bundles": u["bundle_ids"], "detail": detail}
     cards = front + [build_card(st, k, s, ctx, contras) for s in slots] + back
+    also = []
+    if detail == "short" and mode == "task":  # P2 'also relevant' group, shown without a second request
+        p2 = [x["slot"] for x in u["slots"] if x["priority"] == "P2" and x["slot"] not in slots]
+        built = [build_card(st, k, s, ctx, contras) for s in p2]
+        built = [c for c in built if c.get("status") != "not_documented"] + \
+                [c for c in built if c.get("status") == "not_documented"]
+        also = built[:MAX_ALSO_RELEVANT]
+        for c in also:
+            c["group"] = "also_relevant"
+        u["also_relevant"] = [c["slot"] for c in also]
+        u["also_relevant_more"] = max(0, len(built) - len(also))
     dob = next((_dob((f.get("attrs") or {}).get("value")) for f in st.facts if f.get("category") == "date_of_birth"), None)
     age = age_years(dob, _d(as_of)) if dob and _d(as_of) else None
     status = slot_status_fn(st, k, as_of, text)
@@ -300,7 +325,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         for c in cards:  # rule R22: label panel for every shown medication
             if c.get("shape") == "current_list" and c.get("items"):
                 c["label_panel"] = label_panel(st, k, c, status, u["bundle_ids"], detail, age)
-    _annotate_followups(st, cards)
+    _annotate_followups(st, cards + also)
 
     # only what touches this screen: contradictions, blind spot, open follow-ups
     contra_all, proof = _proof_and_contradictions(st, cards, contras)
@@ -332,6 +357,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         "patient": patient,
         "safety_strip": [],
         "cards": cards,
+        "also_relevant": also,
         "card_status_counts": counts,
         "slot_counts": {"shown": len(cards), "by_priority": by_pr},
         "blind_spot": bs,

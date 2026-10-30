@@ -146,6 +146,23 @@ def _side(sides: set[str]) -> str | None:
     return "both" if len(sides) > 1 or "both" in sides else sides.pop()
 
 
+_NUM = __import__("re").compile(r"(?<![\d/.,])(\d+(?:[.,]\d+)?)\s*(%|mg|kg|cm|mm|mmHg|/min|bpm|m/s)?(?![\d/])")
+
+
+def _number_in(label: str, rep: dict, st):
+    """value/unit for a numeric measurement whose engine fact has no numeric value attribute: the number
+    as written in the label, kept only if the same number is in the fact's quote (never invented)."""
+    attrs = rep.get("attrs") or {}
+    if rep.get("ips_section") not in ("results", "vital_signs") and not attrs.get("unit"):
+        return attrs.get("value") or None, attrs.get("unit") or None
+    quote = (rep.get("quote") or "").replace(",", ".")
+    for m in _NUM.finditer(label):
+        num = m.group(1)
+        if num.replace(",", ".") in quote:
+            return num, m.group(2) or attrs.get("unit") or None
+    return attrs.get("value") or None, attrs.get("unit") or None
+
+
 def _in_label(token, label: str) -> bool:
     return token is None or str(token).replace(",", ".").lower() in label.replace(",", ".").lower()
 
@@ -158,8 +175,8 @@ def item_fact(st, it: dict, trust: str) -> Fact:
     attrs = rep.get("attrs") or {}
     label = it.get("label_en") or rep.get("label_en") or ""
     value, unit = attrs.get("value"), attrs.get("unit")
-    if value not in (None, "") and _in_label(value, label) and _in_label(unit, label):
-        value = unit = None  # the label already states it; avoid "Weight 78 kg: 78 kg" on screen
+    if value in (None, ""):
+        value, unit = _number_in(label, rep, st)  # numeric facts always carry value/unit (History tab)
     docs = it.get("docs") or st.fact_docs(rep)
     if trust == "consistent" and len(docs) < 2:
         trust = "single"
@@ -378,6 +395,7 @@ def _routing(screen: dict) -> dict:
             "role_label": u.get("role_label"), "message": screen.get("message"),
             "clinical_gate": (u.get("clinical_gate") or {}).get("decision"),
             "applicability_note": u.get("applicability_note"), "applicability": u.get("applicability"),
+            "also_relevant": u.get("also_relevant") or [], "also_relevant_more": u.get("also_relevant_more") or 0,
             "other_record_issues": screen.get("other_record_issues", 0),
             "other_record_issues_en": screen.get("other_record_issues_en")}
 
@@ -392,7 +410,7 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
     u = screen["understood"]
 
     cards, seen = [], set()
-    for c in (screen.get("safety_strip") or []) + (screen.get("cards") or []):
+    for c in (screen.get("safety_strip") or []) + (screen.get("cards") or []) + (screen.get("also_relevant") or []):
         if c["need"] not in seen:
             seen.add(c["need"])
             cards.append(c)

@@ -18,6 +18,8 @@ import re
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KB_PATH = os.environ.get("SECOND_LOOK_KB", os.path.join(ROOT, "rulebook", "kb", "routing_knowledge_base.json"))
 SLOT_MAP_PATH = os.environ.get("SECOND_LOOK_SLOT_MAP", os.path.join(ROOT, "rulebook", "slot_map.json"))
+# engineering overlay: extra aliases/tags and roles the medical team's KB does not have yet (never slots or facts)
+OVERLAY_PATH = os.environ.get("SECOND_LOOK_KB_OVERLAY", os.path.join(ROOT, "rulebook", "kb_overlay.json"))
 
 PRIORITIES = ("P1", "P2", "P3")
 # surfaces written as prose in the KB; they are handled in code, not looked up as slot IDs
@@ -336,9 +338,40 @@ class KB:
 _KB = None
 
 
-def load(kb_path=KB_PATH, slot_map_path=SLOT_MAP_PATH, strict=True):
+def apply_overlay(data, overlay):
+    """Add the overlay's aliases, tags and roles to the KB data (in place).  Adds only: an overlay never
+    changes or removes the medical team's slots, priorities, rules or existing names."""
+    if not overlay:
+        return data
+
+    def add(lst, extra):
+        seen = {x.lower() for x in lst}
+        for x in extra or []:
+            if x.lower() not in seen:
+                lst.append(x)
+                seen.add(x.lower())
+    bundles = {b["id"]: b for b in data.get("bundles") or []}
+    for bid, tags in (overlay.get("bundle_tags") or {}).items():
+        if bid in bundles:
+            add(bundles[bid].setdefault("tags_en", []), tags.get("en"))
+            add(bundles[bid].setdefault("tags_de", []), tags.get("de"))
+    roles = {r["id"]: r for r in data.get("roles") or []}
+    for rid, al in (overlay.get("role_aliases") or {}).items():
+        if rid in roles:
+            add(roles[rid].setdefault("aliases_en", []), al.get("en"))
+            add(roles[rid].setdefault("aliases_de", []), al.get("de"))
+    for r in overlay.get("roles") or []:
+        if r.get("id") not in roles:
+            data.setdefault("roles", []).append(dict(r, origin="overlay"))
+    return data
+
+
+def load(kb_path=KB_PATH, slot_map_path=SLOT_MAP_PATH, strict=True, overlay_path=OVERLAY_PATH):
     """Load + validate; raise KBError (listing every problem) if anything is wrong."""
-    k = KB(_load(kb_path), _load(slot_map_path))
+    data = _load(kb_path)
+    if overlay_path and os.path.exists(overlay_path):
+        apply_overlay(data, _load(overlay_path))
+    k = KB(data, _load(slot_map_path))
     errors, _warnings = k.validate()
     if errors and strict:
         raise KBError(errors)
