@@ -20,3 +20,9 @@ node_modules/
 out/
 next-env.d.ts
 
+
+# Submission video: generated metrics (patient-derived labels), app captures and render outputs
+video/metrics.json
+video/out/
+video/remotion/public/capture/
+video/remotion/src/generated/

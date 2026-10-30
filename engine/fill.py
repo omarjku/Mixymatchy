@@ -407,6 +407,11 @@ def fill(store, need, as_of, patient, contradictions=(), outdated_days=183):
     comp = need.get("compute")
     fn = _absent_after if comp and comp.startswith("absent_after") else COMPUTE.get(comp, _list)
     fn(store, need, card, facts, as_of, outdated_days)
+    return finish(store, card, contradictions, latest_only=(comp == "latest"))
+
+
+def finish(store, card, contradictions=(), latest_only=False, primary_ids=None):
+    """Collect the card's fact/passage ids and mark it conflicting if a counted contradiction touches it."""
     ids, pids = [], []
     for it in card.get("items") or []:
         for x in it["facts"]:
@@ -418,8 +423,8 @@ def fill(store, need, as_of, patient, contradictions=(), outdated_days=183):
     card["facts"] = ids
     if ids:
         card["passages"] = pids
-    primary = set(ids)
-    if comp == "latest" and card.get("items"):
+    primary = set(ids) if primary_ids is None else set(primary_ids)
+    if latest_only and primary_ids is None and card.get("items"):
         # only the value being shown counts; an identical older value in another letter is support
         top = card["items"][0]
         primary = {x for x in top["facts"]
@@ -431,4 +436,331 @@ def fill(store, need, as_of, patient, contradictions=(), outdated_days=183):
         card["status"] = "conflicting"
     if touched:
         card["conflicts"] = [c["id"] for c in touched]
+    return card
+
+
+# ================================================================= KB shapes
+# The routing KB (rulebook/kb) gives every slot a display shape.  Each shape maps onto a compute type
+# of this module; engine/kbfill.py selects the slot's facts (rulebook/slot_map.json) and calls these.
+SHAPE_COMPUTE = {
+    "current_list": "current_meds",        # _current_meds (class slots: filtered views of all medication)
+    "latest_value": "latest_by_key",       # newest value per key + 'no later value documented' + R21
+    "trend": "trend",                      # every dated value; change calculated for one numeric series
+    "event_history": "list",               # dated list, newest first, with IBM status words
+    "list_all": "list",
+    "status_check": "status_check",        # recommendation -> evidence after it, else not documented
+    "checklist": "checklist",              # sub-items: found / documented as none / not documented
+    "plan": "plan",                        # planned or recommended items with date and who decided
+    "laterality_finding": "laterality",    # finding with side; side summary (conflicts from compare/)
+}
+
+STATUS_DISPLAY = {  # KB status_vocabulary: IBM status -> on-screen word (positive = shown as a fact)
+    "negative": "ruled out", "suspected": "suspected", "statuspost": "past",
+    "recommended": "recommended, not done", "planned": "planned",
+}
+STALE_MONTHS = 12  # KB rule R21
+
+
+def months_between(a, b):
+    da, db = _d(a), _d(b)
+    if not da or not db:
+        return None
+    return (db.year - da.year) * 12 + (db.month - da.month)
+
+
+def annotate_status(store, items):
+    """Attach the KB status word (ruled out / suspected / past / planned ...) of each item's newest fact."""
+    for it in items:
+        fs = [store.fact_by_id[x] for x in it["facts"] if x in store.fact_by_id]
+        if not fs:
+            continue
+        newest = [f for f in fs if str(f.get("date") or "")[:10] == str(it.get("date") or "")[:10]] or fs
+        f = newest[-1]
+        word = STATUS_DISPLAY.get((f.get("attrs") or {}).get("assertion")) or STATUS_DISPLAY.get(f.get("status"))
+        if word:
+            it["status_display"] = word
+    return items
+
+
+def shown(it):
+    s = _with_date(it) if it.get("date") else it["label_en"]
+    return s + (" [%s]" % it["status_display"] if it.get("status_display") else "")
+
+
+def _attr_key(f, key):
+    if key.startswith("attrs."):
+        return str((f.get("attrs") or {}).get(key[6:]) or f.get("category"))
+    return str(f.get(key) or "")
+
+
+def latest_by_key(store, card, facts, context, anchor, key="category"):
+    """Newest value per key (category by default); older values go to card['earlier']."""
+    groups = {}
+    for f in facts:
+        groups.setdefault(_attr_key(f, key), []).append(f)
+    tops, earlier = [], []
+    rank = lambda it: (str(it["date"] or ""), it["status"] == "current", max(it["docs"] or [""]))
+    for k in sorted(groups, key=lambda k: min(x["id"] for x in groups[k])):
+        items = annotate_status(store, group_items(store, groups[k]))
+        items.sort(key=rank, reverse=True)
+        tops.append(items[0])
+        earlier += [{"label_en": it["label_en"], "date": it["date"], "facts": it["facts"],
+                     "passages": it["passages"]} for it in items[1:4]]
+    ctx_items = annotate_status(store, group_items(store, context))
+    for it in ctx_items:
+        it["context"] = True
+    card["items"] = tops + ctx_items
+    card["earlier"] = earlier
+    card["value_en"] = "; ".join(shown(t) for t in tops)
+    if ctx_items:
+        card["value_en"] += " | related: " + "; ".join(shown(it) for it in ctx_items[:6])
+    newest = max(str(t["date"] or "") for t in tops)
+    card["date"] = newest
+    card["status"] = "consistent"
+    plan = all(t["status"] in ("planned", "recommended") for t in tops)
+    age = months_between(newest, anchor)
+    prec = max((t.get("date_precision") or "day" for t in tops if str(t["date"] or "") == newest), default="day")
+    if not plan and age is not None and age > STALE_MONTHS:
+        card["status"] = "outdated"
+        card["note"] = "As of %s; nothing newer documented (older than %d months: rule R21)." % (
+            fmt_date(newest, "month"), STALE_MONTHS)
+        card["rules_applied"] = ["R21"]
+    elif not plan and age is not None and age > 0:
+        card["note"] = "As of %s; no later value documented." % fmt_date(newest, "month" if prec != "year" else prec)
+    card["primary_ids"] = [x for t in tops for x in t["facts"]
+                           if str(store.fact_by_id[x].get("date") or "")[:10] == str(t["date"] or "")[:10]]
+    return card
+
+
+def trend(store, card, facts, calculate_change=True):
+    """Every dated value; a change is calculated (last minus first) only for one numeric series."""
+    cats = {f.get("category") for f in facts}
+    numeric = all(_num_attr(f) is not None for f in facts)
+    if calculate_change and len(cats) == 1 and numeric:
+        return _series(store, {}, card, facts, "9999-12-31", 10 ** 6)
+    items = annotate_status(store, group_items(store, facts))
+    items.sort(key=lambda it: (str(it["date"] or ""), it["label_en"]))
+    card["items"] = items
+    card["value_en"] = " -> ".join(shown(it) for it in items[-12:])
+    card["date"] = items[-1]["date"] if items else None
+    card["status"] = "consistent"
+    return card
+
+
+def _num_attr(f):
+    try:
+        return float(str((f.get("attrs") or {}).get("value")).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def dated_list(store, card, facts, newest_first=True, limit=12):
+    items = annotate_status(store, group_items(store, facts))
+    items.sort(key=lambda it: str(it["date"] or ""), reverse=newest_first)
+    card["items"] = items
+    more = len(items) - limit
+    card["value_en"] = "; ".join(shown(it) for it in items[:limit]) + (" (+%d more)" % more if more > 0 else "")
+    card["date"] = max((str(it["date"] or "") for it in items), default=None)
+    card["status"] = "consistent"
+    return card
+
+
+def plan(store, card, facts):
+    dated_list(store, card, facts)
+    for it in card["items"]:
+        for x in it["facts"]:
+            who = (store.fact_by_id[x].get("attrs") or {}).get("decided_by")
+            if who:
+                it["decided_by"] = who
+    card["value_en"] = "; ".join(shown(it) + (" - decided by %s" % it["decided_by"] if it.get("decided_by") else "")
+                                 for it in card["items"][:8])
+    return card
+
+
+_SIDE = re.compile(r"\b(left|right|bilateral|both sides)\b", re.I)
+
+
+def laterality(store, card, facts):
+    dated_list(store, card, facts)
+    sides = {}
+    for it in card["items"]:
+        found = set()
+        for x in it["facts"]:
+            f = store.fact_by_id[x]
+            s = str((f.get("attrs") or {}).get("side") or "").lower()
+            found |= {s} if s in ("left", "right", "both") else {m.lower() for m in _SIDE.findall(f.get("label_en") or "")}
+        found = {"both" if s in ("bilateral", "both sides") else s for s in found}
+        if found:
+            it["side"] = "/".join(sorted(found))
+            for s in found:
+                sides[s] = sides.get(s, 0) + 1
+    card["sides"] = sides
+    if sides:
+        card["value_en"] = "Side: %s | %s" % (", ".join("%s (%d statement%s)" % (s, n, "" if n == 1 else "s")
+                                                       for s, n in sorted(sides.items(), key=lambda kv: -kv[1])),
+                                             card["value_en"])
+    return card
+
+
+def checklist(store, card, facts, subitems, none_match=None):
+    """Each sub-item independently: found (facts linked) / documented as none / not documented."""
+    none_rx = re.compile(none_match, re.I) if none_match else None
+    negatives = [f for f in facts if none_rx and none_rx.search(fact_text(f))
+                 or (f.get("attrs") or {}).get("assertion") == "negative"]
+    positives = [f for f in facts if f not in negatives]
+    items = annotate_status(store, group_items(store, facts))
+    items.sort(key=lambda it: str(it["date"] or ""), reverse=True)
+    card["items"] = items
+    rows, used = [], set()
+    for sub in subitems:
+        r = re.compile(sub["match"], re.I)
+        hit = [f for f in positives if r.search(fact_text(f))]
+        neg = [f for f in negatives if r.search(fact_text(f))] or ([f for f in negatives if none_rx and none_rx.search(fact_text(f))])
+        used |= {f["id"] for f in hit}
+        if hit:
+            row = {"label": sub["label"], "status": "found", "facts": [f["id"] for f in hit],
+                   "passages": sorted({p for f in hit for p in f.get("passage_ids") or []})}
+        elif neg:
+            row = {"label": sub["label"], "status": "documented_none", "facts": [f["id"] for f in neg],
+                   "passages": sorted({p for f in neg for p in f.get("passage_ids") or []})}
+        else:
+            row = {"label": sub["label"], "status": "not_documented", "facts": [], "passages": []}
+        rows.append(row)
+    other = [f for f in positives if f["id"] not in used]
+    if other:
+        rows.append({"label": "Other", "status": "found", "facts": [f["id"] for f in other],
+                     "passages": sorted({p for f in other for p in f.get("passage_ids") or []})})
+    card["checklist"] = rows
+    word = {"found": "found", "documented_none": "documented as none", "not_documented": "not documented"}
+    found_txt = "; ".join(it["label_en"] for it in items if not set(it["facts"]) & {f["id"] for f in negatives})
+    card["value_en"] = " | ".join("%s: %s" % (r["label"], word[r["status"]]) for r in rows)
+    if found_txt:
+        card["value_en"] = found_txt + " || " + card["value_en"]
+    card["date"] = items[0]["date"] if items else None
+    card["status"] = "consistent" if items else "not_documented"
+    return card
+
+
+def status_check(store, card, recs, checks, evidence_fn, as_of):
+    """For each recommendation: evidence of a matching kind dated after it, else 'not documented'."""
+    rec_items = annotate_status(store, group_items(store, recs))
+    rows, found_items = [], []
+    for it in rec_items:
+        it["role"] = "recommendation"
+        text = " ".join(fact_text(store.fact_by_id[x]) for x in it["facts"])
+        chk = next((c for c in checks if re.search(c["recommendation_match"], text, re.I)), None)
+        threshold = str(it["date"] or "")[:10]
+        row = {"label": it["label_en"], "check": chk["label"] if chk else None, "threshold": threshold,
+               "recommendation": it}
+        if chk is None:
+            row.update(status="not_documented", facts=[], passages=[],
+                       note="no evidence search defined for this kind of follow-up")
+        else:
+            ev = [f for f in evidence_fn(chk["evidence"]) if f["id"] not in it["facts"]
+                  and f.get("status") not in ("recommended", "planned") and _date_after(f, threshold)
+                  and str(f.get("date") or "")[:10] <= as_of]
+            if ev:
+                ev_items = annotate_status(store, group_items(store, ev))
+                ev_items.sort(key=lambda x: str(x["date"] or ""), reverse=True)
+                found_items += ev_items
+                row.update(status="found", facts=[x for e in ev_items for x in e["facts"]],
+                           passages=[x for e in ev_items for x in e["passages"]],
+                           note="documented after %s: %s" % (fmt_date(threshold), "; ".join(shown(e) for e in ev_items[:3])))
+            else:
+                row.update(status="not_documented", facts=[], passages=[],
+                           note="no record that this took place after %s" % fmt_date(threshold))
+        rows.append(row)
+    card["checklist"] = [{"label": r["label"], "status": r["status"], "facts": r["facts"],
+                          "passages": r["passages"] or r["recommendation"]["passages"], "note": r["note"]}
+                         for r in rows]
+    card["related"] = rec_items
+    card["open_checks"] = [{"label": r["label"], "threshold": r["threshold"], "note": r["note"],
+                            "passages": r["recommendation"]["passages"]} for r in rows if r["status"] != "found"]
+    card["threshold"] = min((r["threshold"] for r in rows), default=None)
+    card["items"] = found_items
+    card["value_en"] = " | ".join("%s: %s" % (r["label"], r["note"]) for r in rows)
+    card["status"] = "consistent" if found_items else "not_documented"
+    card["date"] = found_items[0]["date"] if found_items else None
+    return card
+
+
+def _dob(value):
+    m = re.match(r"^\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\s*$", str(value or ""))
+    if m:
+        return datetime.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+    return _d(value)
+
+
+def age_years(dob, at):
+    return at.year - dob.year - ((at.month, at.day) < (dob.month, dob.day))
+
+
+def age_sex(store, card, facts, anchor, patient):
+    """Age calculated from the date of birth at the anchor date (KB slot_notes: never the header age)."""
+    sex = patient.get("sex")
+    sex_p = [p for p in [patient.get("sex_passage")] if p]
+    dob_f = next((f for f in facts if _dob((f.get("attrs") or {}).get("value"))), None)
+    at = _d(anchor)
+    if not dob_f or not at:
+        card["status"] = "not_documented"
+        card["value_en"] = "Date of birth not documented" + ("; sex: %s" % sex if sex else "")
+        card["passages"] = sex_p
+        return card
+    dob = _dob(dob_f["attrs"]["value"])
+    age = age_years(dob, at)
+    items = group_items(store, [dob_f])
+    card["items"] = items
+    card["calculated"] = {"kind": "age", "age": age, "dob": dob.isoformat(), "at": anchor,
+                          "method": "full years from the date of birth to the anchor date (latest document)"}
+    card["value_en"] = "%d years (calculated from the date of birth %s at %s)%s" % (
+        age, dob.strftime("%d.%m.%Y"), fmt_date(anchor), "; %s" % sex if sex else "")
+    if sex_p:
+        items[0]["passages"] = items[0]["passages"] + [p for p in sex_p if p not in items[0]["passages"]]
+    card["status"] = "consistent"
+    card["date"] = anchor
+    checks = []  # KB check X02: stated age vs date of birth at the document date
+    for f in store.facts:
+        if f.get("category") != "age":
+            continue
+        stated = _num_attr(f)
+        d = _d(f.get("date"))
+        if stated is None or not d:
+            continue
+        calc = age_years(dob, d)
+        checks.append({"id": "X02", "stated": stated, "calculated": calc, "date": f.get("date"), "fact": f["id"],
+                       "agrees": abs(stated - calc) < 1})
+    if checks:
+        card["checks"] = checks
+        bad = [c for c in checks if not c["agrees"]]
+        card["note"] = ("Stated age differs from the date of birth: " + "; ".join(
+            "%g stated vs %d calculated (%s)" % (c["stated"], c["calculated"], fmt_date(c["date"])) for c in bad)
+            if bad else "Stated age in the letters agrees with the date of birth (check X02).")
+    return card
+
+
+def med_changes(store, card, facts, as_of):
+    """Drugs no longer on the latest list, and the same drug with a different dose/schedule earlier."""
+    tmp = {"status": None, "items": []}
+    _current_meds(store, {}, tmp, facts, as_of, 0)
+    items = []
+    for it in tmp.get("items") or []:
+        if it.get("not_on_latest_list"):
+            items.append(dict(it, change="not on the latest list"))
+        elif it.get("earlier"):
+            for e in it["earlier"]:
+                items.append(dict(e, docs=[], change="changed: now %s" % it["label_en"]))
+            items.append(dict(it, change="current"))
+    card["list_date"] = tmp.get("list_date")
+    card["date"] = tmp.get("list_date")
+    if not items:
+        card["status"] = "not_documented"
+        card["value_en"] = "No stopped or changed drug found between the medication lists (latest list %s)" % (
+            fmt_date(tmp.get("list_date")))
+        return card
+    for it in items:
+        it.setdefault("docs", [])
+    card["items"] = items
+    card["value_en"] = "; ".join("%s (%s): %s" % (it["label_en"], fmt_date(it["date"]), it["change"])
+                                 for it in items)
+    card["status"] = "consistent"
     return card

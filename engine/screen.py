@@ -6,7 +6,7 @@ import re
 import time
 
 from .conflicts import contradictions as find_contradictions
-from .data import rulebook, store
+from .data import rulebook, rulebook_mode, store
 from .fill import fill, fmt_date, group_items
 from .understand import understand
 
@@ -123,7 +123,84 @@ def _annotate_followups(st, cards):
                     it["followup_open"] = fu.get("is_open")
 
 
-def build_screen(text, as_of=None, use_llm=True):
+def build_screen(text, as_of=None, use_llm=True, detail="long", rulebook=None):
+    """detail: 'short' (P1 only) or 'long' (P1-P3); KB rulebook only.  rulebook: 'kb' | 'legacy' | None (env)."""
+    if rulebook_mode(rulebook) == "kb":
+        return build_screen_kb(text, as_of=as_of, use_llm=use_llm, detail=detail)
+    return build_screen_legacy(text, as_of=as_of, use_llm=use_llm)
+
+
+def _proof_and_contradictions(st, cards, contras):
+    shown = []
+    for c in cards:
+        for x in c["facts"]:
+            if x not in shown:
+                shown.append(x)
+    shown_set = set(shown)
+    contra_out = [dict(c, relevant=bool(set(c["facts"]) & shown_set)) for c in contras]
+    contra_out.sort(key=lambda c: not c["relevant"])
+    verified = [x for x in shown if st.fact_by_id.get(x, {}).get("verified") is not False]
+    proof = {"facts_shown": len(shown), "facts_verified": len(verified), "facts_removed_at_load": len(st.removed),
+             "summary_en": "%d facts shown - %d checked word for word against the letters - %d removed"
+                           % (len(shown), len(verified), len(st.removed))}
+    return contra_out, proof
+
+
+def build_screen_kb(text, as_of=None, use_llm=True, detail="long"):
+    from .fill import _dob, _d, age_years
+    from .kb import kb as load_kb
+    from .kbfill import build_card, label_panel, slot_status_fn
+    from .route import route
+    t0 = time.perf_counter()
+    st = store()
+    k = load_kb()
+    detail = "short" if str(detail).lower() == "short" else "long"
+    anchor = st.anchor_date()
+    m = re.search(r"\bas of (\d{4}-\d{2}-\d{2})\b", text or "")
+    as_of = as_of or (m.group(1) if m else anchor)
+    u = route(text, k, st, as_of, detail=detail, use_llm=use_llm)
+    u["as_of_date"] = as_of
+    u["anchor_date"] = anchor
+    sex, sex_pid = st.patient_sex()
+    patient = {"sex": sex, "sex_passage": sex_pid}
+    contras, csource = _contradictions(st)
+    ctx = {"as_of": as_of, "anchor": as_of, "patient": patient, "text": text, "slot_info": u.pop("slot_info"),
+           "bundles": u["bundle_ids"], "detail": detail}
+    cards = [build_card(st, k, s, ctx, contras) for s in u["slots_shown"]]
+    dob = next((_dob((f.get("attrs") or {}).get("value")) for f in st.facts if f.get("category") == "date_of_birth"), None)
+    age = age_years(dob, _d(as_of)) if dob and _d(as_of) else None
+    status = slot_status_fn(st, k, as_of, text)
+    for c in cards:  # rule R22: label panel for every shown medication
+        if c.get("shape") == "current_list" and c.get("items"):
+            c["label_panel"] = label_panel(st, k, c, status, u["bundle_ids"], detail, age)
+    _annotate_followups(st, cards)
+    contra_out, proof = _proof_and_contradictions(st, cards, contras)
+    for c in contra_out:  # tag each contradiction with the slots it touches (guide step 8)
+        c["slots"] = [x["slot"] for x in cards if set(c["facts"]) & set(x["facts"])]
+    counts = {}
+    for c in cards:
+        counts[c["status"]] = counts.get(c["status"], 0) + 1
+    by_pr = {}
+    for s in u["slots"]:
+        by_pr[s["priority"]] = by_pr.get(s["priority"], 0) + 1
+    return {
+        "understood": u,
+        "rulebook": "kb",
+        "detail": detail,
+        "patient": patient,
+        "safety_strip": [],
+        "cards": cards,
+        "card_status_counts": counts,
+        "slot_counts": {"shown": len(cards), "by_priority": by_pr},
+        "blind_spot": compare_blind_spot(st) or blind_spot(st),
+        "contradictions": contra_out,
+        "contradictions_source": csource,
+        "proof_bar": proof,
+        "timing_ms": round((time.perf_counter() - t0) * 1000, 1),
+    }
+
+
+def build_screen_legacy(text, as_of=None, use_llm=True):
     t0 = time.perf_counter()
     st = store()
     roles_rb, tasks_rb = rulebook()

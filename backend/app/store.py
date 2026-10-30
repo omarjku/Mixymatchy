@@ -42,10 +42,10 @@ def facts_count() -> int:
     return len(load("facts"))
 
 
-def briefing(situation: str) -> Briefing:
+def briefing(situation: str, detail: str = "long") -> Briefing:
     if use_engine():
         from . import adapter
-        return adapter.build_briefing(situation)
+        return adapter.build_briefing(situation, detail=detail)
     from .query import build_briefing
     return build_briefing(situation)
 

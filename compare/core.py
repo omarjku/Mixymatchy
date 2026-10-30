@@ -9,7 +9,7 @@ import re
 
 from pipeline.common import DATE_RE, SLASH_DATE_RE, find_dates, find_ws, iso, norm_ws
 
-BMI_TOLERANCE = 1.0          # kg/m2: |stated - computed| above this is a contradiction
+BMI_TOLERANCE = 0.5          # kg/m2: |stated - computed| above this is a contradiction (KB check X01)
 EVENT_WINDOW_DAYS = 7        # dates of the same event type closer than this belong to one event
 COPY_SIMILARITY = 0.85       # difflib ratio above which two passages look copied
 WEIGHT_CHANGE_MIN_KG = 2.0   # smaller changes are measurement noise
@@ -162,7 +162,7 @@ def bmi_checks(b):
             calc = round(w[2] / (hm * hm), 1)
             checks.append({"doc_id": doc, "date": b.doc_date(doc), "bmi": (bf, bpid, bmi),
                            "height": h, "weight": w, "computed": calc,
-                           "mismatch": abs(calc - bmi) > BMI_TOLERANCE})
+                           "mismatch": round(abs(calc - bmi), 2) > BMI_TOLERANCE})
     checks.sort(key=lambda c: (c["date"] or "", c["doc_id"]))
     return checks
 

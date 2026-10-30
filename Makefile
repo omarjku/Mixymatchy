@@ -23,5 +23,6 @@ eval:
 	python3 -m eval.run_api
 
 test:
-	python3 -m unittest engine.test_engine compare.test_compare eval.test_eval
+	python3 -m engine.kb > /dev/null
+	python3 -m unittest engine.test_engine engine.test_kb compare.test_compare eval.test_eval
 	cd backend && python3 -m pytest -q

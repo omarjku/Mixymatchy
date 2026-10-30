@@ -1,0 +1,29 @@
+{
+  "name": "second-look-video",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Code-rendered submission video for Second Look (Remotion).",
+  "scripts": {
+    "metrics": "python3 ../scripts/export_metrics.py",
+    "capture": "node ../scripts/capture_app.mjs",
+    "studio": "remotion studio src/index.ts",
+    "stills": "node ../scripts/render.mjs stills",
+    "render": "node ../scripts/render.mjs video",
+    "check": "node ../scripts/check_visual.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/inter": "5.2.5",
+    "@fontsource/jetbrains-mono": "5.2.5",
+    "@remotion/bundler": "4.0.535",
+    "@remotion/cli": "4.0.535",
+    "@remotion/renderer": "4.0.535",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.535"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}

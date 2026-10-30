@@ -78,7 +78,7 @@ def segment(segment_id: str) -> dict:
 
 @app.post("/briefing", response_model=Briefing)
 def briefing(req: BriefingRequest) -> Briefing:
-    return store.briefing(req.situation)
+    return store.briefing(req.situation, req.detail)
 
 
 # Deployment: serve the exported frontend from the same origin (registered last, so API routes win).

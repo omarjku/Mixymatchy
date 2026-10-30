@@ -35,6 +35,20 @@ export interface Computed {
   segment_ids: string[];
 }
 
+export interface SourceRef {
+  id: string; // guideline (G..) or drug label (L..) from the routing knowledge base
+  title: string;
+  verification?: string | null;
+  url?: string | null;
+}
+
+export interface ChecklistItem {
+  label: string;
+  status: "found" | "documented_none" | "not_documented";
+  segment_ids: string[];
+  note?: string | null;
+}
+
 export interface NeedResult {
   need: string;
   label: string;
@@ -44,6 +58,16 @@ export interface NeedResult {
   superseded: Fact[];
   reason?: string | null;
   reason_segment_ids: string[];
+  // Routing knowledge base (optional; absent with the legacy rulebook)
+  slot?: string | null;
+  shape?: string | null;
+  priority?: string | null; // "P1" | "P2" | "P3"
+  why?: string | null;
+  sources?: SourceRef[];
+  rules?: string[];
+  note?: string | null;
+  checklist?: ChecklistItem[];
+  label_panel?: Record<string, unknown>[]; // rule R22: listed contraindications beside patient facts
 }
 
 export interface Briefing {
@@ -54,6 +78,8 @@ export interface Briefing {
   needs: NeedResult[];
   blind_spot: Fact[];
   findings: Finding[];
+  detail?: "short" | "long" | null;
+  routing?: Record<string, unknown>;
   // Computed by the backend from this briefing; never typed in.
   stats: {
     facts_shown: number;
@@ -87,11 +113,11 @@ export interface DocumentView {
   segments: Segment[];
 }
 
-export async function getBriefing(situation: string): Promise<Briefing> {
+export async function getBriefing(situation: string, detail: "short" | "long" = "long"): Promise<Briefing> {
   const r = await fetch(`${API}/briefing`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ situation }),
+    body: JSON.stringify({ situation, detail }),
   });
   if (!r.ok) throw new Error(`briefing failed: ${r.status}`);
   return r.json();

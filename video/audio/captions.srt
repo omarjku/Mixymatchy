@@ -1,0 +1,105 @@
+1
+00:00:00,400 --> 00:00:02,183
+One patient. Eight letters.
+
+2
+00:00:02,302 --> 00:00:07,650
+An anaesthetist, a surgeon and an
+emergency doctor each need different facts.
+
+3
+00:00:08,400 --> 00:00:11,773
+Letters copy each other, so errors travel.
+
+4
+00:00:11,893 --> 00:00:17,675
+One duplex report says the right
+carotid; every other letter says left.
+
+5
+00:00:17,795 --> 00:00:21,650
+A twelve kilo weight loss
+is mentioned nowhere.
+
+6
+00:00:22,400 --> 00:00:25,303
+Second Look starts from one sentence.
+
+7
+00:00:25,423 --> 00:00:33,650
+The anaesthetist types her task, and the app
+works out the role and what that task needs.
+
+8
+00:00:34,400 --> 00:00:40,266
+One screen, only what matters: blood
+thinner, allergy, heart function,
+
+9
+00:00:40,386 --> 00:00:43,318
+and what is not documented.
+
+10
+00:00:43,438 --> 00:00:51,650
+Click any fact and the original German sentence
+lights up, with an English translation.
+
+11
+00:00:52,400 --> 00:00:55,580
+Switch the doctor, keep the patient.
+
+12
+00:00:55,700 --> 00:01:03,650
+The surgeon and the emergency physician each
+get a different screen, built for their task.
+
+13
+00:01:04,400 --> 00:01:07,080
+The record disagrees with itself.
+
+14
+00:01:07,200 --> 00:01:13,633
+Second Look found five contradictions
+and shows both passages side by side.
+
+15
+00:01:13,753 --> 00:01:19,650
+It also lists blind spots and
+follow-ups that were never closed.
+
+16
+00:01:20,400 --> 00:01:23,558
+How it works: AI points, code verifies.
+
+17
+00:01:23,678 --> 00:01:29,093
+Every quote is checked against the
+letters, so nothing is made up.
+
+18
+00:01:29,213 --> 00:01:31,469
+Rules handle what rules can.
+
+19
+00:01:31,589 --> 00:01:35,650
+Built on IBM's MLA output
+and the IPS structure.
+
+20
+00:01:36,400 --> 00:01:42,527
+On the five test situations: fifteen of fifteen
+answers, every fact linked, zero invented.
+
+21
+00:01:42,647 --> 00:01:49,650
+Not yet: the PIN lock isn't wired in, and
+guideline citations still need a second reviewer.
+
+22
+00:01:50,400 --> 00:01:52,628
+Other tools summarise the record.
+
+23
+00:01:52,748 --> 00:01:57,650
+Second Look checks it, for
+the task in front of you.

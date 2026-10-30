@@ -10,7 +10,18 @@ import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUILD_DIR = os.environ.get("SECOND_LOOK_BUILD", os.path.join(ROOT, "data", "build"))
-RULEBOOK_DIR = os.environ.get("SECOND_LOOK_RULEBOOK", os.path.join(ROOT, "rulebook"))
+# Rulebook: the routing KB (rulebook/kb/ + rulebook/slot_map.json, engine/kb.py) is the default.
+# SECOND_LOOK_RULEBOOK=legacy (or the CLI flag --legacy-rulebook) switches back to roles.json + tasks.json
+# until parity is proven.  SECOND_LOOK_RULEBOOK_DIR points the legacy loader at another folder.
+RULEBOOK_MODE = "legacy" if os.environ.get("SECOND_LOOK_RULEBOOK", "kb").strip().lower() == "legacy" else "kb"
+RULEBOOK_DIR = os.environ.get("SECOND_LOOK_RULEBOOK_DIR", os.path.join(ROOT, "rulebook"))
+
+
+def rulebook_mode(override=None):
+    """'kb' or 'legacy': explicit argument > SECOND_LOOK_RULEBOOK env > 'kb'."""
+    if override:
+        return "legacy" if str(override).lower() == "legacy" else "kb"
+    return "legacy" if os.environ.get("SECOND_LOOK_RULEBOOK", "kb").strip().lower() == "legacy" else "kb"
 RAW_DIR = os.path.join(ROOT, "data", "patient-0000-0001")
 
 
@@ -59,6 +70,10 @@ class Store:
     def fact_docs(self, f):
         return sorted({self.passage_by_id[p]["doc_id"] for p in f.get("passage_ids") or []
                        if p in self.passage_by_id})
+
+    def anchor_date(self):
+        """KB anchor rule: 'now' = date of the latest document in the record."""
+        return max((d.get("date") or "" for d in self.docs.values()), default="") or None
 
     def doc_date(self, doc_id):
         return (self.docs.get(doc_id) or {}).get("date")
