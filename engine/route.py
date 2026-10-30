@@ -126,6 +126,17 @@ def match_role(t, kb):
     return None, None, "none"
 
 
+# common English / German / Romance function words: never fuzzy-matched to a tag (typo tolerance is for content words)
+FUZZY_STOP = set("""should would could might must about above after again against before behind below
+between during through under until where which while whose whether there their these those other another
+anything something nothing everything someone anyone please thanks really actually already always almost
+because though although without within around across toward towards inside outside himself herself myself
+yourself itself themselves tomorrow yesterday today tonight morning evening
+sollte sollten wurde wurden würde würden konnte konnten könnte könnten müsste mussten musste welche welcher
+welches wieder schon immer nochmal vielleicht zwischen während wegen gegen ohne unter heute morgen gestern
+bitte danke eigentlich irgendwas etwas nichts jemand
+pourquoi comment quelque toujours encore depuis pendant porque cuando siempre todavia perche quando sempre
+ancora""".split())
 PREFIX_MIN = 6   # tags of 6+ characters also match as a word prefix (German compounds: Prämedikation-svisite)
 
 
@@ -152,6 +163,8 @@ def _tag_hits(t, tag):
         return out
     if len(nt) >= PREFIX_MIN:
         for m in re.finditer(r"[^\W\d_][\w-]+", t):
+            if m.group(0) in FUZZY_STOP:  # a function word is never a typo of a tag ('should' -> 'shoulder')
+                continue
             if abs(len(m.group(0)) - len(nt)) <= 2 and \
                     difflib.SequenceMatcher(None, m.group(0), nt).ratio() >= FUZZY_THRESHOLD:
                 out.append((m.start(), m.end()))

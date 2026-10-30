@@ -11,7 +11,8 @@ Decision, deterministic, after KB routing (engine/route.py):
      sex-specific examination (rulebook/applicability.json), implies a clinical context -> clinical.
      Anything else ('tell me everything about her', empty text) -> not authorised.
 
-  0. Overrides both: a non-clinical self-description anywhere in the text ('I am a nurse and her neighbour',
+  0. Overrides both: a non-clinical self-description anywhere in the text (the requester's own identity, not a
+     third party they mention: 'I'm the GP and her daughter asked me' stays clinical) ('I am a nurse and her neighbour',
      'I'm a doctor (I actually deliver pizza)', 'Ärztin, eigentlich Journalistin') -> not authorised.  A
      first-person cue (I am / I'm / ich bin / je suis / soy / sono / ben / أنا ...) followed by the non-clinical
      term with only filler or role words in between, or 'actually / really / eigentlich / en fait ...' right
@@ -109,7 +110,15 @@ def is_clinical_word(w):
 _SELF = re.compile(r"(?<![\w'])(i am|i'm|i work as|i work for|i work at|i actually|i really|my job is|"
                    r"my profession is|by profession|ich bin|bin ich|ich arbeite als|ich arbeite bei|ich arbeite fur|"
                    r"beruflich|je suis|je travaille comme|je travaille pour|soy|trabajo como|trabajo para|sono|"
-                   r"lavoro come|lavoro per|ben|benim|انا)(?![\w'])")
+                   r"lavoro come|lavoro per|ben|benim|انا|"
+                   r"i (?:actually |really |just |only )?(?:deliver|drive|work|write|sell|run|own|teach)s?|"
+                   r"ich (?:liefere|fahre|arbeite|schreibe|verkaufe))(?![\w'])")
+# a term followed by one of these starts a clause about someone else ('her daughter asked me', 'her husband
+# wants to know'): the requester mentions a third party, it is not how they describe themselves
+_THIRD_PARTY_VERB = set("""asked asks ask wants want wanted would called calls rang phoned phones says said told tells
+is was has had wonders wondered needs needed requested mentioned worries worried brought came comes visited
+fragt fragte möchte mochte will wollte hat hatte rief ruft ist war sagt sagte meint bittet bat
+demande demandait veut a pregunta pregunto quiere chiede vuole soruyor soruyordu istiyor""".split())
 _REALLY = re.compile(r"(?<![\w'])(actually|really|in fact|in reality|honestly|eigentlich|tatsachlich|"
                      r"in wirklichkeit|en fait|en realite|en realidad|in realta|aslinda|في الحقيقة)(?![\w'])")
 # words that may stand between the cue and the non-clinical term ('I am a nurse and her neighbour')
@@ -140,6 +149,9 @@ def self_described_non_clinical(t, non_hits, clin_spans):
         return None
     reallys = list(_REALLY.finditer(t))
     for s, e, term, _k in non_hits:
+        nxt = re.match(r"\s*([^\W_][\w'-]*)", t[e:])
+        if nxt and nxt.group(1) in _THIRD_PARTY_VERB:  # 'her daughter asked me about ...'
+            continue
         for m in selfs:  # 'I am (a nurse and) her neighbour'
             if m.end() <= s and s - m.end() <= 80 and _gap_ok(t, m.end(), s, clin_spans, _GAP_OK):
                 return term

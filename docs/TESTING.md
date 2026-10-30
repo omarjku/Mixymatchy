@@ -207,6 +207,8 @@ Open: 1 regression (h027 q5, BMI not shown). Policy item h070 (contradictory sel
 
 Run 3 (no-task fix, `eval/synthetic/results/holdout_v2_run3.json`, `notask_verify.md`): 127/234 questions, 32/73 situations. The drop from 136 is explained. Role-only inputs (Hausarzt, Anästhesie, Sleep medicine) now return needs_task by owner decision. Four false blocks are queued for a follow-up fix: sports-medicine clearance, cardiology exercise-clearance in caps, emergency "Patientin bewusstlos", and "I'm the GP and her daughter asked". Red-team: 59 non-task inputs, 0 leaks.
 
+Run 4 (false-block fix 1): 130/234, 0 regressions; red-team 92 own inputs: 0 leaks, 8 false blocks remain (English emergency shorthand without a role word, third-party 'X called/phoned/rang' before the clinician's self-description) -> next fix. Audit test flake: PIN '2468' can occur by chance in hex hashes (~0.7%); not a privacy bug. Results: `eval/synthetic/results/holdout_v2_run4.json`, `fix2_verify.md`.
+
 ## 7. Known open items
 
 | Item | Detail | Owner |

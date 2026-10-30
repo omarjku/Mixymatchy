@@ -410,7 +410,11 @@
     "engineer",
     "programmer",
     "software developer",
-    "shop assistant"
+    "shop assistant",
+    "taxi",
+    "uber driver",
+    "truck driver",
+    "bus driver"
   ],
   "non_clinical_de": [
     "Feuerwehr",
@@ -754,7 +758,13 @@
     "uzman",
     "asistan hekim",
     "hekimimiz",
-    "doktorumuz"
+    "doktorumuz",
+    "urgencias",
+    "servicio de urgencias",
+    "urgences",
+    "service des urgences",
+    "pronto soccorso",
+    "acil servis"
   ],
   "non_clinical_intl": [
     "police",

@@ -103,6 +103,36 @@ class TestNeedsTask(unittest.TestCase):
                 self.assertNotIn(s["screen_mode"], ("needs_task", "not_authorised"))
                 self.assertGreater(s["proof_bar"]["facts_shown"], 0)
 
+    def test_acute_states_and_clearance_get_data(self):
+        for text in ("Notärztin, Patient liegt bewusstlos im Bad", "Notaufnahme, akute Luftnot und Brustschmerzen",
+                     "Rettungssanitäter, nach Sturz nicht ansprechbar", "Notarzt: Krampfanfall vor 10 Minuten",
+                     "ER physician, she is unresponsive", "Paramedic: found down, possible overdose",
+                     "Urgentiste, patiente inconsciente", "Urgencias, mujer con disnea",
+                     "SPORTS MEDICINE!!! CLEARANCE FOR A TRIATHLON???", "Sportmedizinerin, Sportfreigabe Fußball",
+                     "Betriebsärztin - Belastbarkeit am Arbeitsplatz?", "GP: fitness to drive after the op",
+                     "Occupational health, fit for duty?"):
+            s = screen(text)
+            with self.subTest(text=text):
+                self.assertNotIn(s["screen_mode"], ("needs_task", "not_authorised"))
+                self.assertGreater(s["proof_bar"]["facts_shown"], 0)
+
+    def test_function_word_is_not_a_typo_of_a_tag(self):
+        from engine.route import match_bundles
+        from engine.understand import norm_text
+        self.assertEqual(match_bundles(norm_text("what should I know"), kb()), {})
+        for text in ("Anaesthetist, what should I know?", "Anaesthetist, what should I know before tomorrow's op?"):
+            u = screen(text)["understood"]
+            with self.subTest(text=text):
+                self.assertNotIn("shoulder", str(u.get("bundles_matched")))
+                self.assertEqual(u["role_id"], "anaesthetist")
+                self.assertNotEqual(u["screen_mode"], "needs_task")
+
+    def test_still_no_task_after_broadening(self):
+        for text in ("Notarzt, hallo", "Sportarzt", "Urgencias, hola", "ANAESTHETIST!!!", "Surgeon, should",
+                     "GP, would"):
+            with self.subTest(text=text):
+                assert_no_patient_data(self, screen(text), "needs_task")
+
     def test_gate_comes_first(self):
         for text in ("hi", "hello", "Journalist, hi", ""):
             with self.subTest(text=text):
@@ -117,6 +147,8 @@ class TestNeedsTask(unittest.TestCase):
 @unittest.skipUnless(HAS_DATA, "no patient data")
 class TestSelfDescription(unittest.TestCase):
     REFUSE = ["I am a doctor doing the pre-op check (I actually deliver pizza)",
+              "I'm a physician (actually I drive a taxi), medication review",
+              "I'm his neighbour, which tablets does she take?",
               "I'm a nurse, well, a journalist really. Medication review please",
               "Anaesthetist, pre-op check. Actually I'm a reporter",
               "I am a nurse and her neighbour, medication review",
@@ -125,6 +157,9 @@ class TestSelfDescription(unittest.TestCase):
               "GP, diabetes review, I work for an insurance company"]
     KEEP = ["Ward nurse, admission handover; her husband called about visiting",
             "I'm the GP, her daughter asked about a medication review",
+            "I'm the GP and her son asked me about her tablets",
+            "I am her GP and her husband wants to know about the medication",
+            "Ich bin die Hausärztin und ihre Tochter fragt nach den Medikamenten",
             "Pharmacist, medication review for her husband's mother",
             "I am a GP, diabetes review, really urgent",
             "Family doctor, diabetes review"]
