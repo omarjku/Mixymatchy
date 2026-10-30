@@ -35,6 +35,68 @@ def writer(texts):
     return answer
 
 
+ATTACKS = [  # adversarial verifier (adv2): every one must be rejected
+    ("number as word","n1",0,"Acetylsalicylic acid (Thrombo ASS) one hundred mg 1-0-0, as of April 2016."),
+    ("number word invented","n1",0,"Acetylsalicylic acid (Thrombo ASS) 100 mg 1-0-0 for sixty days, as of April 2016."),
+    ("number word LVEF","n1",1,"LVEF sixty percent, normal systolic LV function, 14 June 2015."),
+    ("day swapped","n3",1,"HbA1c 6.4% (well-controlled type II diabetes), 6 January 2015."),
+    ("day/month swap 13 June->6 Jan13","n3",1,"HbA1c 6.4% (well-controlled type II diabetes), 6 June 2013."),
+    ("date swap weight","n3",2,"Weight 78 kg (4 April 2016), 67 kg (14 June 2015), 66 kg (15 April 2016); change -12 kg over 10 months."),
+    ("unit mg->g","n1",0,"Acetylsalicylic acid (Thrombo ASS) 100 g 1-0-0, as of April 2016."),
+    ("unit kg->g","n3",2,"Weight 78 g (14 June 2015), 67 g (4 April 2016), 66 g (15 April 2016); change -12 g over 10 months."),
+    ("unit %->mmol","n3",1,"HbA1c 6.4 mmol/mol (well-controlled type II diabetes), 13 June 2015."),
+    ("unit ug->mg","n3",0,"Metformin (Glucophage) 1000 mg 1-1-1, pioglitazone (Actos) 30 mg 0-1-0 and exenatide (Byetta) 5 mg s.c. 1-0-1, as of April 2016."),
+    ("class added statin","n1",0,"Acetylsalicylic acid (Thrombo ASS) 100 mg 1-0-0 and a statin, as of April 2016."),
+    ("class added anticoagulant","n1",0,"Acetylsalicylic acid (Thrombo ASS) 100 mg 1-0-0 plus an anticoagulant, as of April 2016."),
+    ("class added beta blocker","n3",0,"Metformin (Glucophage) 1000 mg 1-1-1, pioglitazone (Actos) 30 mg 0-1-0 and exenatide (Byetta) 5 µg s.c. 1-0-1 and a beta-blocker, as of April 2016."),
+    ("class added insulin","n3",0,"Metformin (Glucophage) 1000 mg 1-1-1, pioglitazone (Actos) 30 mg 0-1-0 and exenatide (Byetta) 5 µg s.c. 1-0-1, also insulin, as of April 2016."),
+    ("negation: no allergy","n4",3,"Before contrast: head CT performed without contrast (native), no contrast media allergy, 14 June 2015; takes metformin (Glucophage) 1000 mg 1-1-1; kidney function (creatinine, eGFR) not documented."),
+    ("negation: not on metformin","n4",3,"Before contrast: head CT performed without contrast (native) because of known contrast media allergy, 14 June 2015; does not take metformin (Glucophage) 1000 mg 1-1-1; kidney function (creatinine, eGFR) not documented."),
+    ("negation: stopped aspirin","n1",0,"Acetylsalicylic acid (Thrombo ASS) 100 mg 1-0-0 was stopped, as of April 2016."),
+    ("negation: no stenosis","n4",0,"June 2015: no carotid artery stenosis, left, 60%; dizziness and eye symptoms attributed to atherosclerotic carotid stenosis."),
+    ("laterality flip left->right","n4",0,"June 2015: admission due to hypertensive crisis with dizziness and transient visual disturbance right eye; carotid artery stenosis, right, 60%."),
+    ("laterality flip only","n4",0,"June 2015: admission diagnosis due to hypertensive crisis with dizziness and transient visual disturbance right eye (lasting several seconds); dizziness and eye symptoms attributed to atherosclerotic carotid stenosis; carotid artery stenosis, right, 60%."),
+    ("value from another need (HbA1c in dx)","n3",3,"Diabetes mellitus type II with HbA1c 6.4%, 15 April 2016."),
+    ("value from another need (weight in hba1c)","n3",1,"HbA1c 6.4% (well-controlled type II diabetes), 13 June 2015, weight 67 kg."),
+    ("value from other need: LVEF 60 in aspirin","n1",0,"Acetylsalicylic acid (Thrombo ASS) 100 mg 1-0-0 as of April 2016, LVEF 60%."),
+    ("wrong schedule","n1",0,"Acetylsalicylic acid (Thrombo ASS) 100 mg 0-0-1, as of April 2016."),
+    ("wrong schedule words","n1",0,"Acetylsalicylic acid (Thrombo ASS) 100 mg twice daily, as of April 2016."),
+    ("year changed","n3",1,"HbA1c 6.4% (well-controlled type II diabetes), 13 June 2016."),
+    ("advice/interpretation","n1",0,"Acetylsalicylic acid (Thrombo ASS) 100 mg 1-0-0, as of April 2016; stop it before surgery."),
+    ("percent changed 6.4->6,4 ok? 64","n3",1,"HbA1c 64% (well-controlled type II diabetes), 13 June 2015."),
+    ("decimal shift","n3",1,"HbA1c 6.5% (well-controlled type II diabetes), 13 June 2015."),
+]
+
+
+GOOD = [  # paraphrases in the expected-answer style that must pass
+    ("n1", 0, "Thrombo ASS (acetylsalicylic acid) 100 mg, once in the morning (1-0-0), as of April 2016."),
+    ("n1", 1, "LVEF 60% with normal systolic LV function on 14 June 2015."),
+    ("n3", 1, "HbA1c 6.4% on 13 June 2015; no later value documented."),
+    ("n3", 2, "78 kg in June 2015, 67 kg on 4 April 2016 and 66 kg on 15 April 2016: about 12 kg lost over 10 months."),
+    ("n4", 2, "Candesartan (Blopress) 16 mg twice daily (1-0-1), as of April 2016."),
+    ("n5", 3, "Left carotid artery stenosis of 60% (June 2015); one letter (discharge letter 28.06.2015) says right."),
+]
+
+
+class Allowlist(unittest.TestCase):
+    """verify() is an ALLOWLIST: tokens, units, value-date pairs, schedules and sides come from the line's facts."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.st, cls.k = store(), kb()
+        cls.n = {"n1": _needs(CASE1), "n3": _needs(CASE3), "n4": _needs(CASE4), "n5": _needs(CASE5)}
+
+    def test_every_attack_is_rejected(self):
+        for name, w, i, text in ATTACKS:
+            ok, why = A.verify(self.st, self.k, self.n[w][i], text)
+            self.assertFalse(ok, "%s passed: %s" % (name, text))
+
+    def test_good_paraphrases_pass(self):
+        for w, i, text in GOOD:
+            ok, why = A.verify(self.st, self.k, self.n[w][i], text)
+            self.assertTrue(ok, "%s rejected: %s" % (text, why))
+
+
 class Picking(unittest.TestCase):
     """The rules pick: 3-4 needs in KB order, the composite as one line, nothing repeated."""
 

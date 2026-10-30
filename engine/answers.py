@@ -637,9 +637,9 @@ def payload(st, k, n, lid) -> dict:
     return p
 
 
-def allowed_text(st, k, n) -> str:
-    """Everything a sentence about this line may draw on."""
-    out = [n["label"]] + list(n["slot_labels"]) + list(n["missing"])
+def allowed_text(st, k, n, labels=True) -> str:
+    """Everything a sentence about this line may draw on (labels=False: the facts only, not the need labels)."""
+    out = ([n["label"]] + list(n["slot_labels"]) if labels else []) + list(n["missing"])
     for it in n["items"]:
         fp = _fact_payload(st, k, it)
         out.append(fp["label"] or "")
@@ -659,6 +659,7 @@ def allowed_text(st, k, n) -> str:
         out.append(n["side"])
     for q in n.get("quotes") or []:
         out += [q["label"], q["value"]]
+    out += [str(it.get("status_display") or it.get("status") or "") for it in n["items"]]
     return " ".join(out)
 
 
@@ -731,8 +732,89 @@ def vocab(st, k) -> set[str]:
     return words
 
 
+# ALLOWLIST check (docs/DECISIONS.md 22): every token of a written sentence must come from that line's own facts or
+# from this short list of connector words.  No negations, number words, side words or drug-class words here: those
+# pass only when the line's own facts carry them.
+FUNCTION_WORDS = frozenset("""
+a an and or as at about also by both documented for from had has her in is are of on over per she since takes taking
+the then to was were with lost gained current currently latest change dated yes which
+""".split())
+SCHEDULE_WORDS = {  # what a schedule may be spelt as, beside the schedule itself
+    "1-0-0": "once daily in the morning", "0-1-0": "once daily at midday noon lunchtime",
+    "0-0-1": "once daily in the evening at night", "0-0-0-1": "once daily at night bedtime",
+    "1-0-1": "twice daily in the morning and evening", "1-1-1": "three times daily in the morning at midday and evening",
+    "1-1-1-1": "four times daily", "1-1-0": "twice daily in the morning and at midday",
+}
+UNITS = {"%", "mg", "g", "kg", "µg", "ml", "l", "mmol", "mol", "cm", "mm", "mmhg", "iu", "ie", "months", "month",
+         "years", "year", "days", "day", "weeks", "week", "seconds", "bpm", "ng", "dl"}
+_SCHED_RX = re.compile(r"(?<![\d.-])\d(?:-\d){2,3}(?![\d-])")
+_TOKEN_RX = re.compile(r"\d+(?:[.,]\d+)?|%|[^\W\d_]+", re.U)
+_ND_PHRASES = re.compile(r"\b(?:(?:is|are|was|were)\s+)?not documented\b|\bno record(?: that)?\b", re.I)
+_LATER_PHRASES = re.compile(r"\bno (?:later|newer|more recent) (?:value|result|measurement)s?(?: (?:is|was))?"
+                            r"(?: documented)?\b", re.I)
+_DATE_MENTION = re.compile(
+    r"\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b|\b(?:(\d{1,2})\s+)?(%s)\.?\s+(\d{4})\b|\b(\d{1,2})/(\d{4})\b"
+    % "|".join(m.lower() for m in MONTHS) + r"|" + r"\b(?:%s)\b" % "|".join(m[:3].lower() for m in MONTHS), re.I)
+
+
+def _fold(text: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFKC", str(text or "")).replace("μ", "µ")
+    t = "".join(c for c in unicodedata.normalize("NFKD", t) if not unicodedata.combining(c) or c == "µ")
+    t = unicodedata.normalize("NFKC", t).replace("μ", "µ").lower()
+    return re.sub(r"\b(?:mcg|ug)\b", "µg", t)
+
+
+def _tokens(text: str) -> list[str]:
+    return _TOKEN_RX.findall(_SCHED_RX.sub(" ", _fold(text)))
+
+
+def _num_unit_pairs(text: str) -> list[tuple[str, str | None, int]]:
+    """(number, unit or None, position) for every value number (dates and schedules removed)."""
+    t = _SCHED_RX.sub(lambda m: " " * len(m.group(0)), _fold(text))
+    t = _DATE_MENTION.sub(lambda m: " " * len(m.group(0)), t)
+    out = []
+    for m in re.finditer(r"\d+(?:[.,]\d+)?", t):
+        if t[m.start() - 1:m.start()].isalpha() or (m.start() > 0 and t[m.start() - 1] in "/"):
+            unit = None  # 'T2', 'Ki-67', '145/88'
+        nxt = re.match(r"\s*(%|[^\W\d_]+)", t[m.end():])
+        unit = nxt.group(1) if nxt and nxt.group(1) in UNITS else None
+        out.append((_canon_num(m.group(0)), unit, m.start()))
+    return out
+
+
+def _dates_in(text: str) -> list[tuple[int, int | None, int | None, int]]:
+    """(year, month, day, position) of every full date mention ('13 June 2015', 'June 2015', '13.06.2015')."""
+    out, t = [], _fold(text)
+    for m in _DATE_MENTION.finditer(t):
+        g = m.groups()
+        if g[0]:
+            out.append((int(g[2]), int(g[1]), int(g[0]), m.start()))
+        elif g[4]:
+            out.append((int(g[5]), _month_no(g[4]), int(g[3]) if g[3] else None, m.start()))
+        elif g[6]:
+            out.append((int(g[7]), int(g[6]), None, m.start()))
+    return out
+
+
+def _item_dates(it) -> list[tuple[int, int, int | None]]:
+    out = []
+    m = re.match(r"(\d{4})-(\d{2})(?:-(\d{2}))?", str(it.get("date") or ""))
+    if m:
+        out.append((int(m.group(1)), int(m.group(2)), int(m.group(3)) if m.group(3) else None))
+    for d, mo, y in _DATE_IN.findall(it.get("label_en") or ""):
+        out.append((int(y), int(mo), int(d)))
+    return out
+
+
+def _same_date(mention, fact_date) -> bool:
+    y, mo, d, _p = mention
+    fy, fmo, fd = fact_date
+    return y == fy and (mo is None or mo == fmo) and (d is None or fd is None or d == fd)
+
+
 def verify(st, k, n, text) -> tuple[bool, str]:
-    """-> (ok, reason).  Code check of one written sentence against its own line."""
+    """-> (ok, reason).  ALLOWLIST code check of one written sentence against its own line's facts."""
     if not isinstance(text, str) or not text.strip():
         return False, "empty"
     text = " ".join(text.split())
@@ -740,32 +822,69 @@ def verify(st, k, n, text) -> tuple[bool, str]:
         return False, "too long"
     if len(re.findall(r"[.!?](?:\s|$)", text)) > 2:
         return False, "more than two sentences"
-    allowed = allowed_text(st, k, n)
-    nums = _allowed_numbers(st, n, allowed)
-    bad = sorted(_nums(text) - nums)
-    if bad:
-        return False, "number not in the facts: %s" % ", ".join(bad)
-    months = _allowed_months(st, n, allowed)
-    for m in _MONTH_RX.findall(text):
-        if m.lower() == "may" and not re.search(r"\bmay\s+\d{4}|\d\s+may\b", text, re.I):
-            continue  # the verb 'may'
-        if _month_no(m) not in months:
-            return False, "date not in the facts: %s" % m
-    own = _sig_words(allowed)
-    extra = sorted((_sig_words(text) & vocab(st, k)) - own)
-    if extra:
-        return False, "name not in this line's facts: %s" % ", ".join(extra)
-    if _ND_RX.search(text) and not n["missing"]:
-        if not (_LATER_RX.search(text) and n["shape"] in ("latest_value", "trend")):
-            return False, "'not documented' for a documented need"
-    if n["missing"] and not _ND_RX.search(text):
+    facts_txt = allowed_text(st, k, n, labels=False)
+    # 'not documented' only (and always) for a line with a not-documented need; 'no later value' for a latest value
+    nd = bool(_ND_PHRASES.search(text))
+    later = bool(_LATER_PHRASES.search(text))
+    if nd and not n["missing"]:
+        return False, "'not documented' for a documented need"
+    if n["missing"] and not nd:
         return False, "not-documented need left out"
-    low = text.lower()
+    if later and n["shape"] not in ("latest_value", "trend"):
+        return False, "'no later value' outside a latest value"
+    body = _LATER_PHRASES.sub(" ", _ND_PHRASES.sub(" ", text))
+    # schedules: only the facts' own, and every fact schedule present
+    fact_scheds = set(_SCHED_RX.findall(_fold(facts_txt)))
+    said = set(_SCHED_RX.findall(_fold(body)))
+    if said - fact_scheds:
+        return False, "schedule not in the facts: %s" % ", ".join(sorted(said - fact_scheds))
+    for it in n["items"]:
+        for f in it.get("facts") or []:
+            sc = ((st.fact_by_id.get(f) or {}).get("attrs") or {}).get("schedule")
+            if sc and sc not in said:
+                return False, "schedule left out: %s" % sc
+            break
+    # tokens: the facts' own (labels, values, attrs, units, quotes, computed values, notes), their dates in any
+    # rendering, the words of their schedules, or a connector word
+    allowed = set(_tokens(facts_txt)) | FUNCTION_WORDS
+    for sc in fact_scheds:
+        allowed |= set(SCHEDULE_WORDS.get(sc, "").split())
+    nums = _allowed_numbers(st, n, facts_txt)
+    allowed |= nums
+    for mo in _allowed_months(st, n, facts_txt):
+        allowed |= {MONTHS[mo - 1].lower(), MONTHS[mo - 1][:3].lower()}
+    bad = [t for t in _tokens(body) if t not in allowed and (not t[0].isdigit() or _canon_num(t) not in nums)]
+    if bad:
+        return False, "not in this line's facts: %s" % ", ".join(dict.fromkeys(bad))
+    # every number carries the unit the facts give it
+    pairs = {(v, u) for v, u, _p in _num_unit_pairs(facts_txt)}
+    fact_units = {}
+    for v, u in pairs:
+        fact_units.setdefault(v, set()).add(u)
+    for v, u, _p in _num_unit_pairs(body):
+        if u is not None and u not in fact_units.get(v, set()):
+            return False, "unit changed: %s %s" % (v, u)
+    # value <-> date: a value with a date beside it must be the value of a fact of that date
+    vals = [(v, p) for v, _u, p in _num_unit_pairs(body)]
+    dates = _dates_in(body)
+    item_vals = [(_value_nums(it.get("label_en")) | _nums(" ".join(str(x) for x in _fact_payload(st, k, it)["attrs"].values()
+                                                                if isinstance(x, str) and not _SCHED_RX.search(x))),
+                  _item_dates(it)) for it in n["items"]]
+    for i, (v, p) in enumerate(vals):
+        owners = [ds for vs, ds in item_vals if v in vs]
+        if not owners or not all(ds for ds in owners):
+            continue
+        nxt = vals[i + 1][1] if i + 1 < len(vals) else 10 ** 6
+        prv = vals[i - 1][1] if i else -1
+        near = [d for d in dates if p < d[3] < nxt] or [d for d in dates if prv < d[3] < p][-1:]
+        if near and not any(_same_date(near[0], fd) for ds in owners for fd in ds):
+            return False, "value %s paired with a date not its own" % v
+    low = _fold(text)
     for it in n["items"]:  # every fact is still named: its drug, or its values, or one of its words
         rep = next((st.fact_by_id[f] for f in it.get("facts") or [] if f in st.fact_by_id), {})
         a = rep.get("attrs") or {}
         if a.get("generic") and a.get("dose"):
-            if a["generic"].lower() not in low and str(a.get("brand") or "@@").lower() not in low:
+            if _fold(a["generic"]) not in low and _fold(a.get("brand") or "@@") not in low:
                 return False, "drug left out: %s" % a["generic"]
             need = _value_nums(a["dose"])
         else:
@@ -790,7 +909,10 @@ sometimes, computed values, follow-up status, a contradiction note or needs that
 concise English sentence per line, in the style of a colleague's handover answer.
 
 Rules:
-- Use only the given facts. Every number, dose, schedule, date and name must come from the line's own facts.
+- Use only the given facts and their own words. Every number (in digits), unit, dose, schedule, date, side and name \
+must come from the line's own facts; beyond them use only simple connectors (and, of, in, on, as of, since, with). \
+A code check rejects any other word, so do not add negations, drug classes, advice or number words.
+- Keep every schedule as written (e.g. 1-0-1); its meaning may follow it.
 - Name every given fact; do not add, drop or reorder facts; never mention another line's facts.
 - Drugs: generic name with the brand in brackets, dose, schedule (e.g. 1-0-1); the schedule meaning may be spelt out.
 - Dates: write them as '14 March 2014' or 'March 2014'; never invent a day.
