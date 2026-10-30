@@ -31,7 +31,7 @@ export function MetricTile({
   onPressSources,
 }: MetricTileProps) {
   return (
-    <article className="flex min-h-[150px] min-w-0 flex-col justify-between gap-4 rounded-2xl border border-line bg-surface p-4">
+    <article className="flex min-h-[150px] min-w-0 flex-col justify-between gap-4 rounded-lg border border-line bg-surface p-4">
       <div className="flex items-start justify-between gap-2">
         <h4 className="flex min-w-0 items-center gap-2 text-sm font-medium text-ink">
           <IconTile icon={icon} />

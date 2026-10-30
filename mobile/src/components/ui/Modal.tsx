@@ -31,7 +31,7 @@ export function Modal({ open, onOpenChange, title, description, footer, children
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         className={cn(
-          "mx-auto max-h-[88dvh] w-full max-w-md rounded-t-3xl border-line pb-[env(safe-area-inset-bottom)]",
+          "mx-auto max-h-[88dvh] w-full max-w-md rounded-t-lg border-line pb-[env(safe-area-inset-bottom)]",
           className,
         )}
       >

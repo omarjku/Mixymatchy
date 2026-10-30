@@ -1,7 +1,5 @@
-import { File01Icon } from "@hugeicons/core-free-icons";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { Icon } from "@/components/ui/Icon";
 import { t, type StringKey } from "@/i18n/strings";
 import { cn } from "@/lib/utils";
 import type { Contradiction, SourceCitation } from "@/types/fact";
@@ -45,32 +43,30 @@ export function ContradictionCard({ contradiction, onPressSource }: Contradictio
       )}
 
       {/* side by side, so the passages can be compared directly; each opens its letter */}
+      {/* no card per passage: columns split by a thin rule */}
       <ul
         className={cn(
-          "mt-3 grid gap-2",
-          contradiction.conflictingSources.length >= 2 ? "grid-cols-2" : "",
+          "mt-3 grid border-t border-contradiction-border/40 pt-3",
+          contradiction.conflictingSources.length >= 2 ? "grid-cols-2 divide-x divide-contradiction-border/40" : "",
         )}
         data-passages={contradiction.conflictingSources.length}
       >
         {contradiction.conflictingSources.map((source) => (
-          <li key={source.segmentId ?? source.documentId + source.excerpt}>
+          <li
+            key={source.segmentId ?? source.documentId + source.excerpt}
+            className="min-w-0 px-3 first:pl-0 last:pr-0"
+          >
             <button
               type="button"
               data-source
               onClick={() => onPressSource(source, contradiction.conflictingSources)}
-              className={cn(
-                "h-full w-full rounded-xl border border-contradiction-border/50 bg-surface p-3 text-left transition-colors",
-                "hover:border-contradiction-border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
-              )}
+              className="group h-full w-full rounded text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <span className="flex items-center gap-1.5 text-xs text-ink-muted">
-                <Icon icon={File01Icon} size={14} />
-                {source.documentLabel}
-              </span>
+              <span className="block text-xs text-ink-muted">{source.documentLabel}</span>
               <span lang="de" className="mt-1 block break-words font-serif text-[14px] leading-snug text-ink">
                 „{source.excerpt}“
               </span>
-              <span className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-primary-deep underline underline-offset-2">
+              <span className="mt-1.5 inline-flex text-[13px] font-medium text-primary-deep underline-offset-2 group-hover:underline">
                 {t("results.source")}
               </span>
             </button>

@@ -31,9 +31,9 @@ export type ButtonProps = (TextButtonProps | IconButtonProps) &
 
 const textStyles = {
   primary:
-    "h-12 rounded-xl bg-primary-strong px-5 text-[15px] font-semibold text-primary-ink shadow-none hover:bg-primary-hover active:bg-primary-deep disabled:bg-line disabled:text-ink-muted disabled:opacity-100",
+    "h-12 rounded-lg bg-primary-strong px-5 text-[15px] font-semibold text-primary-ink shadow-none hover:bg-primary-hover active:bg-primary-deep disabled:bg-line disabled:text-ink-muted disabled:opacity-100",
   secondary:
-    "h-11 rounded-xl border border-line bg-surface px-4 text-sm font-medium text-ink shadow-none hover:border-ink-faint hover:bg-surface active:bg-canvas",
+    "h-11 rounded-lg border border-line bg-surface px-4 text-sm font-medium text-ink shadow-none hover:border-ink-faint hover:bg-surface active:bg-canvas",
   ghost:
     "h-10 rounded-lg px-3 text-sm font-medium text-primary-deep shadow-none hover:bg-primary-soft hover:text-primary-deep active:bg-primary-soft",
 } as const;

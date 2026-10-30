@@ -14,7 +14,7 @@ export interface PanelProps {
 
 export function Panel({ title, icon, action, children, className }: PanelProps) {
   return (
-    <section className={cn("min-w-0 rounded-2xl border border-line bg-surface p-4", className)}>
+    <section className={cn("min-w-0 rounded-lg border border-line bg-surface p-4", className)}>
       <header className="mb-3 flex items-center justify-between gap-2">
         <h3 className="flex min-w-0 items-center gap-2 text-sm font-semibold text-ink">
           <IconTile icon={icon} />

@@ -17,7 +17,7 @@ const toneStyles: Record<CardTone, string> = {
   contradiction: "border-contradiction-border bg-contradiction-soft",
 };
 
-const base = "rounded-2xl border border-line bg-surface p-4 text-ink shadow-[0_1px_2px_rgba(20,24,49,0.05)]";
+const base = "rounded-lg border border-line bg-surface p-4 text-ink shadow-[0_1px_2px_rgba(20,24,49,0.05)]";
 
 type StaticCardProps = {
   selectable?: false;

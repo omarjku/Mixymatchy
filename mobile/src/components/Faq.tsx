@@ -19,7 +19,7 @@ export function Faq({ items }: { items: FaqItem[] }) {
         <AccordionItem
           key={item.id}
           value={item.id}
-          className="rounded-2xl border border-line bg-surface px-4 last:border-b"
+          className="rounded-lg border border-line bg-surface px-4 last:border-b"
         >
           <AccordionTrigger className="group items-center gap-3 py-4 text-left hover:no-underline focus-visible:ring-primary [&>svg]:hidden">
             <span className="flex-1 text-[15px] font-medium leading-snug text-ink md:text-base">{item.question}</span>

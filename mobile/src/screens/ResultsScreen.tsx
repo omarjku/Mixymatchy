@@ -12,7 +12,6 @@ import { ViewTabs } from "@/components/ViewTabs";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
-import { Notice } from "@/components/ui/Notice";
 import { roles } from "@/data/roles";
 import { intlLocale, toggleLocale, useLocale } from "@/i18n/locale";
 import { t } from "@/i18n/strings";
@@ -157,9 +156,6 @@ export function ResultsScreen() {
               <span className="font-medium text-ink">{brief.taskLabel ?? brief.task}</span>
             </p>
 
-            {/* one line on the results screen (the full text is on the start screen and in Help) */}
-            <Notice tone="readonly" title={t("readonly.title")} className="mt-3 py-2 text-[13px]" />
-
             {!notAuthorised && (
               <div className="mt-3">
                 <ViewTabs
@@ -188,7 +184,7 @@ export function ResultsScreen() {
               <section
                 role="alert"
                 data-banner="not_authorised"
-                className="rounded-2xl border-2 border-contradiction-border bg-contradiction-soft p-5"
+                className="rounded-lg border-2 border-contradiction-border bg-contradiction-soft p-5"
               >
                 <h2 className="text-[19px] font-semibold text-contradiction-deep">{t("results.notAuthorised.title")}</h2>
                 {brief.message && <p className="mt-2 text-[15px] leading-relaxed text-ink">{brief.message}</p>}
@@ -200,7 +196,7 @@ export function ResultsScreen() {
               <section
                 role="status"
                 data-banner="not_applicable"
-                className="rounded-2xl border-2 border-dashed border-ink-faint bg-surface p-5"
+                className="rounded-lg border-2 border-dashed border-ink-faint bg-surface p-5"
               >
                 <h2 className="text-[19px] font-semibold text-ink">{t("results.notApplicable.title")}</h2>
                 {brief.applicabilityNote && (
@@ -220,7 +216,7 @@ export function ResultsScreen() {
             )}
 
             {!notAuthorised && brief.routeNote && (
-              <section data-banner="fallback" className="rounded-2xl border border-primary bg-primary/10 p-4">
+              <section data-banner="fallback" className="rounded-lg border border-primary bg-primary/10 p-4">
                 <p className="text-[15px] font-medium text-primary-deep">{brief.routeNote}</p>
                 <Suggestions
                   items={brief.suggestions ?? []}
@@ -262,7 +258,7 @@ export function ResultsScreen() {
                   {t("results.factsHeading")} ({brief.facts.length})
                 </h2>
                 {brief.facts.length === 0 ? (
-                  <p className="rounded-2xl border border-dashed border-ink-faint/60 p-5 text-center text-sm text-ink-muted">
+                  <p className="rounded-lg border border-dashed border-ink-faint/60 p-5 text-center text-sm text-ink-muted">
                     {t("results.empty")}
                   </p>
                 ) : (
@@ -307,9 +303,9 @@ export function ResultsScreen() {
                 <h2 id="gaps-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.gapsHeading")} ({gaps.length})
                 </h2>
-                <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
+                <ul className="divide-y divide-line border-y border-line">
                   {gaps.map((gap) => (
-                    <li key={gap.id} className="px-4 py-3">
+                    <li key={gap.id} className="px-3 py-3">
                       <p className="text-xs font-medium text-ink-muted">{t(`results.gap.${gap.kind}`)}</p>
                       <p className="mt-0.5 text-[15px] font-semibold text-ink">{gap.title}</p>
                       {gap.explanation && <p className="mt-0.5 text-[14px] text-ink-muted">{gap.explanation}</p>}
@@ -338,7 +334,10 @@ export function ResultsScreen() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs leading-snug text-ink-muted">{t("app.disclaimer")}</p>
+        {/* read-only statement lives here as plain text (full explanation in Help), not as a banner */}
+        <p className="mt-6 text-center text-xs leading-snug text-ink-muted">
+          {t("readonly.title")}. {t("app.disclaimer")}
+        </p>
 
         {viewer && (
           <SourceViewer
@@ -358,7 +357,7 @@ export function ResultsScreen() {
         >
           {guideline && (
             <>
-              <p className="rounded-xl bg-canvas p-4 text-[15px] leading-relaxed text-ink">{guideline.guideline.excerpt}</p>
+              <p className="rounded-lg bg-canvas p-4 text-[15px] leading-relaxed text-ink">{guideline.guideline.excerpt}</p>
               {guideline.guideline.reference && (
                 <p className="mt-3 break-words text-xs text-ink-muted">{guideline.guideline.reference}</p>
               )}
@@ -374,7 +373,7 @@ export function ResultsScreen() {
 // become rows, and what the engine collapsed sits behind "+N more". Always visible, no tap needed.
 function AlsoRelevantList({ facts, onPressSource }: { facts: Fact[]; onPressSource: (fact: Fact) => void }) {
   return (
-    <ul className="divide-y divide-line rounded-2xl border border-line bg-surface px-4 py-1">
+    <ul className="divide-y divide-line border-y border-line">
       {facts.map((fact) => {
         const openRow = (row: FactRow) => onPressSource({ ...fact, source: row.sources[0], sources: row.sources });
         const rows = fact.rows ?? [];
@@ -410,7 +409,7 @@ function AlsoRelevantList({ facts, onPressSource }: { facts: Fact[]; onPressSour
           body = (<>{label}<FactRows rows={rows} onPressRow={openRow} /></>);
         }
         return (
-          <li key={fact.id} className="py-1.5" data-fact={fact.id} data-trust={fact.trust}>
+          <li key={fact.id} className="px-3 py-2.5" data-fact={fact.id} data-trust={fact.trust}>
             {body}
           </li>
         );
