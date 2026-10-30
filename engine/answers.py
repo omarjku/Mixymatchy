@@ -353,8 +353,8 @@ def _question_need(c) -> dict:
 
 
 def pick_lines(st, k, cards: list, u: dict, contras: list, terms_text: str, as_of: str | None,
-               mode: str = "task", focus=()) -> list[dict]:
-    """-> ordered answer needs (<= MAX_LINES), each with its chosen items.  Deterministic.  The user's own
+               mode: str = "task", focus=(), cap: int = MAX_LINES) -> list[dict]:
+    """-> ordered answer needs (<= cap, default MAX_LINES), each with its chosen items.  Deterministic.  The user's own
     question comes first (question cards of engine/ask.py, then the KB slots a question named); a question-only
     screen shows nothing else."""
     if mode in ("not_applicable", "not_authorised", "needs_task") or not cards:
@@ -409,7 +409,7 @@ def pick_lines(st, k, cards: list, u: dict, contras: list, terms_text: str, as_o
         shown |= {f for it in n["items"] for f in it.get("facts") or []}
         lines.append(n)
     lines = _merge_nd(lines)
-    return _fit(lines, MAX_LINES)
+    return _fit(lines, cap)
 
 
 def _merge_nd(lines):
@@ -903,7 +903,7 @@ def verify(st, k, n, text) -> tuple[bool, str]:
 
 # ----------------------------------------------------------------- the writer (optional LLM)
 
-STYLE = """You write the answer lines of Second Look, a tool that shows a clinician the facts of one patient's record \
+STYLE = """You write the answer lines of Second Eye, a tool that shows a clinician the facts of one patient's record \
 that their task needs. For each line you get the facts the rules already chose (label, attrs, date, status) and, \
 sometimes, computed values, follow-up status, a contradiction note or needs that are not documented. Write ONE \
 concise English sentence per line, in the style of a colleague's handover answer.

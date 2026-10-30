@@ -83,14 +83,19 @@ def documented_sex(store):
     return sex, first[sex][1], first[sex][2]
 
 
-def check(task_text, store, full_text=None, as_of=None):
-    """-> {"items": [...], "sex": ..., "passage": ..., "age": ..., "not_applicable": [...], "applicable": [...]}"""
+def check(task_text, store, full_text=None, as_of=None, extra_ids=()):
+    """-> {"items": [...], "sex": ..., "passage": ..., "age": ..., "not_applicable": [...], "applicable": [...]}
+    extra_ids: item ids named by the v2 AI reading (engine/understand_v2.py) that the terms did not match."""
     sex, pid, word = documented_sex(store)
     anchor = as_of or (store.anchor_date() if hasattr(store, "anchor_date") else None)
     age, age_pid, dob = documented_age(store, anchor) if anchor else (None, None, None)
     res = {"sex": sex, "passage": pid, "word": word, "age": age, "age_passage": age_pid, "dob": dob,
            "items": [], "not_applicable": [], "applicable": []}
-    for it, term in match_items(task_text, full_text):
+    matched = match_items(task_text, full_text)
+    have = {it["id"] for it, _t in matched}
+    matched += [(it, it.get("label") or it["id"]) for it in table().get("items") or []
+                if it["id"] in (extra_ids or ()) and it["id"] not in have]
+    for it, term in matched:
         row = {"id": it["id"], "label": it["label"], "applicable_sex": it.get("applicable_sex"), "term": term,
                "age_min": it.get("applicable_age_min"), "age_max": it.get("applicable_age_max"),
                "scope": it.get("scope") or "task", "roles": list(it.get("roles") or []),

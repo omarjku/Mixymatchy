@@ -81,6 +81,24 @@ export interface AnswerLineView {
   trust?: string | null;      // conflicting | not_documented
 }
 
+// v2 answer (docs/DECISIONS.md 23): ONE sentence (two at most) at the top, with numbered Source chips [1][2].
+// Written with the Citations API and checked twice by the backend, or its deterministic compact template.
+export interface AnswerChip {
+  n: number;                  // the chip number as cited in the sentence
+  label: string;              // what the cited evidence is about (accessible name)
+  sources: SourceCitation[];  // tapping the chip opens the letter with these passages highlighted
+}
+
+export interface AnswerView {
+  kind: "answer" | "nothing" | "not_applicable";
+  text: string;
+  segments: { text: string; chips: number[] }[];
+  chips: AnswerChip[];
+  origin: "llm" | "regenerated" | "template";
+  note?: string | null;       // one-line applicability note (sex / age mismatch)
+  noteSources: SourceCitation[];
+}
+
 export interface TrendSummary {
   points: { value: string; date: string; collapsed?: boolean }[]; // oldest first, value incl. unit
   numbers: number[];
@@ -127,6 +145,7 @@ export interface PatientBrief {
   applicabilityNote?: string | null;
   applicabilitySources?: SourceCitation[];
   alsoRelevant?: Fact[];          // P2 needs from the long view, shown under "Also relevant"
+  answer?: AnswerView | null;     // v2: the cited 1-2 sentence answer; everything else sits behind "Show more"
   answerLines?: AnswerLineView[]; // header + answer lines (DECISIONS 22); when present key facts move behind "Show more"
   keyFacts?: KeyFactLine[];       // answer-first block; when present everything else sits behind "Show more"
   situation?: string;             // the exact sentence sent to the backend

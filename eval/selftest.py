@@ -68,6 +68,15 @@ def answers():
         r["llm"], r["rejected"]))
 
 
+def answers_v2():
+    """v2 answers (docs/DECISIONS.md 23): understand + cited writer + binding check + claim judge, live.  Without
+    the LLM the answer is the compact template (no fake writer in the server)."""
+    from engine import llm
+    from eval import answers_v2 as v2
+    r = v2.official(use_llm=llm.available(), out=lambda *_: None, fake=False)
+    say(v2.selftest_line(r, "llm" if llm.available() else "template"))
+
+
 def redteam(use_llm):
     """Red-team inputs (eval/redteam/inputs.json): one model call per input when the layer is on, run
     concurrently (the free instance restarts after ~15-25 min; 600 sequential calls would not finish).
@@ -110,6 +119,7 @@ def run():
         redteam(llm.available())
         before = llm_budget.budget().snapshot()
         answers()
+        answers_v2()
         syn.run(use_llm=True, out=say)
         say(syn.spend_line(before))
     except Exception:

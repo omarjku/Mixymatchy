@@ -127,6 +127,13 @@ def _annotate_followups(st, cards):
 def build_screen(text, as_of=None, use_llm=True, detail="short", rulebook=None):
     """detail: 'short' (P1 only, the default) or 'long' (P1-P3); KB rulebook only.  rulebook: 'kb' | 'legacy' | None (env)."""
     if rulebook_mode(rulebook) == "kb":
+        from . import screen_v2
+        if screen_v2.enabled():  # DECISIONS 23: SECOND_LOOK_ROUTER=v2 (default off); the old path stays the fallback
+            try:
+                return screen_v2.build_screen_v2(text, as_of=as_of, use_llm=use_llm, detail=detail)
+            except Exception:  # any v2 failure: the old path answers
+                import logging
+                logging.getLogger(__name__).exception("v2 router failed; old path used")
         return build_screen_kb(text, as_of=as_of, use_llm=use_llm, detail=detail)
     return build_screen_legacy(text, as_of=as_of, use_llm=use_llm)
 
@@ -151,6 +158,8 @@ SAFETY_CORE = ("age_sex", "allergies")  # decision 7: on every clinical screen, 
 MAX_ALSO_RELEVANT = 6  # P2 cards in the short view's 'also relevant' group (the rest: long view), KB order
 MAX_SHORT_TOTAL = 16   # short view never shows more cards than this (P1 + also relevant)
 MAX_SUMMARY_CARDS = 6  # safety summary (unrecognised task / not applicable): never a dump
+V2_MAX_SLOTS = 10      # v2 retrieval: AI slots + rules P1 + safety core, about 10 (DECISIONS 23)
+V2_MIN_AI_SLOTS = 3    # ... but the AI's top slots always join
 OVERVIEW_RX = re.compile(r"(?<![a-zäöüß])(overview|summary|summarise|summarize|über(blick|sicht)|zusammenfassung)")
 
 
@@ -215,7 +224,9 @@ def _task_blind_spot(bs, domain):
     return out, other
 
 
-def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
+def build_screen_kb(text, as_of=None, use_llm=True, detail="short", v2=None):
+    """v2: None (old path) or {"slots": [...], "task_label": str, "applicability_item": id|None} from the v2 router
+    (engine/screen_v2.py, DECISIONS 23): gates skipped, AI slots added, sex/age mismatch = note + facts."""
     from . import applicability as A
     from .fill import _dob, _d, age_years
     from .kb import kb as load_kb
@@ -252,7 +263,8 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     role = k.role_by_id.get(u["role_id"])
 
     # applicability (rulebook/applicability.json) and the safety summary for unrecognised tasks
-    app = A.check(u.get("task_text") or "", st, full_text=req["task"], as_of=as_of)
+    app = A.check(u.get("task_text") or "", st, full_text=req["task"], as_of=as_of,
+                  extra_ids=[v2["applicability_item"]] if v2 and v2.get("applicability_item") else ())
 
     # clinical gate (rulebook/clinical_roles.json): patient data only for a clinical requester
     # a role read by the LLM never authorises: kb_role only for a role the rules found in the text
@@ -260,97 +272,104 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     gate = C.classify(req["clean"], kb_alias=(u.get("role_match") or {}).get("matched") if rules_role else None,
                       kb_role=rules_role,
                       task_evidence=C.strong_task(u.get("bundles_matched"), k.fallback_bundle) or bool(app["items"]))
-    if req.get("withdrawn_roles") and gate["decision"] not in ("kb_role", "clinical_term", "not_clinical"):
-        # a withdrawn clinical claim ('I'm not a doctor, but ...') and no other clinical identity left: refuse,
-        # even when the task itself is clinical
-        gate = {"decision": "not_clinical", "clinical": False, "term": req["withdrawn_roles"][0], "label": None}
-    u["clinical_gate"] = gate
-    # LLM primary when it answered (engine/llm_gate.py): its verdict decides, the rules veto (deny wins)
-    from . import llm_gate as G
-    alias0 = (u.get("role_match") or {}).get("matched") if rules_role else None
-    rules_task = rules_actionable = False
-    if u.get("llm_kind"):
-        from . import focus as F0
-        from . import intent as I0
-        named0 = F0.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
-        it0 = I0.has_task(req["task"], k, st, aliases=[alias0] if alias0 else [], named_topics=named0,
-                          applicability_items=app["items"])
-        rules_actionable = it0["actionable"]
-        rules_task = bool(C.strong_task(u.get("bundles_matched"), k.fallback_bundle)) or it0["reason"] in (
-            "KB task", "named topic", "applicability item", "review / overview request")
-        # a question the rules see as a real question (not greeting / filler only) that the model mapped to KB
-        # slots or search words ('has she ever had a stumble at home?' -> falls): the model's reading may route
-        # it.  The requester's role still has to come from the rules (llm_gate.decide); the model adds only slot
-        # ids and search keys, never facts
-        lq = u.get("llm_question") or {}
-        if not rules_actionable and (lq.get("slots") or lq.get("terms")) and u.get("llm_kind") == "clinical_task":
-            from . import ask as Q0
-            from .understand import fold as fold0
-            content = [w for w in re.findall(r"[^\W\d_][\w'-]{3,}", fold0(req["task"]).lower())
-                       if w not in I0.lexicon()["never"] and w not in Q0.STOP]
-            if Q0.is_question(u.get("task_text") or "") and content:
-                rules_actionable = True
-    verdict = G.decide(u, gate, req, [alias0] if alias0 else [], rules_task=rules_task, app_items=app["items"],
-                       rules_actionable=rules_actionable)
-    llm_ok = False
-    if verdict:
-        what, why, vetoed = verdict
-        u["llm_verdict"] = {"verdict": what, "reason": why, "veto": vetoed}
-        if what == "refuse":
-            gate = dict(gate, decision="llm_not_clinical", clinical=False)
-            scr = not_authorised_screen(u, gate, detail, t0)
-            scr["understood"].update(clinical_gate=gate, llm_used=True, llm_reason=why)
-            return scr
-        if what == "spam":
-            return needs_task_screen(u, "LLM: spam or abuse", detail, t0, llm_reason=why, message=G.SPAM_MESSAGE)
-        if what == "no_role":
-            ask = re.sub(r"\s+", " ", req["task"]).strip(" ,;:.?!")[:80]
-            u["clinical_gate"] = dict(gate, clinical=False)
-            return needs_task_screen(u, "LLM: no requester role", detail, t0, llm_reason=why,
-                                     message=C.NEEDS_ROLE_MESSAGE, role_missing=True,
-                                     suggestions=["%s, %s" % (r_, ask) for r_ in C.ROLE_EXAMPLES])
-        if what == "no_task":
-            return needs_task_screen(u, "LLM: no clinical task", detail, t0, llm_reason=why)
-        if what == "data":
-            llm_ok = True
-            gate = {"decision": "llm_clinical", "clinical": True, "term": None,
-                    "label": role["name"] if role else None}
-            u.update(clinical_gate=gate, llm_used=True, llm_reason=why)
-    # rules path (no LLM reading, or a rules veto): no requester role stated (decision 'no_role' or
-    # 'clinical_task': the task alone is clear): never data, the needs_task screen asks who is asking and for
-    # the task (DECISIONS 19); a greeting alone asks for the task
-    if not llm_ok and gate["decision"] in ("no_role", "clinical_task"):
+    if v2 is None:  # the old gates; the v2 router (engine/screen_v2.py) gates minimally before this function
+        if req.get("withdrawn_roles") and gate["decision"] not in ("kb_role", "clinical_term", "not_clinical"):
+            # a withdrawn clinical claim ('I'm not a doctor, but ...') and no other clinical identity left: refuse,
+            # even when the task itself is clinical
+            gate = {"decision": "not_clinical", "clinical": False, "term": req["withdrawn_roles"][0], "label": None}
+        u["clinical_gate"] = gate
+        # LLM primary when it answered (engine/llm_gate.py): its verdict decides, the rules veto (deny wins)
+        from . import llm_gate as G
+        alias0 = (u.get("role_match") or {}).get("matched") if rules_role else None
+        rules_task = rules_actionable = False
+        if u.get("llm_kind"):
+            from . import focus as F0
+            from . import intent as I0
+            named0 = F0.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
+            it0 = I0.has_task(req["task"], k, st, aliases=[alias0] if alias0 else [], named_topics=named0,
+                              applicability_items=app["items"])
+            rules_actionable = it0["actionable"]
+            rules_task = bool(C.strong_task(u.get("bundles_matched"), k.fallback_bundle)) or it0["reason"] in (
+                "KB task", "named topic", "applicability item", "review / overview request")
+            # a question the rules see as a real question (not greeting / filler only) that the model mapped to KB
+            # slots or search words ('has she ever had a stumble at home?' -> falls): the model's reading may route
+            # it.  The requester's role still has to come from the rules (llm_gate.decide); the model adds only slot
+            # ids and search keys, never facts
+            lq = u.get("llm_question") or {}
+            if not rules_actionable and (lq.get("slots") or lq.get("terms")) and u.get("llm_kind") == "clinical_task":
+                from . import ask as Q0
+                from .understand import fold as fold0
+                content = [w for w in re.findall(r"[^\W\d_][\w'-]{3,}", fold0(req["task"]).lower())
+                           if w not in I0.lexicon()["never"] and w not in Q0.STOP]
+                if Q0.is_question(u.get("task_text") or "") and content:
+                    rules_actionable = True
+        verdict = G.decide(u, gate, req, [alias0] if alias0 else [], rules_task=rules_task, app_items=app["items"],
+                           rules_actionable=rules_actionable)
+        llm_ok = False
+        if verdict:
+            what, why, vetoed = verdict
+            u["llm_verdict"] = {"verdict": what, "reason": why, "veto": vetoed}
+            if what == "refuse":
+                gate = dict(gate, decision="llm_not_clinical", clinical=False)
+                scr = not_authorised_screen(u, gate, detail, t0)
+                scr["understood"].update(clinical_gate=gate, llm_used=True, llm_reason=why)
+                return scr
+            if what == "spam":
+                return needs_task_screen(u, "LLM: spam or abuse", detail, t0, llm_reason=why, message=G.SPAM_MESSAGE)
+            if what == "no_role":
+                ask = re.sub(r"\s+", " ", req["task"]).strip(" ,;:.?!")[:80]
+                u["clinical_gate"] = dict(gate, clinical=False)
+                return needs_task_screen(u, "LLM: no requester role", detail, t0, llm_reason=why,
+                                         message=C.NEEDS_ROLE_MESSAGE, role_missing=True,
+                                         suggestions=["%s, %s" % (r_, ask) for r_ in C.ROLE_EXAMPLES])
+            if what == "no_task":
+                return needs_task_screen(u, "LLM: no clinical task", detail, t0, llm_reason=why)
+            if what == "data":
+                llm_ok = True
+                gate = {"decision": "llm_clinical", "clinical": True, "term": None,
+                        "label": role["name"] if role else None}
+                u.update(clinical_gate=gate, llm_used=True, llm_reason=why)
+        # rules path (no LLM reading, or a rules veto): no requester role stated (decision 'no_role' or
+        # 'clinical_task': the task alone is clear): never data, the needs_task screen asks who is asking and for
+        # the task (DECISIONS 19); a greeting alone asks for the task
+        if not llm_ok and gate["decision"] in ("no_role", "clinical_task"):
+            from . import intent as I
+            words = re.findall(r"[^\W\d_][\w'-]*", req["clean"])
+            if words and all(w in I.lexicon()["never"] for w in words):
+                return needs_task_screen(u, "greeting / filler only", detail, t0)  # 'hello', 'ok': still 0 facts
+            if gate["decision"] == "clinical_task" or I.has_task(req["task"], k)["actionable"]:
+                ask = re.sub(r"\s+", " ", req["task"]).strip(" ,;:.?!")[:80]
+                u["clinical_gate"] = dict(gate, clinical=False)
+                return needs_task_screen(u, "no requester role stated", detail, t0, message=C.NEEDS_ROLE_MESSAGE,
+                                         suggestions=["%s, %s" % (r_, ask) for r_ in C.ROLE_EXAMPLES], role_missing=True)
+        if not gate["clinical"]:
+            return not_authorised_screen(u, gate, detail, t0)
+        # no task, no data (engine/intent.py, docs/DECISIONS.md 19): a greeting, filler or a role alone never opens
+        # the record (rules path; the LLM path decided above, a greeting-only request is vetoed there)
+        from . import focus as F
         from . import intent as I
-        words = re.findall(r"[^\W\d_][\w'-]*", req["clean"])
-        if words and all(w in I.lexicon()["never"] for w in words):
-            return needs_task_screen(u, "greeting / filler only", detail, t0)  # 'hello', 'ok': still 0 facts
-        if gate["decision"] == "clinical_task" or I.has_task(req["task"], k)["actionable"]:
-            ask = re.sub(r"\s+", " ", req["task"]).strip(" ,;:.?!")[:80]
-            u["clinical_gate"] = dict(gate, clinical=False)
-            return needs_task_screen(u, "no requester role stated", detail, t0, message=C.NEEDS_ROLE_MESSAGE,
-                                     suggestions=["%s, %s" % (r_, ask) for r_ in C.ROLE_EXAMPLES], role_missing=True)
-    if not gate["clinical"]:
-        return not_authorised_screen(u, gate, detail, t0)
-    # no task, no data (engine/intent.py, docs/DECISIONS.md 19): a greeting, filler or a role alone never opens
-    # the record (rules path; the LLM path decided above, a greeting-only request is vetoed there)
-    from . import focus as F
-    from . import intent as I
-    alias = (u.get("role_match") or {}).get("matched") if rules_role else None
-    named_pre = F.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
-    intent = I.has_task(req["task"], k, st, aliases=[alias] if alias else [], named_topics=named_pre,
-                        applicability_items=app["items"])
-    if not intent["actionable"]:  # a question about a known subject is a task ('does she hav a pacemakr?', engine/ask.py)
-        from . import ask as Q
-        known = [s for s in Q.subjects(u.get("task_text")) if Q.slot_for(s, k) or Q.search_words(s)[1]]
-        # a clinical requester's question about a medical subject ('does she have sarcoidosis?') is answered, if
-        # only with 'Nothing found'; greetings, filler, keyboard mash and small talk are not ('GP: asdfgh?')
-        asked = Q.clinical_subject(st, u.get("task_text"), I.lexicon()["never"])
-        if Q.is_question(u.get("task_text") or "") and (known or asked):
-            intent = dict(intent, actionable=True, words=known or [asked],
-                          reason="question about a known subject" if known else "question from a clinical requester")
-    u["task_check"] = {"actionable": intent["actionable"], "reason": intent["reason"], "words": intent["words"][:8]}
-    if not intent["actionable"] and not llm_ok:  # with the LLM's clinical_task verdict, its reading of the task holds
-        return needs_task_screen(u, intent["reason"], detail, t0)
+        alias = (u.get("role_match") or {}).get("matched") if rules_role else None
+        named_pre = F.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
+        intent = I.has_task(req["task"], k, st, aliases=[alias] if alias else [], named_topics=named_pre,
+                            applicability_items=app["items"])
+        if not intent["actionable"]:  # a question about a known subject is a task ('does she hav a pacemakr?', engine/ask.py)
+            from . import ask as Q
+            known = [s for s in Q.subjects(u.get("task_text")) if Q.slot_for(s, k) or Q.search_words(s)[1]]
+            # a clinical requester's question about a medical subject ('does she have sarcoidosis?') is answered, if
+            # only with 'Nothing found'; greetings, filler, keyboard mash and small talk are not ('GP: asdfgh?')
+            asked = Q.clinical_subject(st, u.get("task_text"), I.lexicon()["never"])
+            if Q.is_question(u.get("task_text") or "") and (known or asked):
+                intent = dict(intent, actionable=True, words=known or [asked],
+                              reason="question about a known subject" if known else "question from a clinical requester")
+        u["task_check"] = {"actionable": intent["actionable"], "reason": intent["reason"], "words": intent["words"][:8]}
+        if not intent["actionable"] and not llm_ok:  # with the LLM's clinical_task verdict, its reading of the task holds
+            return needs_task_screen(u, intent["reason"], detail, t0)
+    else:  # v2 (DECISIONS 23): no clinical gate, no role / task requirement; every clinical wording is answered
+        from . import focus as F
+        named_pre = F.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
+        gate = {"decision": "v2", "clinical": True, "term": None, "label": role["name"] if role else None}
+        u["clinical_gate"] = gate
+        llm_ok = False
     # recognised role (or a clinical requester the lexicon knows), task wording not recognised: the role's own
     # typical task (rulebook/kb_overlay.json role_fallback_bundles, else its first default bundle) with a
     # visible note, instead of the generic safety summary
@@ -400,8 +419,8 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
                       ("%s patient" % A.SEX_WORD.get(app["sex"], app["sex"])) for r in app["not_applicable"]))
         # the whole request does not apply: the task is not recognised otherwise, the item is about who asks
         # (paediatrics, obstetrics ...), or the asking specialty exists for this item (urologist + prostate)
-        whole = fallback or any(r.get("scope") == "request" or u.get("role_id") in r.get("roles")
-                                for r in app["not_applicable"])
+        whole = v2 is None and (fallback or any(r.get("scope") == "request" or u.get("role_id") in r.get("roles")
+                                                for r in app["not_applicable"]))
         if whole:
             mode, slots = "not_applicable", list(safety)
             u["fallback_note"] = None
@@ -518,6 +537,17 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         if x not in slots:
             slots.append(x)
             _ensure_info(k, info, x, "your question (AI reading)" if x in ai_slots else "your question")
+    if v2 is not None and v2.get("slots"):  # v2: the AI's ranked slots join the rules' slots (about 10 in all)
+        added = 0
+        for x in v2["slots"]:
+            if x in k.slot_by_id and x not in slots and (len(slots) < V2_MAX_SLOTS or added < V2_MIN_AI_SLOTS):
+                slots.append(x)
+                _ensure_info(k, info, x, "AI reading")
+                added += 1
+        if mode == "fallback":
+            mode = "task"
+            u["fallback_note"] = None
+            u["task_labels"] = [v2.get("task_label") or "Your question"]
     u["question_only"] = question_only
     u["asked_slots"] = ask_slots
     u["asked_subjects"] = ask_subs
