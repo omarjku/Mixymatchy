@@ -24,6 +24,77 @@ const anaesthetistBrief: PatientBrief = {
         guidelineName: "DGAI/DGCH Empfehlung perioperatives Gerinnungsmanagement",
         excerpt: "Pausierung direkter oraler Antikoagulanzien abhängig von Blutungsrisiko und Nierenfunktion.",
       },
+      // invented: the dose a newer letter replaced (Details: "Medication changes")
+      rows: [
+        {
+          id: "an-1:now",
+          text: "Apixaban 5 mg 1-0-1",
+          date: "01.09.2026",
+          sources: [
+            {
+              documentId: "doc-medplan-2026",
+              documentLabel: "Bundeseinheitlicher Medikationsplan, Sept. 2026",
+              excerpt: "Apixaban 5 mg, 1-0-1, bei Vorhofflimmern",
+            },
+          ],
+        },
+      ],
+      superseded: [
+        {
+          id: "an-1:old",
+          text: "Apixaban 2,5 mg 1-0-1",
+          date: "12.03.2026",
+          sources: [
+            {
+              documentId: "doc-outpatient-2026",
+              documentLabel: "Ambulanzbrief, März 2026",
+              excerpt: "Apixaban 2,5 mg 1-0-1.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // invented: weight series as the backend sends a trend need (Details: "Changes over time")
+      id: "an-6",
+      label: "Gewicht",
+      value: "81 kg → 70 kg → 69 kg",
+      trust: "consistent",
+      source: {
+        documentId: "doc-discharge-2025",
+        documentLabel: "Entlassbrief Kardiologie, Juni 2025",
+        excerpt: "Gewicht 81 kg, Größe 168 cm.",
+      },
+      sources: [
+        { documentId: "doc-discharge-2025", documentLabel: "Entlassbrief Kardiologie, Juni 2025", excerpt: "Gewicht 81 kg, Größe 168 cm." },
+        { documentId: "doc-outpatient-2026", documentLabel: "Ambulanzbrief, März 2026", excerpt: "Gewicht 70 kg, Größe 169 cm, BMI 28,4 kg/m²." },
+        { documentId: "doc-anamnesis-2026", documentLabel: "Aufnahmebogen, Okt. 2026", excerpt: "Gewicht 69 kg, Größe 168 cm." },
+      ],
+      isTimeSeries: true,
+      history: [
+        { date: "2025-06-27", value: "81", unit: "kg" },
+        { date: "2026-03-12", value: "70", unit: "kg" },
+        { date: "2026-10-14", value: "69", unit: "kg" },
+      ],
+      trend: {
+        points: [
+          { value: "81 kg", date: "27.06.2025" },
+          { value: "70 kg", date: "12.03.2026" },
+          { value: "69 kg", date: "14.10.2026" },
+        ],
+        numbers: [81, 70, 69],
+        change: "−12 kg in 16 Monaten",
+        formula: "69 kg − 81 kg",
+      },
+      rows: [
+        {
+          id: "an-6:bmi",
+          text: "BMI: 24,4 kg/m²",
+          computed: true,
+          note: "69 kg / (1,68 m)²",
+          sources: [{ documentId: "doc-anamnesis-2026", documentLabel: "Aufnahmebogen, Okt. 2026", excerpt: "Gewicht 69 kg, Größe 168 cm." }],
+        },
+      ],
     },
     {
       id: "an-2",
@@ -93,6 +164,28 @@ const anaesthetistBrief: PatientBrief = {
           documentLabel: "Aufnahmebogen, Okt. 2026",
           excerpt: "Allergien: keine bekannt.",
         },
+      ],
+    },
+    {
+      // invented: data-quality note (Details: "Record checks")
+      id: "an-n1",
+      factLabel: "BMI",
+      tier: "documentation_note",
+      explanation: "Im Ambulanzbrief steht BMI 28,4 kg/m²; aus 70 kg und 169 cm ergeben sich 24,5 kg/m².",
+      conflictingSources: [
+        { documentId: "doc-outpatient-2026", documentLabel: "Ambulanzbrief, März 2026", excerpt: "Gewicht 70 kg, Größe 169 cm, BMI 28,4 kg/m²." },
+      ],
+    },
+  ],
+  // invented: a task fact the latest letter no longer mentions (Details: "Blind spot")
+  gaps: [
+    {
+      id: "an-g1",
+      kind: "dropped",
+      title: "Schlafapnoe",
+      explanation: "Zuletzt erwähnt im Entlassbrief Kardiologie, Juni 2025; im neuesten Brief nicht mehr aufgeführt.",
+      sources: [
+        { documentId: "doc-discharge-2025", documentLabel: "Entlassbrief Kardiologie, Juni 2025", excerpt: "Nebendiagnosen: Obstruktive Schlafapnoe (CPAP)." },
       ],
     },
   ],

@@ -43,6 +43,7 @@ export interface Fact {
   priority?: string;          // knowledge-base priority of the need (P1 / P2 / P3)
   rows?: FactRow[];           // one need with several facts: one compact row each (value · date · source)
   trend?: TrendSummary;       // trend need: "78 kg → 67 kg → 66 kg (−12 kg over 10 months)"
+  superseded?: FactRow[];     // older values a newer letter replaced (Details: "Medication changes")
 }
 
 // One documented statement inside a need's card. collapsed: the engine put it behind "+N more"

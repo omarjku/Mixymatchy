@@ -9,7 +9,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { FactRows, TrendLine } from "@/components/FactCard";
 import { Icon, type IconGlyph } from "@/components/ui/Icon";
-import { hasHistory, ValueHistory } from "@/components/ValueHistory";
 import { t } from "@/i18n/strings";
 import { cn } from "@/lib/utils";
 import type { Fact, FactRow, FactTrust } from "@/types/fact";
@@ -39,19 +38,17 @@ const rowTint: Partial<Record<FactTrust, string>> = {
 
 export interface FactListProps {
   facts: Fact[];
-  showHistory?: boolean;
   onPressSource: (fact: Fact) => void;
   onPressGuideline: (fact: Fact) => void;
 }
 
-export function FactList({ facts, showHistory = false, onPressSource, onPressGuideline }: FactListProps) {
+export function FactList({ facts, onPressSource, onPressGuideline }: FactListProps) {
   return (
     <ul className="divide-y divide-line border-y border-line">
       {facts.map((fact) => (
         <FactListRow
           key={fact.id}
           fact={fact}
-          showHistory={showHistory}
           onPressSource={onPressSource}
           onPressGuideline={onPressGuideline}
         />
@@ -62,12 +59,10 @@ export function FactList({ facts, showHistory = false, onPressSource, onPressGui
 
 function FactListRow({
   fact,
-  showHistory,
   onPressSource,
   onPressGuideline,
 }: {
   fact: Fact;
-  showHistory: boolean;
   onPressSource: (fact: Fact) => void;
   onPressGuideline: (fact: Fact) => void;
 }) {
@@ -88,7 +83,8 @@ function FactListRow({
   } else if (!documented) {
     value = <p className="text-[15px] font-medium text-undocumented">{t("trust.not_documented")}</p>;
   } else if (fact.trend) {
-    value = <TrendLine fact={fact} onPressRow={openRow} />;
+    // text only: the charts are in Details
+    value = <TrendLine fact={fact} onPressRow={openRow} sparkline={false} />;
   } else if (multi) {
     value = <FactRows rows={rows} onPressRow={openRow} className="mt-0" />;
   } else {
@@ -154,7 +150,6 @@ function FactListRow({
             {fact.note}
           </p>
         )}
-        {showHistory && documented && hasHistory(fact) && <ValueHistory fact={fact} />}
       </div>
     </li>
   );

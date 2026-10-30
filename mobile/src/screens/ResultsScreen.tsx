@@ -1,17 +1,18 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { lazy, type ReactNode, Suspense, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Add01Icon, LanguageSkillIcon, StopCircleIcon, VolumeHighIcon } from "@hugeicons/core-free-icons";
 import { AppBar } from "@/components/AppBar";
 import { ContradictionCard } from "@/components/ContradictionCard";
 import { FactRows, RowSource, TrendLine } from "@/components/FactCard";
 import { FactList } from "@/components/FactList";
+import { HistoryLog } from "@/components/HistoryLog";
 import { PatientCard } from "@/components/PatientCard";
 import { SourceViewer } from "@/components/SourceViewer";
-import { hasHistory } from "@/components/ValueHistory";
 import { ViewTabs } from "@/components/ViewTabs";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { roles } from "@/data/roles";
 import { intlLocale, toggleLocale, useLocale } from "@/i18n/locale";
 import { t } from "@/i18n/strings";
@@ -22,10 +23,16 @@ import type { Fact, FactRow, GuidelineCitation, PatientBrief, SourceCitation } f
 import type { BriefRequest } from "@/types/request";
 
 // Results: patient + how the request was read, banners (not authorised / not applicable / task not
-// recognised), the record's contradictions, the facts the task needs (P1), "Also relevant" (P2, always
-// visible), documentation notes and open items. Every source link opens the original letter.
+// recognised), then three levels with different content:
+//   Overview: plain text, what matters now: contradictions, the facts the task needs (P1), "Also relevant" (P2)
+//   Details:  the in-depth view: charts of changes, medication changes, calculations, record checks, open items
+//   History:  a plain log of every dated entry, newest first
+// Every source link opens the original letter.
 
-type View = "overview" | "history";
+type View = "overview" | "details" | "history";
+
+// Details level: charts (recharts) load only when the tab is opened
+const DetailsView = lazy(() => import("@/components/details/DetailsView"));
 type Viewer = { citations: SourceCitation[]; index: number; title: string };
 
 export function ResultsScreen() {
@@ -71,8 +78,6 @@ export function ResultsScreen() {
   const mode = brief.screenMode ?? "task";
   const notAuthorised = mode === "not_authorised";
   const stats = brief.stats ?? {};
-  const allFacts = [...brief.facts, ...(brief.alsoRelevant ?? [])];
-  const historyCount = allFacts.filter((f) => f.trust !== "not_documented" && hasHistory(f)).length;
 
   const openSources = (citations: SourceCitation[], index: number, title: string) =>
     citations.length > 0 && setViewer({ citations, index, title });
@@ -91,9 +96,7 @@ export function ResultsScreen() {
   }
 
   const contradictions = brief.contradictions.filter((c) => (c.tier ?? "contradiction") === "contradiction");
-  const notes = brief.contradictions.filter((c) => c.tier === "documentation_note");
-  const gaps = brief.gaps ?? [];
-  const droppedOnScreen = gaps.filter((g) => g.kind === "dropped").length;
+  const droppedOnScreen = (brief.gaps ?? []).filter((g) => g.kind === "dropped").length;
   const blindSpot = stats.blind_spot ?? 0;
   const taskConcepts = stats.task_concepts ?? 0;
   const otherIssues = stats.other_record_issues ?? 0;
@@ -161,6 +164,7 @@ export function ResultsScreen() {
                 <ViewTabs
                   tabs={[
                     { id: "overview", label: t("results.view.overview") },
+                    { id: "details", label: t("results.view.details") },
                     { id: "history", label: t("results.view.history") },
                   ]}
                   active={view}
@@ -168,12 +172,12 @@ export function ResultsScreen() {
                   label={t("results.view.label")}
                   panelId="facts-panel"
                 />
-                <p className={cn("px-2 text-xs text-ink-muted", view === "history" && "mt-2")} aria-live="polite">
+                <p className="mt-2 px-2 text-xs text-ink-muted" aria-live="polite">
                   {view === "overview"
-                    ? <span className="sr-only">{t("results.view.overviewHint")}</span>
-                    : historyCount > 0
-                      ? t("results.view.historyAvailable", { n: historyCount, m: allFacts.length })
-                      : t("results.view.historyNone")}
+                    ? t("results.view.overviewHint")
+                    : view === "details"
+                      ? t("results.view.detailsHint")
+                      : t("results.view.historyHint")}
                 </p>
               </div>
             )}
@@ -226,7 +230,7 @@ export function ResultsScreen() {
             )}
 
             {/* Margin note: shown only when the dropped facts are on this screen */}
-            {!notAuthorised && blindSpot > 0 && taskConcepts > 0 && droppedOnScreen > 0 && (
+            {!notAuthorised && view === "overview" && blindSpot > 0 && taskConcepts > 0 && droppedOnScreen > 0 && (
               <section data-blind-spot className="border-l-4 border-contradiction pl-4">
                 <h2 className="text-[15px] font-semibold text-contradiction-deep">{t("results.blindSpot.title")}</h2>
                 <p className="mt-0.5 text-[15px] text-ink">
@@ -235,7 +239,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {contradictions.length > 0 && (
+            {view === "overview" && contradictions.length > 0 && (
               <section aria-labelledby="contradictions-heading">
                 <h2 id="contradictions-heading" className="mb-3 text-sm font-semibold text-contradiction-deep">
                   {t("results.contradictionsHeading")} ({contradictions.length})
@@ -252,7 +256,21 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!notAuthorised && (
+            {!notAuthorised && view === "details" && (
+              <section id="facts-panel" aria-label={t("results.view.details")}>
+                <Suspense fallback={<Skeleton className="h-64 w-full rounded-lg" />}>
+                  <DetailsView brief={brief} onOpenSources={openSources} />
+                </Suspense>
+              </section>
+            )}
+
+            {!notAuthorised && view === "history" && (
+              <section id="facts-panel" aria-label={t("results.view.history")}>
+                <HistoryLog brief={brief} onOpenSources={openSources} />
+              </section>
+            )}
+
+            {!notAuthorised && view === "overview" && (
               <section id="facts-panel" aria-labelledby="facts-heading">
                 <h2 id="facts-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.factsHeading")} ({brief.facts.length})
@@ -264,7 +282,6 @@ export function ResultsScreen() {
                 ) : (
                   <FactList
                     facts={brief.facts}
-                    showHistory={view === "history"}
                     onPressSource={showSource}
                     onPressGuideline={showGuideline}
                   />
@@ -272,7 +289,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!notAuthorised && (brief.alsoRelevant?.length ?? 0) > 0 && (
+            {!notAuthorised && view === "overview" && (brief.alsoRelevant?.length ?? 0) > 0 && (
               <section aria-labelledby="also-heading" data-also-relevant>
                 <h2 id="also-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.alsoRelevant")} ({brief.alsoRelevant!.length})
@@ -281,52 +298,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {notes.length > 0 && (
-              <section aria-labelledby="notes-heading">
-                <h2 id="notes-heading" className="mb-3 text-sm font-semibold text-ink-muted">
-                  {t("results.notesHeading")} ({notes.length})
-                </h2>
-                <div className="space-y-3">
-                  {notes.map((c) => (
-                    <ContradictionCard
-                      key={c.id}
-                      contradiction={c}
-                      onPressSource={(source, all) => openSources(all, all.indexOf(source), c.factLabel)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {gaps.length > 0 && (
-              <section aria-labelledby="gaps-heading">
-                <h2 id="gaps-heading" className="mb-3 text-sm font-semibold text-ink-muted">
-                  {t("results.gapsHeading")} ({gaps.length})
-                </h2>
-                <ul className="divide-y divide-line border-y border-line">
-                  {gaps.map((gap) => (
-                    <li key={gap.id} className="px-3 py-3">
-                      <p className="text-xs font-medium text-ink-muted">{t(`results.gap.${gap.kind}`)}</p>
-                      <p className="mt-0.5 text-[15px] font-semibold text-ink">{gap.title}</p>
-                      {gap.explanation && <p className="mt-0.5 text-[14px] text-ink-muted">{gap.explanation}</p>}
-                      {gap.sources.length > 0 && (
-                        <button
-                          type="button"
-                          data-source
-                          onClick={() => openSources(gap.sources, 0, gap.title)}
-                          className="mt-2 text-[13px] font-medium text-primary-deep underline underline-offset-2"
-                        >
-                          {t("results.source")}
-                          {gap.sources.length > 1 ? ` (${gap.sources.length})` : ""}
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {!notAuthorised && otherIssues > 0 && (
+            {!notAuthorised && view === "overview" && otherIssues > 0 && (
               <p className="text-sm text-ink-muted" data-other-issues>
                 {t("results.otherIssues", { n: otherIssues })}
               </p>
