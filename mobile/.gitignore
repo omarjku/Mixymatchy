@@ -26,3 +26,8 @@ dist-ssr
 # The repo root ignores every data/ folder (IBM patient data rule). src/data/ here holds only
 # role config and invented mock patients, no real patient data, so it is re-included.
 !src/data/
+
+# Playwright output (can contain patient text: never commit)
+test-results/
+playwright-report/
+blob-report/

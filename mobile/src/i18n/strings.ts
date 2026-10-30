@@ -1,7 +1,9 @@
-// All user-facing UI strings. German first; keep keys stable; the language toggle (Phase 10) swaps values.
-// Copy rule: factual only ("Erforderliche Prüfungen", "Verifiziert", "Nicht dokumentiert"): never advisory.
+import { getLocale, type Locale } from "@/i18n/locale";
 
-export const strings = {
+// All user-facing UI strings, English (default) and German. Keep keys stable; every key needs both languages.
+// Copy rule: factual only ("Verified", "Not documented"): never advisory.
+
+const de = {
   "app.name": "Second Look",
   "readonly.title": "Nur Lesen: Second Look ändert keine Daten",
   "readonly.body":
@@ -172,10 +174,173 @@ export const strings = {
   "dev.styleguide.title": "Styleguide",
 } as const;
 
-export type StringKey = keyof typeof strings;
+export type StringKey = keyof typeof de;
+
+const en: Record<StringKey, string> = {
+  "app.name": "Second Look",
+  "readonly.title": "Read only: Second Look never changes the record",
+  "readonly.body":
+    "Letters, reports and notes stay unchanged. Errors can only be flagged; every flag is reviewed.",
+  "app.disclaimer": "Decision support only. A clinician reviews every fact before acting.",
+
+  "start.title": "What are you about to do?",
+  "start.subtitle": "Pick your role and describe the task. You only see the facts this task needs, each with its source.",
+  "start.roleHeading": "Role",
+  "start.suggestionsHeading": "Common tasks",
+  "start.roleMissing": "Pick a role first.",
+
+  "bar.placeholder.display": "Describe the task",
+  "bar.placeholder.speak": "Task to read aloud",
+  "bar.mode.switchLabel": "Read the result aloud",
+  "bar.mode.display": "The result is shown on screen.",
+  "bar.mode.speak": "The result is shown and read aloud.",
+  "bar.mode.speakUnsupported": "No English voice on this device. The result is shown on screen only.",
+  "bar.send": "Get the patient brief",
+
+  "role.anaesthetist.name": "Anaesthetist",
+  "role.anaesthetist.description": "Pre-operative check",
+  "role.pharmacist.name": "Pharmacist",
+  "role.pharmacist.description": "Medication review",
+  "role.surgeon.name": "Surgeon",
+  "role.surgeon.description": "Surgery planning",
+  "role.gp.name": "GP",
+  "role.gp.description": "Follow-up care",
+  "role.emergency.name": "Emergency",
+  "role.emergency.description": "Acute care",
+  "role.other.name": "Other role",
+  "role.other.description": "Type your role and task",
+  "task.emergency.neuro": "Dizziness and blurred vision at night",
+  "task.emergency.contrast": "CT angiography with contrast planned",
+
+  "task.anaesthetist.breast": "Pre-op check: breast surgery",
+  "task.anaesthetist.hip": "Pre-op check: hip replacement",
+  "task.anaesthetist.general": "Pre-op check: general",
+  "task.pharmacist.polypharmacy": "Medication review: polypharmacy",
+  "task.pharmacist.renal": "Dose check: kidney function",
+  "task.pharmacist.admission": "Reconcile admission medication",
+  "task.surgeon.hip": "Surgery planning: hip replacement",
+  "task.surgeon.breast": "Surgery planning: breast surgery",
+  "task.surgeon.hernia": "Surgery planning: inguinal hernia",
+  "task.gp.discharge": "Follow-up after a hospital stay",
+  "task.gp.chronic": "Review of a chronic condition",
+  "task.gp.medication": "Update the medication plan",
+
+  "trust.verified": "Verified",
+  "trust.ai_inferred": "Review needed",
+  "trust.not_documented": "Not documented",
+  "trust.conflicting": "Conflicting",
+  "trust.outdated": "Outdated",
+  "label.documentationNote": "Documentation note",
+  "results.notesHeading": "Documentation notes",
+  "results.gapsHeading": "Open items",
+  "results.gap.dropped": "Not in the latest letter",
+  "results.gap.followup": "No later record",
+  "results.gap.silence": "Not mentioned in any letter",
+  "results.computed": "Calculated",
+  "results.moreEntries": "{n} more entries",
+  "results.notApplicable": "Not applicable",
+  "results.backendError": "The server cannot be reached. Try again.",
+
+  "action.source": "Show source",
+  "action.guideline": "Show guideline",
+  "action.flag": "Flag",
+  "action.export": "Export",
+  "action.close": "Close",
+  "action.submitFlag": "Send flag",
+  "action.cancel": "Cancel",
+  "action.retry": "Try again",
+  "action.back": "Back",
+
+  "label.contradiction": "Contradiction",
+  "label.severity.low": "Low",
+  "label.severity.medium": "Medium",
+  "label.severity.high": "High",
+
+  "loading.title": "Building the patient brief …",
+  "loading.error.title": "The patient brief could not be loaded",
+  "loading.error.timeout": "No answer within 10 seconds.",
+  "loading.error.generic": "Something went wrong while fetching the data.",
+
+  "results.generatedAt": "As of",
+  "results.contradictionsHeading": "The record disagrees",
+  "results.factsHeading": "What you need",
+  "results.empty": "No facts were found for this task.",
+  "results.source": "Source",
+  "results.guideline": "Guideline",
+  "results.patientRecord": "Patient record",
+  "results.guidelineReason": "Why this is shown",
+  "results.readAloud": "Read aloud",
+  "results.stopReading": "Stop reading",
+  "results.noGermanVoice": "Read aloud not available: no English voice on this device",
+  "results.language": "Language",
+  "results.comingSoon": "Coming in a later step.",
+  "results.flagTitle": "Flag this fact",
+  "results.severity": "Severity",
+  "results.view.label": "View",
+  "results.view.overview": "Overview",
+  "results.view.history": "History",
+  "results.view.historyAvailable": "History available for {n} of {m} facts.",
+  "results.view.historyNone": "No earlier values are documented for any fact.",
+  "results.view.overviewHint": "Current values. History shows earlier values where documented.",
+  "results.view.dashboard": "Dashboard",
+  "results.view.dashboardHint": "Changes calculated from documented values. Calculations, not diagnoses.",
+  "results.sources": "Sources",
+
+  "dash.title": "Key figures",
+  "dash.recordsThrough": "Records through {date}",
+  "dash.loading": "Loading key figures …",
+  "dash.error": "Key figures could not be loaded.",
+  "dash.empty": "No measurements or dose changes are documented for this patient.",
+  "dash.proof.title": "Sourced facts",
+  "dash.proof.ring": "with source",
+  "dash.proof.text": "{n} of {m} facts are backed by a source passage. Removed because not found in the letter: {r}.",
+  "dash.tiles": "Documented changes",
+  "dash.tile.weight": "Weight",
+  "dash.tile.bmi": "BMI calculated",
+  "dash.tile.dose": "{drug} prescribed",
+  "dash.tile.bp": "Blood pressure: {label}",
+  "dash.tile.compare": "{from} → {to}",
+  "dash.sourcesFor": "Sources: {label}",
+  "dash.weight.title": "Weight",
+  "dash.weight.unit": "kg",
+  "dash.bmi.title": "BMI: written and calculated",
+  "dash.bmi.recorded": "Written in the letter",
+  "dash.bmi.calculated": "Calculated from weight and height",
+  "dash.bmi.agrees": "Agrees",
+  "dash.bmi.differs": "Difference {diff}",
+  "dash.bmi.notRecorded": "No BMI written",
+  "dash.bmi.note":
+    "Difference = written minus calculated, in kg/m². Tolerance {tol} kg/m² for data quality, not a clinical threshold. A difference does not show which input is wrong.",
+  "dash.bp.title": "Blood pressure comparisons",
+  "dash.bp.unit": "mmHg",
+  "dash.bp.percent": "Systolic {sys} · Diastolic {dia}",
+  "dash.dated.title": "Dated findings without a trend",
+  "dash.notes.title": "Documented context",
+
+  "patient.id": "ID",
+  "patient.details": "Details",
+  "patient.openDetails": "Open patient details",
+  "patient.closeDetails": "Close patient details",
+  "patient.trustSummary": "Facts by trust level",
+  "patient.stats": "Measurements over time",
+  "patient.noStats": "No earlier values in the documents.",
+  "patient.documents": "Source documents",
+  "patient.factSingular": "fact",
+  "patient.factPlural": "facts",
+  "patient.inContradiction": "Contradiction",
+  "patient.trend": "History",
+
+  "speech.contradiction": "Contradiction",
+  "speech.notDocumented": "not documented",
+
+  "dev.styleguide.title": "Styleguide",
+};
+
+const dictionaries: Record<Locale, Record<StringKey, string>> = { en, de };
 
 // Optional vars fill {placeholders}, so word order stays in the translation: t("x", { n: 1, m: 5 })
+// Reads the current locale on every call; App remounts the screens when the locale changes.
 export function t(key: StringKey, vars?: Record<string, string | number>): string {
-  const text: string = strings[key];
+  const text: string = dictionaries[getLocale()][key];
   return vars ? text.replace(/\{(\w+)\}/g, (match, name) => String(vars[name] ?? match)) : text;
 }

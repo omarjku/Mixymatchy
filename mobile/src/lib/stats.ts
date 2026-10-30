@@ -1,7 +1,8 @@
+import { intlLocale } from "@/i18n/locale";
 import type { BloodPressure, MeasurementSet } from "@/types/stats";
 
 // Arithmetic on documented values. Results are calculations, not diagnoses: no thresholds,
-// no "good/bad", no classification. Formatting is German (comma decimals).
+// no "good/bad", no classification. Formatting follows the UI language.
 
 // Data-quality tolerance for "recorded BMI matches weight/height" (not a clinical threshold)
 export const BMI_TOLERANCE = 0.5;
@@ -40,12 +41,13 @@ export function bpChange(from: BloodPressure, to: BloodPressure) {
   return { systolic: change(from.systolic, to.systolic), diastolic: change(from.diastolic, to.diastolic) };
 }
 
-const numberFormats = new Map<number, Intl.NumberFormat>();
+const numberFormats = new Map<string, Intl.NumberFormat>();
 export function formatNumber(value: number, decimals = 0): string {
-  let format = numberFormats.get(decimals);
+  const key = `${intlLocale()}:${decimals}`;
+  let format = numberFormats.get(key);
   if (!format) {
-    format = new Intl.NumberFormat("de-DE", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    numberFormats.set(decimals, format);
+    format = new Intl.NumberFormat(intlLocale(), { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    numberFormats.set(key, format);
   }
   return format.format(value);
 }
@@ -63,5 +65,5 @@ export function formatBp(bp: BloodPressure): string {
 }
 
 export function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return new Intl.DateTimeFormat(intlLocale(), { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
 }

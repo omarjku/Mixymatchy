@@ -4,7 +4,8 @@ import { TaskBar } from "@/components/TaskBar";
 import { Chip } from "@/components/ui/Chip";
 import { roles, type RoleId } from "@/data/roles";
 import { t } from "@/i18n/strings";
-import { unlockSpeech, useGermanVoiceAvailable } from "@/lib/speech";
+import { unlockSpeech, useVoiceAvailable } from "@/lib/speech";
+import { toggleLocale, useLocale } from "@/i18n/locale";
 import type { BriefRequest, DeliveryMode } from "@/types/request";
 
 // Start screen: pick a role, then type the task in the bar (or tap a suggestion). Bar sits at the bottom,
@@ -19,7 +20,8 @@ export function RoleTaskSelectScreen() {
   const role = roles.find((r) => r.id === roleId);
   const trimmedTask = task.trim();
   const canSubmit = role !== undefined && trimmedTask.length > 0;
-  const speechAvailable = useGermanVoiceAvailable();
+  const speechAvailable = useVoiceAvailable();
+  const locale = useLocale();
 
   function selectRole(id: RoleId) {
     if (id === roleId) return;
@@ -45,8 +47,16 @@ export function RoleTaskSelectScreen() {
   return (
     // Phone: bar pinned to the bottom (thumb reach). Tablet/desktop: one centered composer column.
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pt-[env(safe-area-inset-top)] md:max-w-2xl md:px-8">
-      <header className="flex h-14 items-center md:h-20">
+      <header className="flex h-14 items-center justify-between md:h-20">
         <span className="text-[15px] font-semibold tracking-tight text-primary-deep">{t("app.name")}</span>
+        <button
+          type="button"
+          onClick={toggleLocale}
+          aria-label={`${t("results.language")}: ${locale === "en" ? "English" : "Deutsch"}`}
+          className="h-9 rounded-full border border-line px-3 text-xs font-semibold text-ink-muted hover:border-primary/60 hover:text-primary-deep"
+        >
+          {locale === "en" ? "EN" : "DE"}
+        </button>
       </header>
 
       <div className="flex flex-1 flex-col md:justify-center md:pb-[12vh]">
