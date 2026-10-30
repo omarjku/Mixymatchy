@@ -36,6 +36,13 @@ def brief(screen):
     for c in screen["cards"]:
         out.append("  [%s] %-5s %s: %s  {%s}" % (MARK.get(c["status"], "?"), c["priority"], c["label_en"],
                                                  c["value_en"][:200], ",".join(c["facts"][:6])))
+    for c in screen.get("focus") or []:
+        out.append("  [%s] focus %s: %s  {%s}" % (MARK.get(c["status"], "?"), c["label_en"], (c.get("value_en") or "")[:200],
+                                                ",".join(c["facts"][:6])))
+        for cl in c.get("computed_lines") or []:
+            out.append("        %s: %s" % (cl["label"], (cl.get("value") or "")[:160]))
+    for c in screen.get("also_relevant") or []:
+        out.append("  [%s] also  %s: %s" % (MARK.get(c["status"], "?"), c["label_en"], (c.get("value_en") or "")[:120]))
     if screen.get("blind_spot"):
         out.append("-- blind spot: " + screen["blind_spot"]["summary_en"])
         for i in screen["blind_spot"]["items"]:
