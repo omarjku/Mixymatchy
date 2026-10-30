@@ -221,9 +221,10 @@ class TestUnseenRoles(unittest.TestCase):
         s = screen("Chest pain at night. You are the emergency physician.")
         self.assertEqual(s["understood"]["bundle_ids"], ["B18"])
         self.assertTrue(s["understood"]["fallback_note"])
-        s = screen("Something completely different.")
+        s = screen("Something completely different.")  # no role, no task: clinical gate (test_clinical_gate)
         self.assertEqual(s["understood"]["role_id"], "other")
-        self.assertIn("not recognised", s["understood"]["fallback_note"])
+        self.assertEqual(s["screen_mode"], "not_authorised")
+        self.assertIn("clinical role", s["understood"]["fallback_note"])
 
     def test_german_and_fuzzy(self):
         u = screen("Anästhesist: Prämedikationsvisite vor Quadrantektomie")["understood"]

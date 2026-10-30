@@ -76,7 +76,11 @@ export interface Routing {
   fallback_note?: string | null;
   applicability_note?: string | null;
   suggestions?: string[];
-  screen_mode?: "task" | "fallback" | "not_applicable" | "sex_specific" | "overview" | null;
+  screen_mode?: "task" | "fallback" | "not_applicable" | "sex_specific" | "overview" | "not_authorised" | null;
+  // clinical gate: "not_authorised" = no clinical role stated, no patient data in the briefing
+  message?: string | null;
+  role_label?: string | null;
+  clinical_gate?: "kb_role" | "clinical_term" | "clinical_task" | "not_clinical" | "no_role" | null;
   other_record_issues?: number;
   other_record_issues_en?: string | null;
   [key: string]: unknown;

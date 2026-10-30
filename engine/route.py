@@ -11,6 +11,7 @@ import difflib
 import re
 
 from . import llm
+from .clinical import is_clinical_word
 from .slots import drug_classes_of, found, rx
 from .understand import _phrase_rx, _you_are_spans, extract_modifiers, norm_text
 
@@ -88,6 +89,10 @@ def match_role(t, kb):
             if len(a) < 5:
                 continue
             for g in grams:
+                # a typo keeps its first letter; a distinct clinical word is never a typo of another role
+                # ('urologist' is not 'neurologist', 'rheumatologist' not 'pneumologist')
+                if g[:1] != a[:1] or is_clinical_word(g):
+                    continue
                 r = difflib.SequenceMatcher(None, g, a).ratio()
                 if r >= FUZZY_THRESHOLD and (best is None or r > best[0]):
                     best = (r, role["id"], alias)
