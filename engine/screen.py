@@ -337,7 +337,10 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     defaults = [b for b in cand if b in k.bundle_by_id]
     # the request names its own topics ('Endocrinologist, thyroid'): the core summary plus those topics, not the
     # role's typical task (which may be about something else, e.g. diabetes)
-    if named_pre and defaults and k.fallback_bundle in k.bundle_by_id:
+    # ... unless every named topic is part of the role's own task ('oncologist: receptor status' stays oncology)
+    own = {x for b in defaults for p_ in ("P1", "P2") for x in (k.bundle_by_id[b].get("slots") or {}).get(p_) or []}
+    in_own = all(tp.get("slots") and set(tp["slots"]) <= own for tp in named_pre)
+    if named_pre and defaults and k.fallback_bundle in k.bundle_by_id and not in_own:
         defaults = [k.fallback_bundle]
     if (u["tasks_from"] == "fallback" and defaults and not app["items"]
             and not OVERVIEW_RX.search(u.get("task_text") or "")):
@@ -432,15 +435,19 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
                 and not (ex_text and fold(s) in ex_text)  # 'not interested in X' wins
                 and not any(r.get("term") and fold(norm_text(r["term"]))[:6] in fold(s)  # applicability answers it
                             for r in app["items"])] if asked else []
+    if ask_subs and _asks_judgement(u.get("task_text") or ""):  # 'Sportfreigabe ja oder nein?': the role's view
+        ask_subs = [s for s in ask_subs if Q.slot_for(s, k)]      # answers it, not a word search
     if tags:  # a matched task already answers its own words; an unknown word beside it is likely a typo of one
         ask_subs = [s for s in ask_subs if Q.slot_for(s, k) or Q.search_words(s)[1]]
     ask_slots = [x for x in dict.fromkeys(Q.slot_for(s, k) for s in ask_subs) if x]  # a KB slot answers these
     ask_subs = [s for s in ask_subs if not Q.slot_for(s, k)]
     unanswered = ask_subs[Q.MAX_SUBJECTS:]
     ask_subs = ask_subs[:Q.MAX_SUBJECTS]
-    # only when the rules and the LLM chose no task (the role's default or the general fallback stood in)
+    # only when the rules and the LLM chose no task (the role's default or the general fallback stood in), and the
+    # question asks for a fact, not a judgement the role's own view answers ('Sportfreigabe ja oder nein?')
     question_only = bool(asked and mode != "not_applicable" and (named or ask_subs or ask_slots)
-                         and not u.get("bundles_matched") and u.get("tasks_from") in ("role_default", "fallback"))
+                         and not u.get("bundles_matched") and u.get("tasks_from") in ("role_default", "fallback")
+                         and not _asks_judgement(u.get("task_text") or ""))
     if question_only:
         mode = "task"
         slots = [x for x in SAFETY_CORE if x in k.slot_by_id]
@@ -458,11 +465,25 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     u["question_only"] = question_only
     u["asked_subjects"] = ask_subs
     u["unanswered_subjects"] = unanswered
+    # role-typical topics (rulebook/kb_overlay.json role_topics, from the role's own mindset / often_missing text):
+    # only when the role's view comes from a bundle that is not its own (an overlay role borrows a KB bundle; a KB
+    # role whose task wording was not recognised gets its default), never on a question-only screen
+    role_tps = []
+    rtopics = ((getattr(k, "overlay", None) or {}).get("role_topics") or {}).get(u.get("role_id")) or []
+    borrowed = bool(role) and (role.get("origin") == "overlay"
+                               or not set(u.get("bundle_ids") or []) & set(role.get("default_bundles") or []))
+    if mode == "task" and not question_only and borrowed and rtopics:
+        by_id = {tp["id"]: tp for tp in F.topic_list(getattr(k, "overlay", None) or {})}
+        have = {tp["id"] for tp in named} | ex_ids
+        role_tps = [dict(by_id[x], _why="A %s usually needs this." % role["name"].lower())
+                    for x in rtopics if x in by_id and x not in have]
+    u["role_topics"] = [tp["id"] for tp in role_tps]
     if mode != "not_applicable" or asked:  # a not-applicable item never hides the other things asked about
-        for x in F.topic_slots(k, named, excluded)[:tsettings.get("max_topic_slots", 5)]:
+        named_slots = F.topic_slots(k, named, excluded)
+        for x in F.topic_slots(k, named + role_tps, excluded)[:tsettings.get("max_topic_slots", 5)]:
             if x not in slots:
                 slots.append(x)
-                _ensure_info(k, info, x, "named topic")
+                _ensure_info(k, info, x, "named topic" if x in named_slots else "role topic")
     if named and u.get("tasks_from") == "role_default" and not question_only:
         u["fallback_note"] = "Showing the topics you named (%s) and what %s usually needs (%s)." % (
             ", ".join(tp["label"] for tp in named), ("a %s" % role["name"]) if role else "a clinician",
@@ -487,7 +508,8 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
             if finfo["llm_focus"]:
                 u["llm_used"] = True
                 u["llm_reason"] = u.get("llm_reason") or finfo["llm_focus"]["reason"]
-        tcards, tinfo = F.topic_cards(st, k, named, excluded, u.get("task_text") or "", as_of, cards + focus, tsettings)
+        tcards, tinfo = F.topic_cards(st, k, named + role_tps, excluded, u.get("task_text") or "", as_of, cards + focus,
+                                      tsettings)
         focus = focus + tcards
         u["topic_cards"] = tinfo
     focus = [Q.answer_card(st, s, as_of) for s in ask_subs] + focus  # also beside a not-applicable item
@@ -658,6 +680,24 @@ def other_patient_screen(text, req, detail, t0):
                              task_labels=["Different patient"], other_patient=req["other_patient"])
     scr["proof_bar"]["summary_en"] = "No patient facts shown: the request is about a different patient."
     return scr
+
+
+_JUDGEMENT = []
+
+
+def _asks_judgement(text):
+    """The request asks for an assessment, not a fact (clearance, fitness, 'should I worry'): the 'judgement'
+    words of rulebook/task_intent.json."""
+    from . import intent as I
+    from .understand import fold, norm_text
+    if not _JUDGEMENT:
+        import json
+        with open(I.PATH, encoding="utf-8") as fh:
+            d = json.load(fh)
+        words = [fold(norm_text(x).strip()) for x in d.get("judgement") or []]
+        _JUDGEMENT.append(re.compile(r"(?<![\w-])(?:%s)" % "|".join(re.escape(w) for w in sorted(set(words), key=len,
+                                                                                             reverse=True) if w)))
+    return bool(_JUDGEMENT[0].search(fold(norm_text(text))))
 
 
 def needs_task_screen(u, reason, detail, t0, llm_reason=None, message=None, suggestions=None, role_missing=False):

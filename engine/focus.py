@@ -330,12 +330,12 @@ def topic_cards(store, kb, named, excluded, task_text, as_of, shown_cards, setti
         tslots = [s for s in tp.get("slots") or [] if s in slot_cards]
         slot_has = any(slot_cards[s].get("status") != "not_documented" for s in tslots)
         slot_nd = any(slot_cards[s].get("status") == "not_documented" for s in tslots)
-        why = "Your request names %s." % tp["label"].split(" (")[0].lower()
+        why = tp.get("_why") or "Your request names %s." % tp["label"].split(" (")[0].lower()
         if new:
             items = _topic_items(store, new, words)[:max_items]
             card = {"need": "topic_%s" % tp["id"], "slot": "topic_%s" % tp["id"], "label_en": tp["label"],
                     "shape": "list", "priority": "P1", "why": why, "sources": [TODO_SOURCE], "rules": [],
-                    "origins": ["named topic"], "compute": "topic", "status": "consistent",
+                    "origins": ["role topic" if tp.get("_why") else "named topic"], "compute": "topic", "status": "consistent",
                     "value_en": " | ".join(it["label_en"] for it in items), "items": items, "group": "named_topic",
                     "facts": [x for it in items for x in it["facts"]],
                     "passages": list(dict.fromkeys(p for it in items for p in it["passages"])), "collapsed": 0}
@@ -347,7 +347,8 @@ def topic_cards(store, kb, named, excluded, task_text, as_of, shown_cards, setti
             searched = ", ".join(s.replace("\\b", "") for s in tp.get("search") or []) or "the topic's fact kinds"
             card = {"need": "topic_%s" % tp["id"], "slot": "topic_%s" % tp["id"], "label_en": tp["label"],
                     "shape": "record_check", "priority": "P1", "why": why, "sources": [TODO_SOURCE], "rules": [],
-                    "origins": ["named topic"], "compute": "record_check", "status": "not_documented",
+                    "origins": ["role topic" if tp.get("_why") else "named topic"], "compute": "record_check",
+                    "status": "not_documented",
                     "items": [], "facts": [], "passages": mentions, "date": None, "group": "named_topic",
                     "searched": {"documents": len(store.docs), "facts_checked": len(store.facts),
                                  "passages_scanned": len(store.passages), "terms": list(tp.get("search") or []),
