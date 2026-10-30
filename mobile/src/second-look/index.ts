@@ -11,22 +11,39 @@ interface SecondLookLock {
   logout(): void;
 }
 
+// SECOND_LOOK_AUTH=0 on the backend turns sign-in and the PIN lock off: GET /auth/config -> {"auth": false}.
+// Any failure means auth stays on.
+async function authEnabled(): Promise<boolean> {
+  try {
+    const r = await fetch("/auth/config", { cache: "no-store" });
+    if (!r.ok) return true;
+    return (await r.json()).auth !== false;
+  } catch {
+    return true;
+  }
+}
+
+const authOn = await authEnabled();
 const lock = (window as unknown as { SecondLook: { lock: SecondLookLock } }).SecondLook.lock;
 
 // Demo/test hook: ?idle=10 shortens the client idle lock (never lengthens it; the server keeps its 3 min).
 const idleParam = Number(new URLSearchParams(window.location.search).get("idle"));
 const idleSeconds = idleParam > 0 && idleParam < 180 ? idleParam : undefined;
 
-lock.init({
-  apiBase: "",
-  appRoot: "#root",
-  stylesheet: false, // bundled above
-  idleSeconds,
-  // A different person may be next: drop all patient data from memory and the DOM.
-  onLoggedOut: (reason: string) => {
-    if (reason === "not_me" || reason === "user" || reason === "revoked") window.location.replace("/");
-  },
-});
+if (authOn) {
+  lock.init({
+    apiBase: "",
+    appRoot: "#root",
+    stylesheet: false, // bundled above
+    idleSeconds,
+    // A different person may be next: drop all patient data from memory and the DOM.
+    onLoggedOut: (reason: string) => {
+      if (reason === "not_me" || reason === "user" || reason === "revoked") window.location.replace("/");
+    },
+  });
+}
 
-export const secureFetch: typeof fetch = (input, init) => lock.fetch(input, init);
-export const lockNow = () => lock.lock();
+export const secureFetch: typeof fetch = (input, init) => (authOn ? lock.fetch(input, init) : fetch(input, init));
+export const lockNow = () => {
+  if (authOn) lock.lock();
+};

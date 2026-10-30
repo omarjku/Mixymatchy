@@ -110,3 +110,15 @@ def test_spa_fallback(client):
     assert client.get("/documents/nope").status_code == 401  # API paths are not swallowed
     assert client.get("/auth/nope").status_code == 404
     assert client.get("/../security/users.example.json").status_code == 404
+
+
+def test_auth_switch(main, monkeypatch):
+    body = {"situation": "x"}
+    monkeypatch.setenv("SECOND_LOOK_AUTH", "1")
+    with TestClient(main.app) as c:
+        assert c.get("/auth/config").json() == {"auth": True}
+        assert c.post("/briefing", json=body).status_code == 401
+    monkeypatch.setenv("SECOND_LOOK_AUTH", "0")
+    with TestClient(main.app) as c:
+        assert c.get("/auth/config").json() == {"auth": False}
+        assert c.post("/briefing", json=body).status_code != 401
