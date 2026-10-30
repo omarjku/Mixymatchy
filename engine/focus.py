@@ -147,11 +147,26 @@ def _eligible(store, ids, as_of, shown, taken):
     return out
 
 
-def focus_cards(store, kb, task_text, text, as_of, shown_cards, llm_focus=None):
+def out_of_scope(overlay, role_id, task_text):
+    """-> fact filter for rulebook/kb_overlay.json 'task_focus_scope': facts whose label matches an entry are
+    not promoted for roles outside its only_roles, unless the request names them or its own subject
+    (unless_text: 'pathology resident', 'tumour board', 'chemo').  No role: no filter."""
+    rxs = []
+    for e in overlay.get("task_focus_scope") or []:
+        rx = re.compile(e["label_match"], re.I)
+        why_not = e.get("unless_text") and re.search(e["unless_text"], task_text or "", re.I)
+        if role_id and role_id not in (e.get("only_roles") or []) and not rx.search(task_text or "") and not why_not:
+            rxs.append(rx)
+    return lambda f: any(rx.search(str(f.get("label_en") or "")) for rx in rxs)
+
+
+def focus_cards(store, kb, task_text, text, as_of, shown_cards, llm_focus=None, role_id=None):
     """-> (cards, routing info).  shown_cards: the cards already on the screen (their open facts are not
     repeated)."""
     overlay = getattr(kb, "overlay", None) or {}
     shown = _open_ids(shown_cards)
+    skip = out_of_scope(overlay, role_id, task_text)
+    shown |= {f["id"] for f in store.facts if skip(f)}  # treated as already shown: never promoted
     cards, info = [], {"task_focus": None, "llm_focus": None}
 
     # deterministic: task terms + overlay relevance
@@ -330,12 +345,12 @@ def topic_cards(store, kb, named, excluded, task_text, as_of, shown_cards, setti
         tslots = [s for s in tp.get("slots") or [] if s in slot_cards]
         slot_has = any(slot_cards[s].get("status") != "not_documented" for s in tslots)
         slot_nd = any(slot_cards[s].get("status") == "not_documented" for s in tslots)
-        why = "Your request names %s." % tp["label"].split(" (")[0].lower()
+        why = tp.get("_why") or "Your request names %s." % tp["label"].split(" (")[0].lower()
         if new:
             items = _topic_items(store, new, words)[:max_items]
             card = {"need": "topic_%s" % tp["id"], "slot": "topic_%s" % tp["id"], "label_en": tp["label"],
                     "shape": "list", "priority": "P1", "why": why, "sources": [TODO_SOURCE], "rules": [],
-                    "origins": ["named topic"], "compute": "topic", "status": "consistent",
+                    "origins": ["role topic" if tp.get("_why") else "named topic"], "compute": "topic", "status": "consistent",
                     "value_en": " | ".join(it["label_en"] for it in items), "items": items, "group": "named_topic",
                     "facts": [x for it in items for x in it["facts"]],
                     "passages": list(dict.fromkeys(p for it in items for p in it["passages"])), "collapsed": 0}
@@ -347,7 +362,8 @@ def topic_cards(store, kb, named, excluded, task_text, as_of, shown_cards, setti
             searched = ", ".join(s.replace("\\b", "") for s in tp.get("search") or []) or "the topic's fact kinds"
             card = {"need": "topic_%s" % tp["id"], "slot": "topic_%s" % tp["id"], "label_en": tp["label"],
                     "shape": "record_check", "priority": "P1", "why": why, "sources": [TODO_SOURCE], "rules": [],
-                    "origins": ["named topic"], "compute": "record_check", "status": "not_documented",
+                    "origins": ["role topic" if tp.get("_why") else "named topic"], "compute": "record_check",
+                    "status": "not_documented",
                     "items": [], "facts": [], "passages": mentions, "date": None, "group": "named_topic",
                     "searched": {"documents": len(store.docs), "facts_checked": len(store.facts),
                                  "passages_scanned": len(store.passages), "terms": list(tp.get("search") or []),

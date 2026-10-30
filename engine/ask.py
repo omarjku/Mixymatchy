@@ -37,6 +37,8 @@ SUBJECT_PATTERNS = [re.compile(p) for p in (
     r"undergo(?:ne)?|suffer(?:ed|s)? from|experience[ds]?|carry|carries|need|needs|wear|wears)?\s*(.+)" % _WHO,
     r"\b(?:what|which|how)\s+(?:is|was|are|were|'s)\s+(?:her|his|their|the patient'?s?|the)\s+(.+)",
     r"\bwhat'?s\s+(?:her|his|their|the patient'?s?|the)\s+(.+)",
+    r"\bhow\s+(\w+)\s+(?:is|was|are)\s+%s\b" % _WHO,  # 'how tall is she?', 'how heavy is she?'
+    r"\bhow\s+(?:much|many|often)\s+(?:does|did|do)\s+%s\s+(\w+)" % _WHO,  # 'how much does she weigh / drink?'
     r"\bwhen\s+(?:was|were|did)\s+(?:her|his|their|the|she|he)\s+(?:last\s+)?(.+)",
     r"\b(?:any|history of|hx of|known|evidence of|signs? of|record of|mention of|documented)\s+(.+)",
     r"\b(?:hat|hatte)\s+(?:sie|er|die patientin|der patient)\s+(?:je|jemals|schon|bereits|aktuell)?\s*(.+)",
@@ -45,11 +47,12 @@ SUBJECT_PATTERNS = [re.compile(p) for p in (
 )]
 
 _CUT = re.compile(r"[?!.;:()\[\]]")
-_SPLIT = re.compile(r",|/|\s+(?:and|or|und|oder|plus)\s+")
+_SPLIT = re.compile(r",|/|\s*[+&]\s*|\s+(?:and|or|und|oder|plus)\s+")
 _LEAD = re.compile(r"^(?:a|an|any|the|some|known|her|his|their|its|ever|eine?[nmrs]?|ein|kein[e]?|ihre?|seine?|der|die|das|"
                    r"of|for|on|about|to|with|history of|signs of|evidence of|been)\s+")
 _TRAIL = re.compile(r"\s+(?:ever|a lot|lots|often|much|anymore|lately|before|already|currently|now|at all|in the past|documented|recorded|noted|mentioned|"
-                    r"known|so far|last|recently|today|previously|in the record|in the letters|"
+                    r"known|so far|last|recently|today|previously|in the record|in the letters|dose|doses|dosage|"
+                    r"status|values?|levels?|results?|findings?|score|list|history|hx|"
                     r"je|jemals|bisher|schon|bekannt|dokumentiert|vor|gehabt|bekommen|genommen)$")
 STOP = set("""a an the and or of for to in on at with about from by is are was were be been being do does did
 has had have she he her his they their it its patient pt any some there this that these those what which when
@@ -59,7 +62,7 @@ before after still yet also only just all much many more most other such same so
 check checking review show tell list give find look need needs want wants
 summary overview everything anything something info information details detail relevant important
 problem problems issue issues finding findings result results note notes record records letter letters data
-done missing new changed change changes happened going wrong ok okay fine normal
+done missing new changed change changes happened going wrong ok okay fine normal old dose doses dosage
 sie er ihr ihre sein seine der die das ein eine einen kein keine und oder ist war hat hatte gibt es gab
 je jemals bisher schon bekannt dokumentiert patientin patient bitte wie was wann welche welcher welches wo""".split())
 
@@ -90,14 +93,66 @@ def subjects(task_text):
     out = []
     for clause in re.split(r"[?;]|\.\s", t):
         tails = [m.group(1) for m in (rx.search(clause) for rx in SUBJECT_PATTERNS) if m][:1]
-        if not tails and "?" in t:  # a bare subject: 'Blutgruppe?', 'pacemaker?'
-            tails = [clause.split(":")[-1].split(",")[-1]]
+        if not tails and "?" in t:  # a bare subject: 'Blutgruppe?', 'pacemaker?' (a short phrase, not a sentence
+            bare = clause.split(":")[-1].split(",")[-1]  # in another language: 'jakie leki ... przyjmuje?')
+            tails = [bare] if len(bare.split()) <= 3 else []
         for tail in tails:
             for part in _SPLIT.split(_CUT.split(tail)[0]):
                 s = _clean(part)
-                if s and s not in out:
+                # only Latin script: the letters are German, a Cyrillic / CJK phrase cannot be searched in them
+                if s and s not in out and not NON_LATIN.search(s):
                     out.append(s)
     return out
+
+
+NON_LATIN = re.compile(r"[^\W\d_a-zA-Z\u00c0-\u024f]")
+
+
+def _wordlike(w):
+    """A real word, not keyboard mash ('asdfgh', 'qwertz'): Latin words need vowels and no long consonant run."""
+    if NON_LATIN.search(w):
+        return len(w) >= 2
+    v = sum(c in "aeiouyäöü" for c in w)
+    return (len(w) >= 4 and v / len(w) >= 0.25 and len(set(w)) > 2
+            and not re.search(r"[^aeiouyäöü\W\d]{5,}", w))
+
+
+def content_words(task_text, never=()):
+    """Words of a question that could name a clinical subject (not stop words, filler or keyboard mash)."""
+    words = re.findall(r"[^\W\d_][\w'-]*", fold(norm_text(task_text or "")))
+    return [w for w in words if w not in STOP and w not in never and _wordlike(w)]
+
+
+# medical word endings (English / Latin / German): an unknown subject with one of them is a clinical question
+MEDICAL_WORD = re.compile(r"(?:itis|osis|oses|ose|oma|omas|emia|aemia|ämie|pathy|pathie|algia|algie|ectomy|ektomie|"
+                          r"otomy|otomie|ostomy|scopy|skopie|graphy|graphie|gram|iasis|plasia|plasie|trophy|trophie|"
+                          r"penia|penie|cele|uria|urie|ism|ismus|insufficiency|insuffizienz|stenosis|stenose|"
+                          r"thrombosis|embolism|embolie|infarction|infarkt|syndrome|syndrom|disease|disorder|"
+                          r"deficiency|mangel|fracture|fraktur|cancer|karzinom|carcinoma|tumou?r|lesion|läsion|"
+                          r"infection|infektion|allergy|allergie|virus|viral|bacterial|vaccine|impfung|"
+                          r"tablet|dose|dosis|level|wert|pain|schmerz|ache)$")
+
+
+def clinical_subject(store, task_text, never=()):
+    """A content word of the question that is medical by its form ('sarcoidosis', 'gout'?) or that the letters
+    contain ('Raucherin') -> the word, else None ('what's the weather like?' is not a clinical question)."""
+    words = content_words(task_text, never)
+    for w in words:  # other scripts: only the task vocabulary (engine/intent.py) can tell, not the word's form
+        if not NON_LATIN.search(w) and MEDICAL_WORD.search(w):
+            return w
+    text = store_text(store)
+    return next((w for w in words if len(w) >= 5 and _word_rx(w).search(text)), None)
+
+
+_STORE_TEXT = {}
+
+
+def store_text(store):
+    """All passage text of the store, folded and lowercased (cached per store)."""
+    if id(store) not in _STORE_TEXT:
+        _STORE_TEXT.clear()
+        _STORE_TEXT[id(store)] = fold(" ".join(p.get("text") or "" for p in store.passages).lower())
+    return _STORE_TEXT[id(store)]
 
 
 @lru_cache(maxsize=1)
@@ -108,7 +163,8 @@ def lexicon():
     for k, v in terms.items():
         v = v if isinstance(v, dict) else {"words": v}
         out[fold(norm_text(k))] = {"words": list(v.get("words") or []), "slot": v.get("slot"),
-                                   "label": re.compile(v["label"], re.I) if v.get("label") else None}
+                                   "label": re.compile(v["label"], re.I) if v.get("label") else None,
+                                   "sections": list(v.get("sections") or [])}
     return out
 
 
@@ -173,10 +229,14 @@ def covered(subject, kb, named_topics, bundle_tags):
     return any(fold(norm_text(t)) in s for t in bundle_tags if len(t) > 3)
 
 
-def answer_card(store, subject, as_of=None):
+def answer_card(store, subject, as_of=None, ai_words=()):
     """One card for one asked subject: matching facts (translated, with sources), else the passages that
-    mention it word for word, else 'Nothing found' naming what was searched."""
+    mention it word for word, else 'Nothing found' naming what was searched.  ai_words: German search words
+    the optional LLM reading suggested (engine/llm.py question_terms); only search keys, never facts."""
     words, from_lexicon = search_words(subject)
+    ai_words = [w for w in ai_words or () if fold(w.lower()) not in {fold(x.lower()) for x in words}]
+    if ai_words:
+        words = (words if from_lexicon else []) + list(ai_words)
     rxs = [_word_rx(w) for w in words]
     # only letters written by the as-of date
     docs = [d for d in store.docs if as_of is None or str(store.doc_date(d) or "")[:10] <= str(as_of)[:10]]
@@ -184,6 +244,8 @@ def answer_card(store, subject, as_of=None):
     hit_passages = [p for p in store.passages if p["doc_id"] in known
                     and any(r.search(fold((p.get("text") or "").lower())) for r in rxs)]
     labels = [e["label"] for e in _entries(subject) if e["label"]]
+    # 'was an ultrasound done?': only procedures and plans answer it, not a diagnosis whose sentence mentions it
+    sections = {x for e in _entries(subject) for x in e["sections"]}
 
     def english(f):  # the English label without bracketed original terms ('Case (Fall) number' is no fall)
         return fold(re.sub(r"\([^)]*\)", "", str(f.get("label_en") or "")).lower())
@@ -192,16 +254,17 @@ def answer_card(store, subject, as_of=None):
     # matches the entry's label pattern; the subject's own English word only without German search words
     facts = [f for f in store.facts
              if f.get("category") not in ADMIN_CATEGORIES and set(store.fact_docs(f)) & known
+             and (not sections or f.get("ips_section") in sections)
              and (as_of is None or str(f.get("date") or "") <= str(as_of) or not f.get("date"))
              and (any(r.search(fold(str(f.get("quote") or "").lower())) for r in rxs)
                   or any(rx.search(english(f)) for rx in labels)
-                  or (not from_lexicon and _phrase_in(fold(subject), english(f))))]
+                  or (not from_lexicon and not ai_words and _phrase_in(fold(subject), english(f))))]
     label = "Your question: %s" % subject
     why = "You asked about %s; every passage of the %d documents was searched for it." % (subject, len(docs))
     searched = {"documents": len(docs), "passages_scanned": len(store.passages), "terms": words,
-                "from_lexicon": from_lexicon}
+                "from_lexicon": from_lexicon, "ai_terms": list(ai_words)}
     base = {"need": "ask_%s" % re.sub(r"\W+", "_", subject).strip("_"), "slot": None, "label_en": label,
-            "priority": "P1", "why": why, "sources": [], "rules": [], "origins": ["your question"],
+            "priority": "P1", "why": why, "sources": [], "rules": [], "origins": ["your question"] + (["AI search words"] if ai_words else []),
             "group": "question", "searched": searched, "collapsed": 0}
     if facts:
         items = group_items(store, facts)
@@ -225,9 +288,10 @@ def answer_card(store, subject, as_of=None):
                     note=("%d more passage(s) mention it." % more) if more else None,
                     value_en="Mentioned in %d passage(s), quoted word for word below; read them in context."
                              % len(hit_passages))
-    if from_lexicon:
-        value = ("Nothing found for %s: none of the %d documents contains any of these words: %s."
-                 % (subject, len(docs), ", ".join(words)))
+    if from_lexicon or ai_words:
+        value = ("Nothing found for %s: none of the %d documents contains any of these words: %s.%s"
+                 % (subject, len(docs), ", ".join(words),
+                    " (German search words suggested by the AI reading.)" if ai_words else ""))
     else:
         value = ("Nothing found for '%s': none of the %d documents contains %s. The letters are in German and no "
                  "German search word is stored for this term, so check the letters if it matters."

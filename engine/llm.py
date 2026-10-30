@@ -29,6 +29,7 @@ Cost: the static part (instructions, role and bundle lists) is one cached system
 in-process LRU cache and cost nothing.
 """
 import json
+import re
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
@@ -38,6 +39,10 @@ from . import llm_budget
 DEFAULT_MODEL = "claude-haiku-5-5"
 MAX_BUNDLES = 3
 MAX_FOCUS = 3
+MAX_SLOTS = 4       # answer_slots: KB slots that answer a specific question in the request
+MAX_SUBJECTS = 3    # question_terms: question topics no slot covers ...
+MAX_TERMS = 6       # ... each with German search words for the letters
+TERM_RX = re.compile(r"^[^\W\d_][\w .'/-]{1,38}$")
 MAX_REASON = 120
 NO_ROLE = "none"
 KINDS = ("clinical_task", "no_task", "non_clinical_requester", "spam_or_abuse", "other_patient")
@@ -118,6 +123,7 @@ def static_prompt(kb, concepts=()):
     for r in kb.roles:
         aliases = list(dict.fromkeys((r.get("aliases_en") or [])[:3] + (r.get("aliases_de") or [])[:1]))
         roles.append("%s: %s (%s)" % (r["id"], r.get("name", r["id"]), ", ".join(aliases)))
+    slot_ids = [x["id"] for x in kb.slots]
     bundles = []
     for b in kb.bundles:
         if b["id"] == kb.fallback_bundle:
@@ -151,6 +157,10 @@ def static_prompt(kb, concepts=()):
         "the task.\n"
         "- bundle_ids: 0-3 task bundles for the task, most relevant first.\n"
         "- reason: at most 15 words, no patient facts.\n"
+        "- answer_slots: 0-4 screen slots answering a specific question, any wording ('kidneys ok?' -> "
+        "kidney_function); empty for a broad task.\n"
+        "- question_terms: per question topic no slot answers (max 3): English subject + 1-6 German search words "
+        "as a German letter writes them ('ever fall?' -> fall: Sturz, gestürzt). Search words only, no facts.\n"
         + ("- focus_concepts: 0-3 labels copied exactly from the record concept list that this task especially "
            "needs (e.g. a comorbidity that is a caution for the planned treatment); empty when nothing stands "
            "out.\n" if concepts else "") +
@@ -181,8 +191,13 @@ def static_prompt(kb, concepts=()):
             "requester_role": {"type": "string", "enum": role_ids + [NO_ROLE]},
             "bundle_ids": {"type": "array", "items": {"type": "string", "enum": bundle_ids}},
             "reason": {"type": "string"},
+            "answer_slots": {"type": "array", "items": {"type": "string", "enum": slot_ids}},
+            "question_terms": {"type": "array", "items": {
+                "type": "object", "additionalProperties": False, "required": ["subject", "terms_de"],
+                "properties": {"subject": {"type": "string"},
+                               "terms_de": {"type": "array", "items": {"type": "string"}}}}},
         },
-        "required": ["request_kind", "requester_role", "bundle_ids", "reason"],
+        "required": ["request_kind", "requester_role", "bundle_ids", "reason", "answer_slots", "question_terms"],
         "additionalProperties": False,
     }
     if concepts:  # 0-3 is enforced in validate() (array length constraints are not supported by the API)
@@ -196,7 +211,7 @@ def request_params(text, kb, concepts=()):
     system, schema, _r, _b, _c = static_prompt(kb, concepts)
     return dict(
         model=model(),
-        max_tokens=300,  # a short JSON classification; thinking off for latency (Haiku 5.5: allowed at effort <= high)
+        max_tokens=400,  # a short JSON classification; thinking off for latency (Haiku 5.5: allowed at effort <= high)
         thinking={"type": "disabled"},
         system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
         output_config={"effort": "low", "format": {"type": "json_schema", "schema": schema}},
@@ -230,8 +245,23 @@ def validate(raw, kb, concepts=()):
     for x in given:
         if isinstance(x, str) and x in allowed and x not in focus:
             focus.append(x)
+    slot_ids = {x["id"] for x in kb.slots}
+    given = raw.get("answer_slots") if isinstance(raw.get("answer_slots"), list) else []
+    aslots = []
+    for x in given:
+        if isinstance(x, str) and x in slot_ids and x not in aslots:
+            aslots.append(x)
+    qterms = []
+    for q in raw.get("question_terms") if isinstance(raw.get("question_terms"), list) else []:
+        if not isinstance(q, dict) or not isinstance(q.get("subject"), str) or not TERM_RX.match(q["subject"].strip()):
+            continue
+        terms = [t.strip() for t in q.get("terms_de") or [] if isinstance(t, str) and TERM_RX.match(t.strip())]
+        terms = list(dict.fromkeys(terms))[:MAX_TERMS]
+        if terms:
+            qterms.append({"subject": q["subject"].strip().lower(), "terms_de": terms})
     return {"kind": kind, "role_id": rid, "bundle_ids": bids[:MAX_BUNDLES], "reason": reason,
-            "focus_concepts": focus[:MAX_FOCUS]}
+            "focus_concepts": focus[:MAX_FOCUS], "answer_slots": aslots[:MAX_SLOTS],
+            "question_terms": qterms[:MAX_SUBJECTS]}
 
 
 def _call(params):
