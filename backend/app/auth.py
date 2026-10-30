@@ -5,6 +5,8 @@
 Patient-data routes depend on ``require_unlocked`` (401 = sign in, 423 = locked, PIN needed). The token is
 sent as ``Authorization: Bearer`` by security/web/second-look-lock.js; an HttpOnly cookie is also accepted.
 
+SECOND_LOOK_AUTH=0 turns sign-in and the PIN lock off (default 1 = on); GET /auth/config reports it.
+
 Users: SECOND_LOOK_USERS (path), else a Render secret file /etc/secrets/users.json (or
 /etc/secrets/SECOND_LOOK_USERS), else the demo user in security/users.example.json.
 Audit: SECOND_LOOK_AUDIT, default data/audit/audit.jsonl (ephemeral on Render, accepted for the demo).
@@ -26,7 +28,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from security.auth import (  # noqa: E402
-    DEFAULT_AUDIT_FILE, IDLE_LOCK_SECONDS, AuditLog, AuthError, AuthService, Session, load_users,
+    DEFAULT_AUDIT_FILE, IDLE_LOCK_SECONDS, AuditLog, AuthError, AuthService, Session, User, load_users,
 )
 
 COOKIE_NAME = "sl_session"
@@ -120,8 +122,23 @@ def _secure(request: Request) -> bool:
     return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
 
 
+def auth_enabled() -> bool:
+    """SECOND_LOOK_AUTH=0 switches sign-in and the PIN lock off (demo); anything else keeps them on."""
+    return (os.environ.get("SECOND_LOOK_AUTH") or "1").strip().lower() not in ("0", "false", "off", "no")
+
+
+def demo_session() -> Session:
+    """Synthetic session used when auth is off; audit lines are still written with this user."""
+    import time
+    now = time.time()
+    user = User(staff_id="demo", display_name="Demo", role="clinician", password_hash="", pin_hash="")
+    return Session(token="auth-off-demo", user=user, created=now, last_activity=now)
+
+
 def require_unlocked(request: Request) -> Session:
     """Dependency for patient-data routes. Counts as user activity (resets the idle timer)."""
+    if not auth_enabled():
+        return demo_session()
     try:
         return service.authorize(request_token(request))
     except AuthError as err:
@@ -172,6 +189,11 @@ async def logout(request: Request):
 @router.get("/status")
 def status(request: Request):
     return _json(service.status(request_token(request)))
+
+
+@router.get("/config")
+def config():
+    return _json({"auth": auth_enabled()})
 
 
 @router.get("/policy")

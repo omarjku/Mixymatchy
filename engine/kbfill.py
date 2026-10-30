@@ -119,8 +119,11 @@ def build_card(store, kb, slot_id, ctx, contradictions=()):
         # the answer values themselves (latest_value: the newest value per key) always stay open
         answer = set(primary_ids) if primary_ids is not None and comp == "latest_value" else set()
         open_items = [it for it in card.get("items") or [] if not it.get("collapsed")]
-        for it in open_items[P1_VISIBLE:]:
-            if not set(it["facts"]) & answer:
+        # open questions ('X?', 'Question: X') go behind '+N more' before documented findings do
+        firm = [it for it in open_items if not _is_question_item(it)]
+        keep = {id(it) for it in (firm + [it for it in open_items if _is_question_item(it)])[:P1_VISIBLE]}
+        for it in open_items:
+            if id(it) not in keep and not set(it["facts"]) & answer:
                 it["collapsed"] = True
     card["collapsed"] = sum(1 for it in card.get("items") or [] if it.get("collapsed"))
     return card
@@ -129,7 +132,12 @@ def build_card(store, kb, slot_id, ctx, contradictions=()):
 # Short view, P1 cards whose items are a history or context around the answer: the first P1_VISIBLE items
 # (newest / primary first) stay open, the rest sit behind '+N more'.  Lists that are the answer itself
 # (current medication, list_all lists, checklists, follow-up checks, age/sex) are never collapsed here.
-P1_VISIBLE = 3
+P1_VISIBLE = 4
+
+
+def _is_question_item(it):
+    lab = str(it.get("label_en") or "").strip()
+    return lab.lower().startswith("question:") or lab.endswith("?") or it.get("status_display") == "suspected"
 P1_COLLAPSIBLE = ("latest_value", "plan", "event_history", "laterality_finding")
 ALSO_VISIBLE = 3  # P2 'also relevant' cards show at most this many items; the rest sit behind '+N more'
 

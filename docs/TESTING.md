@@ -12,7 +12,7 @@ Abbreviations: F = found, ND = not documented, NA = not applicable, NAUTH = not 
 | Official eval through the API | Same situations over HTTP, with latency (3 runs per situation) | `python3 -m eval.run_api` (`--detail short\|long`) |
 | Synthetic eval (rules only) | 70 situations, 170 questions, scored on the short view the phone shows | `python3 -m eval.synthetic.run` (`--verbose`, `--only s01,s02`) |
 | Synthetic eval with LLM | Same set with the Haiku understand layer on. Spends real money inside the budget guard. Needs `ANTHROPIC_API_KEY` and `SECOND_LOOK_LLM=1`. | `python3 -m eval.synthetic.run --llm` |
-| Unit, security, backend tests | Engine, KB, relevance, clinical gate, LLM layer (mocked), compare, eval harness, security, backend | `make test` (runs `engine.kb`, `security.test_security`, the engine/compare/eval unittests and `pytest` in `backend/`) |
+| Unit, security, backend tests | Engine, KB, relevance, clinical gate, LLM layer (mocked), request understanding (`engine/test_request.py`), compare, eval harness, security, backend | `make test` (runs `engine.kb`, `security.test_security`, the engine/compare/eval unittests and `pytest` in `backend/`) |
 | Mobile Playwright e2e | Real backend, no mocks. 5 situations with answer tokens visible, source viewer, contradictions, language toggle, banners, speed under 2 s, 15 unseen situations without console errors, axe accessibility. Files: `mobile/e2e/situations.spec.ts`, `helpers.ts`, `README.md` | Backend on :8011, then `cd mobile && npm run e2e` (see `mobile/e2e/README.md`) |
 | Live start-up self-test | Official 15 questions plus the synthetic set (with LLM when enabled), printed to the Render logs with prefix `EVAL:`, then the LLM spend estimate. Runs once in a background thread. | Set `EVAL_ON_START=1` on Render and redeploy. Foreground: `python3 -m eval.selftest` |
 
@@ -128,6 +128,8 @@ Rules added to pass v1 are marked `source: TODO-cite` in `rulebook/kb_overlay.js
 | TR02 | radiotherapy -> lupus (SLE) | TODO-cite, needs medical team review |
 | TR03 | oncology discharge -> planned procedure | TODO-cite, needs medical team review |
 
+Added 31 Oct (holdout v2 failure patterns, general mechanisms): overlay `roles` (16 new, see DECISIONS 18), `role_fallback_bundles`, `role_stems`, `topics` (46 named topics), intl aliases/tags; `rulebook/clinical_roles.json` intl lexicon; `rulebook/applicability.json` age limits (paediatrics 17, neonatology 0, pregnancy 55). All TODO-cite.
+
 These sit in the `task_relevance` section. The medical team must cite or reject each one. The overlay role `nephrologist` (kidney function at P1) and the `task_terms` synonyms were added in the same commit and also need review.
 
 ## 4. Iteration log
@@ -149,6 +151,8 @@ All dates 2026. "Rules" = deterministic engine only. Results are from commit mes
 | 957a051 | 30 Oct | LLM understand layer (Haiku, every request), budget guard, start-up self-test | Live, with LLM: official 15/15. Synthetic 164/170 questions, 64/70 situations. 75 calls, 0 errors, EUR 0.0056. Failures: s31 q2 (oncology nurse, discharge, planned procedure); s38 q4 (endocrine therapy -> osteoporosis); s40 q3 (radiotherapy -> lupus); s47 q1 (nephrologist, kidney function, not documented); s48 q1 (gastroenterologist, reflux); s49 q2 (endocrinologist, osteoporosis) |
 | 3088097 | 30 Oct | Phone screen compaction: collapsed P2 and trend items, one-line rows | Live: official 15/15. Synthetic not completed before the next deploy replaced it. Rules-only synthetic still 96.5% |
 | 7eb50db | 30 Oct | Task focus: LLM `focus_concepts`, task terms, overlay `task_relevance` TR01-TR03, nephrologist role | Live, with LLM: official 15/15. Synthetic 170/170 questions, 70/70 situations. 75 calls, 3 errors (fell back to rules), EUR 0.0121. Rules only: 170/170 (commit message) |
+
+| (uncommitted) | 31 Oct | Fixer, from the holdout-v2 failure patterns only (holdout file not opened): multilingual gate/roles, role default task, named topics + honest absence, exclusions / instructions / other patient, age applicability, "Letters disagree" card. New tests `engine/test_request.py` (22, invented wordings) | Rules only: official 15/15 strict; v1 170/170, 70/70; `make test` green. Holdout v2 re-run pending (test runner) |
 
 Note: the six failures at 957a051 are the cases the 7eb50db rules were written for. That is the fitting effect from section 3.
 
@@ -189,11 +193,17 @@ Holdout set: `eval/synthetic/holdout_v2.json`. It is adversarial. It was written
 
 ### Holdout v2 results
 
-To be filled after the first run. Use this table.
+All runs are rules-only, by an independent runner.
 
-| Date | Commit | Mode (rules / LLM) | Questions passed | Situations passed | Failures | Run by |
-|---|---|---|---|---|---|---|
-| | | | | | | |
+| Run | Commit | Holdout | Questions passed | Situations passed | Notes |
+|---|---|---|---|---|---|
+| 1 | 22aaafd | v2.0 | 78/227 | - | First run. The test author then fixed the tests (v2.1, 234 questions). |
+| 2 before | 0877095 | v2.1 | 92/234 | 20/73 | Screens 61/73. |
+| 2 after | this commit | v2.1 | 136/234 | 33/73 | Screens 72/73. v1 170/170, official 15/15. |
+
+Results: `eval/synthetic/results/holdout_v2_run2.{md,json}`.
+
+Open: 1 regression (h027 q5, BMI not shown). Policy item h070 (contradictory self-description) is handled by the next fix.
 
 ## 7. Known open items
 

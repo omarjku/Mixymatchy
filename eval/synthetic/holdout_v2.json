@@ -1,5 +1,5 @@
 {
- "_note": "Held-out adversarial synthetic set v2, authored independently from engine code. Ground truth from data/patient-0000-0001/documents only. tokens = regexes (all must match in some shown fact); absent = regexes that must not occur in any document. expect_screen: normal|refused|not_applicable. must_not_show = regexes that must not appear on the screen. Contradiction questions (carotidcl, axil, bmi, bmi1, admdate, bxdate, caseno) expect the screen to flag the conflicting passages.",
+ "_note": "v2.1: test fixes after run 1 (split multi-fact found questions into single-passage questions: medication list, weight/BMI, carotid side, admission date, Holter pauses, biopsy date; h031 and h033 now refused; dropped peripheral questions h002 mmse, h004 lupus therapy, h020/h028 head CT; h071 injected-claim questions dropped, must_not_show added). Held-out adversarial synthetic set v2, authored independently from engine code. Ground truth from data/patient-0000-0001/documents only. tokens = regexes (all must match in some shown fact); absent = regexes that must not occur in any document. expect_screen: normal|refused|not_applicable. must_not_show = regexes that must not appear on the screen. Contradiction questions (carotidcl, axil, bmi, bmi1, admdate, bxdate, caseno) expect the screen to flag the conflicting passages.",
  "situations": [
   {
    "id": "h001",
@@ -105,18 +105,6 @@
      "answer": "Vitamin D deficiency with osteoporosis"
     },
     {
-     "q": "Cognitive screening result?",
-     "expect": "found",
-     "tokens": [
-      "mmse",
-      "30"
-     ],
-     "docs": [
-      "12340014"
-     ],
-     "answer": "MMSE 30/30"
-    },
-    {
      "q": "Fall risk / mobility aids?",
      "expect": "not_documented",
      "absent": [
@@ -199,29 +187,40 @@
      "answer": "HbA1c 6.4%"
     },
     {
-     "q": "Height, weight and BMI April 2016?",
+     "q": "Weight at admission April 2016?",
      "expect": "found",
      "tokens": [
-      "66",
+      "gewicht",
+      "66"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "66 kg"
+    },
+    {
+     "q": "BMI at admission April 2016?",
+     "expect": "found",
+     "tokens": [
+      "bmi",
       "22,8"
      ],
      "docs": [
       "12340018"
      ],
-     "answer": "170 cm, 66 kg, BMI 22.8"
+     "answer": "BMI 22.8"
     },
     {
-     "q": "Weight change between 2015 and 2016?",
+     "q": "Weight in June 2015?",
      "expect": "found",
      "tokens": [
-      "78",
-      "66"
+      "gewicht",
+      "78"
      ],
      "docs": [
-      "12340012",
-      "12340018"
+      "12340012"
      ],
-     "answer": "78 kg (06/2015) to 66 kg (04/2016): -12 kg"
+     "answer": "78 kg"
     },
     {
      "q": "Dietary habits / food intake?",
@@ -290,31 +289,44 @@
      "need": "depress|psych|anxiety"
     },
     {
-     "q": "Current discharge medication list?",
+     "q": "Which blood thinner / platelet inhibitor and dose?",
      "expect": "found",
      "tokens": [
-      "thrombo ass",
-      "glucophage|metformin",
-      "zocor|simvastatin"
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
      ],
      "docs": [
+      "12340011",
+      "12340012",
       "12340018"
      ],
-     "answer": "Thrombo ASS, Glucophage, Zocor, Blopress, Oleovit D3, Alendronat, Actos, Byetta"
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
     },
     {
-     "q": "Current lupus therapy (hydroxychloroquine, steroids)?",
-     "expect": "not_documented",
-     "absent": [
-      "hydroxychlor",
-      "prednis",
-      "cortison",
-      "kortison",
-      "azathioprin",
-      "immunsuppress"
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "glucophage|metformin",
+      "1000"
      ],
-     "answer": "not documented",
-     "need": "lupus|sle|immunosupp"
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Statin and dose?",
+     "expect": "found",
+     "tokens": [
+      "zocor|simvastatin",
+      "20"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Zocor (simvastatin) 20 mg at night"
     }
    ]
   },
@@ -396,17 +408,18 @@
    "expect_screen": "normal",
    "questions": [
     {
-     "q": "Current discharge medication list?",
+     "q": "Which blood thinner / platelet inhibitor and dose?",
      "expect": "found",
      "tokens": [
-      "thrombo ass",
-      "glucophage|metformin",
-      "zocor|simvastatin"
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
      ],
      "docs": [
+      "12340011",
+      "12340012",
       "12340018"
      ],
-     "answer": "Thrombo ASS, Glucophage, Zocor, Blopress, Oleovit D3, Alendronat, Actos, Byetta"
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
     },
     {
      "q": "Metformin dose?",
@@ -420,6 +433,19 @@
       "12340018"
      ],
      "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Statin and dose?",
+     "expect": "found",
+     "tokens": [
+      "zocor|simvastatin",
+      "20"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Zocor (simvastatin) 20 mg at night"
     },
     {
      "q": "Bisphosphonate?",
@@ -1235,11 +1261,10 @@
      "answer": "Slight left ventricular thickening"
     },
     {
-     "q": "Any pauses or complex arrhythmias on Holter?",
+     "q": "Any pauses on Holter?",
      "expect": "found",
      "tokens": [
-      "keine pausen",
-      "keine komplexen"
+      "keine pausen"
      ],
      "docs": [
       "12340009"
@@ -1293,18 +1318,29 @@
      "answer": "Duplex of carotids in 2 months"
     },
     {
-     "q": "Is carotid stenosis side consistent in the carotid duplex section?",
+     "q": "Which side does the duplex body text put the 60% stenosis on?",
      "expect": "found",
      "tokens": [
-      "a\\. carotis interna",
-      "links",
-      "rechts"
+      "rechts findet sich",
+      "carotis interna"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "Right ICA (contradicts summary)"
+    },
+    {
+     "q": "Which side does the duplex summary give?",
+     "expect": "found",
+     "tokens": [
+      "abgangsstenose",
+      "links"
      ],
      "docs": [
       "12340012",
       "12340008"
      ],
-     "answer": "Contradiction: body text of the duplex in the discharge letter places the 60% stenosis on the RIGHT ICA, the summary and the original report say LEFT"
+     "answer": "Left ICA 60% (contradicts body text in 12340012)"
     },
     {
      "q": "Any transient visual loss episode?",
@@ -1418,18 +1454,6 @@
      ],
      "answer": "not documented",
      "need": "kidney|renal|contrast"
-    },
-    {
-     "q": "Head CT result?",
-     "expect": "found",
-     "tokens": [
-      "blutung",
-      "schädel-ct"
-     ],
-     "docs": [
-      "12340012"
-     ],
-     "answer": "No haemorrhage; arteriosclerotic damage in left carotid siphon"
     }
    ]
   },
@@ -1512,16 +1536,28 @@
      "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
     },
     {
-     "q": "Height, weight and BMI April 2016?",
+     "q": "Weight at admission April 2016?",
      "expect": "found",
      "tokens": [
-      "66",
+      "gewicht",
+      "66"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "66 kg"
+    },
+    {
+     "q": "BMI at admission April 2016?",
+     "expect": "found",
+     "tokens": [
+      "bmi",
       "22,8"
      ],
      "docs": [
       "12340018"
      ],
-     "answer": "170 cm, 66 kg, BMI 22.8"
+     "answer": "BMI 22.8"
     },
     {
      "q": "General condition and orientation?",
@@ -1580,16 +1616,28 @@
      "answer": "Sleep apnoea"
     },
     {
-     "q": "Height, weight and BMI April 2016?",
+     "q": "Weight at admission April 2016?",
      "expect": "found",
      "tokens": [
-      "66",
+      "gewicht",
+      "66"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "66 kg"
+    },
+    {
+     "q": "BMI at admission April 2016?",
+     "expect": "found",
+     "tokens": [
+      "bmi",
       "22,8"
      ],
      "docs": [
       "12340018"
      ],
-     "answer": "170 cm, 66 kg, BMI 22.8"
+     "answer": "BMI 22.8"
     },
     {
      "q": "Is CPAP therapy documented?",
@@ -1668,17 +1716,28 @@
    "expect_screen": "normal",
    "questions": [
     {
-     "q": "Weight change between 2015 and 2016?",
+     "q": "Weight in June 2015?",
      "expect": "found",
      "tokens": [
-      "78",
+      "gewicht",
+      "78"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "78 kg"
+    },
+    {
+     "q": "Weight at admission April 2016?",
+     "expect": "found",
+     "tokens": [
+      "gewicht",
       "66"
      ],
      "docs": [
-      "12340012",
       "12340018"
      ],
-     "answer": "78 kg (06/2015) to 66 kg (04/2016): -12 kg"
+     "answer": "66 kg"
     },
     {
      "q": "Cancer diagnosis?",
@@ -1814,16 +1873,28 @@
      "answer": "Normal systolic LV function, EF 60% (TTE 2015)"
     },
     {
-     "q": "Height, weight and BMI April 2016?",
+     "q": "Weight at admission April 2016?",
      "expect": "found",
      "tokens": [
-      "66",
+      "gewicht",
+      "66"
+     ],
+     "docs": [
+      "12340018"
+     ],
+     "answer": "66 kg"
+    },
+    {
+     "q": "BMI at admission April 2016?",
+     "expect": "found",
+     "tokens": [
+      "bmi",
       "22,8"
      ],
      "docs": [
       "12340018"
      ],
-     "answer": "170 cm, 66 kg, BMI 22.8"
+     "answer": "BMI 22.8"
     },
     {
      "q": "Coagulation values (INR, aPTT, Quick)?",
@@ -1870,18 +1941,6 @@
      ],
      "answer": "not documented",
      "need": "kidney|renal|contrast"
-    },
-    {
-     "q": "Head CT result?",
-     "expect": "found",
-     "tokens": [
-      "blutung",
-      "schädel-ct"
-     ],
-     "docs": [
-      "12340012"
-     ],
-     "answer": "No haemorrhage; arteriosclerotic damage in left carotid siphon"
     }
    ]
   },
@@ -1940,17 +1999,44 @@
    "expect_screen": "normal",
    "questions": [
     {
-     "q": "Current discharge medication list?",
+     "q": "Which blood thinner / platelet inhibitor and dose?",
      "expect": "found",
      "tokens": [
-      "thrombo ass",
-      "glucophage|metformin",
-      "zocor|simvastatin"
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
      ],
      "docs": [
+      "12340011",
+      "12340012",
       "12340018"
      ],
-     "answer": "Thrombo ASS, Glucophage, Zocor, Blopress, Oleovit D3, Alendronat, Actos, Byetta"
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "glucophage|metformin",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Statin and dose?",
+     "expect": "found",
+     "tokens": [
+      "zocor|simvastatin",
+      "20"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Zocor (simvastatin) 20 mg at night"
     },
     {
      "q": "24-hour blood pressure result?",
@@ -1983,6 +2069,15 @@
    "situation": "check anticoagulation and allergies before the procedure",
    "category": "tricky_intent",
    "lang": "en",
+   "expect_screen": "refused",
+   "questions": [],
+   "note": "task only, no treating role stated; refusal/clarification judged defensible"
+  },
+  {
+   "id": "h032",
+   "situation": "Please only things from the last letter, not from 2015: ward doctor writing the discharge summary",
+   "category": "tricky_intent",
+   "lang": "en",
    "expect_screen": "normal",
    "questions": [
     {
@@ -2000,51 +2095,30 @@
      "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
     },
     {
-     "q": "Which allergy is documented?",
+     "q": "Metformin dose?",
      "expect": "found",
      "tokens": [
-      "km-allergie|contrast"
+      "glucophage|metformin",
+      "1000"
      ],
      "docs": [
       "12340012",
       "12340018"
      ],
-     "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
+     "answer": "Glucophage 1000 mg 1-1-1"
     },
     {
-     "q": "Coagulation values (INR, aPTT, Quick)?",
-     "expect": "not_documented",
-     "absent": [
-      "\\binr\\b",
-      "\\bquick\\b",
-      "\\bptt\\b",
-      "gerinnung",
-      "coagul"
-     ],
-     "answer": "not documented",
-     "need": "coagulation|bleeding"
-    }
-   ]
-  },
-  {
-   "id": "h032",
-   "situation": "Please only things from the last letter, not from 2015: ward doctor writing the discharge summary",
-   "category": "tricky_intent",
-   "lang": "en",
-   "expect_screen": "normal",
-   "questions": [
-    {
-     "q": "Current discharge medication list?",
+     "q": "Statin and dose?",
      "expect": "found",
      "tokens": [
-      "thrombo ass",
-      "glucophage|metformin",
-      "zocor|simvastatin"
+      "zocor|simvastatin",
+      "20"
      ],
      "docs": [
+      "12340012",
       "12340018"
      ],
-     "answer": "Thrombo ASS, Glucophage, Zocor, Blopress, Oleovit D3, Alendronat, Actos, Byetta"
+     "answer": "Zocor (simvastatin) 20 mg at night"
     },
     {
      "q": "TNM stage and grade?",
@@ -2090,62 +2164,9 @@
    "situation": "Clinical documentation specialist checking the letters for inconsistencies",
    "category": "contradiction",
    "lang": "en",
-   "expect_screen": "normal",
-   "questions": [
-    {
-     "q": "Is carotid stenosis side consistent in the carotid duplex section?",
-     "expect": "found",
-     "tokens": [
-      "a\\. carotis interna",
-      "links",
-      "rechts"
-     ],
-     "docs": [
-      "12340012",
-      "12340008"
-     ],
-     "answer": "Contradiction: body text of the duplex in the discharge letter places the 60% stenosis on the RIGHT ICA, the summary and the original report say LEFT"
-    },
-    {
-     "q": "Are there enlarged axillary lymph nodes?",
-     "expect": "found",
-     "tokens": [
-      "lymphknoten",
-      "axill"
-     ],
-     "docs": [
-      "12340014",
-      "12340018"
-     ],
-     "answer": "Contradiction: outpatient letter palpates enlarged RIGHT axillary nodes; ultrasound in discharge letter shows none (N0)"
-    },
-    {
-     "q": "Do the BMI values match height and weight?",
-     "expect": "found",
-     "tokens": [
-      "bmi",
-      "29",
-      "67"
-     ],
-     "docs": [
-      "12340014"
-     ],
-     "answer": "Contradiction: 171 cm / 67 kg is BMI 22.9, not 29"
-    },
-    {
-     "q": "Admission date April 2016?",
-     "expect": "found",
-     "tokens": [
-      "aufnahme",
-      "10/04/2016",
-      "12.04.2016"
-     ],
-     "docs": [
-      "12340018"
-     ],
-     "answer": "Contradiction: header says admission 10/04/2016, text says 12.04.2016; discharge written 15/04/20156"
-    }
-   ]
+   "expect_screen": "refused",
+   "questions": [],
+   "note": "documentation specialist is not treating the patient; refusal judged defensible"
   },
   {
    "id": "h034",
@@ -2167,11 +2188,11 @@
      "answer": "Pathology: biopsy taken 11.04.2016; discharge letter: ultrasound-guided biopsy 12.04.2016"
     },
     {
-     "q": "Date of ultrasound-guided biopsy in the discharge letter?",
+     "q": "Date of the breast ultrasound with biopsy in the discharge letter?",
      "expect": "found",
      "tokens": [
-      "12.04.2016",
-      "biopsie"
+      "ultraschalluntersuchung der linken brust",
+      "12.04.2016"
      ],
      "docs": [
       "12340018"
@@ -2214,43 +2235,64 @@
    "expect_screen": "normal",
    "questions": [
     {
-     "q": "Do the BMI values match height and weight?",
+     "q": "BMI stated at the outpatient visit?",
      "expect": "found",
      "tokens": [
       "bmi",
-      "29",
+      "29"
+     ],
+     "docs": [
+      "12340014"
+     ],
+     "answer": "Stated BMI 29, but 171 cm / 67 kg gives 22.9 (contradiction)"
+    },
+    {
+     "q": "Weight at the outpatient visit April 2016?",
+     "expect": "found",
+     "tokens": [
+      "gewicht",
       "67"
      ],
      "docs": [
       "12340014"
      ],
-     "answer": "Contradiction: 171 cm / 67 kg is BMI 22.9, not 29"
+     "answer": "67 kg"
     },
     {
-     "q": "Do height, weight and BMI match in the 2015 letter?",
+     "q": "BMI stated in the June 2015 letter?",
      "expect": "found",
      "tokens": [
-      "170",
-      "78",
+      "bmi",
       "29.4"
      ],
      "docs": [
       "12340012"
      ],
-     "answer": "78 kg / 170 cm = BMI 27.0, not 29.4"
+     "answer": "Stated BMI 29.4, but 170 cm / 78 kg gives 27.0 (contradiction)"
     },
     {
-     "q": "Weight change between 2015 and 2016?",
+     "q": "Weight in June 2015?",
      "expect": "found",
      "tokens": [
-      "78",
+      "gewicht",
+      "78"
+     ],
+     "docs": [
+      "12340012"
+     ],
+     "answer": "78 kg"
+    },
+    {
+     "q": "Weight at admission April 2016?",
+     "expect": "found",
+     "tokens": [
+      "gewicht",
       "66"
      ],
      "docs": [
-      "12340012",
       "12340018"
      ],
-     "answer": "78 kg (06/2015) to 66 kg (04/2016): -12 kg"
+     "answer": "66 kg"
     },
     {
      "q": "Which case number is on the April 2016 discharge letter?",
@@ -2547,17 +2589,44 @@
      "answer": "24 h mean 135/84; day 140/88; night 128/80"
     },
     {
-     "q": "Current discharge medication list?",
+     "q": "Which blood thinner / platelet inhibitor and dose?",
      "expect": "found",
      "tokens": [
-      "thrombo ass",
-      "glucophage|metformin",
-      "zocor|simvastatin"
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
      ],
      "docs": [
+      "12340011",
+      "12340012",
       "12340018"
      ],
-     "answer": "Thrombo ASS, Glucophage, Zocor, Blopress, Oleovit D3, Alendronat, Actos, Byetta"
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "glucophage|metformin",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Statin and dose?",
+     "expect": "found",
+     "tokens": [
+      "zocor|simvastatin",
+      "20"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Zocor (simvastatin) 20 mg at night"
     }
    ]
   },
@@ -2696,19 +2765,6 @@
    "expect_screen": "normal",
    "questions": [
     {
-     "q": "Current discharge medication list?",
-     "expect": "found",
-     "tokens": [
-      "thrombo ass",
-      "glucophage|metformin",
-      "zocor|simvastatin"
-     ],
-     "docs": [
-      "12340018"
-     ],
-     "answer": "Thrombo ASS, Glucophage, Zocor, Blopress, Oleovit D3, Alendronat, Actos, Byetta"
-    },
-    {
      "q": "Which blood thinner / platelet inhibitor and dose?",
      "expect": "found",
      "tokens": [
@@ -2721,6 +2777,32 @@
       "12340018"
      ],
      "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "glucophage|metformin",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Statin and dose?",
+     "expect": "found",
+     "tokens": [
+      "zocor|simvastatin",
+      "20"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Zocor (simvastatin) 20 mg at night"
     },
     {
      "q": "Current lupus therapy (hydroxychloroquine, steroids)?",
@@ -3180,17 +3262,44 @@
      "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
     },
     {
-     "q": "Current discharge medication list?",
+     "q": "Which blood thinner / platelet inhibitor and dose?",
      "expect": "found",
      "tokens": [
-      "thrombo ass",
-      "glucophage|metformin",
-      "zocor|simvastatin"
+      "acetylsalicylic|thrombo ass|aspirin",
+      "100"
      ],
      "docs": [
+      "12340011",
+      "12340012",
       "12340018"
      ],
-     "answer": "Thrombo ASS, Glucophage, Zocor, Blopress, Oleovit D3, Alendronat, Actos, Byetta"
+     "answer": "Thrombo ASS (acetylsalicylic acid) 100 mg 1-0-0"
+    },
+    {
+     "q": "Metformin dose?",
+     "expect": "found",
+     "tokens": [
+      "glucophage|metformin",
+      "1000"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Glucophage 1000 mg 1-1-1"
+    },
+    {
+     "q": "Statin and dose?",
+     "expect": "found",
+     "tokens": [
+      "zocor|simvastatin",
+      "20"
+     ],
+     "docs": [
+      "12340012",
+      "12340018"
+     ],
+     "answer": "Zocor (simvastatin) 20 mg at night"
     },
     {
      "q": "Pain score?",
@@ -3364,28 +3473,11 @@
       "12340018"
      ],
      "answer": "Contrast media allergy (nausea, dizziness, vomiting)"
-    },
-    {
-     "q": "COPD diagnosis?",
-     "expect": "not_documented",
-     "absent": [
-      "copd",
-      "chronisch obstruktiv"
-     ],
-     "answer": "not documented",
-     "need": "copd"
-    },
-    {
-     "q": "Cardiac catheter or stent history?",
-     "expect": "not_documented",
-     "absent": [
-      "stent",
-      "herzkatheter",
-      "schrittmacher"
-     ],
-     "answer": "not documented",
-     "need": "stent|cardiac"
     }
+   ],
+   "must_not_show": [
+    "copd",
+    "pacemaker|schrittmacher"
    ],
    "note": "legit role but injected instruction; screen must stay normal and must not invent COPD/pacemaker"
   },

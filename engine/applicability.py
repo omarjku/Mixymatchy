@@ -27,20 +27,37 @@ def table():
 
 
 def _term_rx(term):
-    t = re.escape(term.lower())
-    post = "" if len(term) >= 5 else r"(?![a-z0-9äöüß])"
-    return re.compile(r"(?<![a-z0-9äöüß])" + t + post)
+    from .understand import fold, norm_text
+    t = re.escape(fold(norm_text(term)))
+    post = "" if len(term) >= 5 else r"(?![\w])"
+    return re.compile(r"(?<![\w])" + t + post)
 
 
-def match_items(task_text):
-    """Items of the table named in the (normalised, lowercase) task text -> [(item, matched term)]."""
+def match_items(task_text, full_text=None):
+    """Items of the table named in the (normalised, lowercase) text -> [(item, matched term)].
+    Items with scope 'request' (a specialty that only treats children / pregnant women ...) are matched in
+    the whole request, role words included; the others in the task text (role words removed)."""
+    from .understand import fold
     out = []
     for it in table().get("items") or []:
-        for term in (it.get("terms_en") or []) + (it.get("terms_de") or []):
-            if _term_rx(term).search(task_text or ""):
+        txt = fold((full_text if full_text is not None else task_text) if it.get("scope") == "request" else task_text)
+        for term in (it.get("terms_en") or []) + (it.get("terms_de") or []) + (it.get("terms_intl") or []):
+            if _term_rx(term).search(txt or ""):
                 out.append((it, term))
                 break
     return out
+
+
+def documented_age(store, as_of):
+    """-> (age in full years at as_of, passage id, date of birth text) from the date-of-birth fact."""
+    from .fill import _d, _dob, age_years
+    for f in store.facts:
+        if f.get("category") == "date_of_birth":
+            dob = _dob((f.get("attrs") or {}).get("value"))
+            at = _d(as_of) if as_of else None
+            if dob and at:
+                return age_years(dob, at), (f.get("passage_ids") or [None])[0], (f.get("attrs") or {}).get("value")
+    return None, None, None
 
 
 def documented_sex(store):
@@ -66,30 +83,59 @@ def documented_sex(store):
     return sex, first[sex][1], first[sex][2]
 
 
-def check(task_text, store):
-    """-> {"items": [...], "sex": ..., "passage": ..., "not_applicable": [...], "applicable": [...]}"""
+def check(task_text, store, full_text=None, as_of=None):
+    """-> {"items": [...], "sex": ..., "passage": ..., "age": ..., "not_applicable": [...], "applicable": [...]}"""
     sex, pid, word = documented_sex(store)
-    res = {"sex": sex, "passage": pid, "word": word, "items": [], "not_applicable": [], "applicable": []}
-    for it, term in match_items(task_text):
-        row = {"id": it["id"], "label": it["label"], "applicable_sex": it["applicable_sex"], "term": term,
+    anchor = as_of or (store.anchor_date() if hasattr(store, "anchor_date") else None)
+    age, age_pid, dob = documented_age(store, anchor) if anchor else (None, None, None)
+    res = {"sex": sex, "passage": pid, "word": word, "age": age, "age_passage": age_pid, "dob": dob,
+           "items": [], "not_applicable": [], "applicable": []}
+    for it, term in match_items(task_text, full_text):
+        row = {"id": it["id"], "label": it["label"], "applicable_sex": it.get("applicable_sex"), "term": term,
+               "age_min": it.get("applicable_age_min"), "age_max": it.get("applicable_age_max"),
+               "scope": it.get("scope") or "task", "roles": list(it.get("roles") or []),
                "slots": list(it.get("slots") or []), "record_checks": list(it.get("record_checks") or [])}
         res["items"].append(row)
-        if sex and sex != it["applicable_sex"]:
+        reason = None
+        if sex and row["applicable_sex"] and sex != row["applicable_sex"]:
+            reason = "sex"
+        elif age is not None and ((row["age_max"] is not None and age > row["age_max"]) or
+                                  (row["age_min"] is not None and age < row["age_min"])):
+            reason = "age"
+        if reason:
+            row["reason"] = reason
             res["not_applicable"].append(row)
         else:
             res["applicable"].append(row)
     return res
 
 
-def not_applicable_card(store, row, sex, pid, word):
-    passages = [pid] if pid else []
+def _age_range(row):
+    lo, hi = row.get("age_min"), row.get("age_max")
+    if hi is not None and hi < 1:
+        return "newborns"
+    if lo is not None and hi is not None:
+        return "patients aged %d-%d" % (lo, hi)
+    if hi is not None:
+        return "patients up to %d years" % hi
+    return "patients from %d years" % lo
+
+
+def not_applicable_card(store, row, sex, pid, word, age=None, age_pid=None, dob=None):
+    if row.get("reason") == "age":
+        passages = [age_pid] if age_pid else []
+        why = "Applicability table (rulebook/applicability.json): %s applies to %s only." % (row["label"], _age_range(row))
+        value = "Not applicable: the record documents a patient aged %s (date of birth %s)" % (age, dob)
+        word = dob
+    else:
+        passages = [pid] if pid else []
+        why = ("Applicability table (rulebook/applicability.json): %s applies to %s patients only."
+               % (row["label"], row["applicable_sex"]))
+        value = "Not applicable: the record documents %s patient" % SEX_WORD.get(sex, sex)
     return {"need": "applicability_%s" % row["id"], "slot": "applicability_%s" % row["id"],
             "label_en": row["label"], "shape": "applicability", "priority": "P1",
-            "why": "Applicability table (rulebook/applicability.json): %s applies to %s patients only."
-                   % (row["label"], row["applicable_sex"]),
-            "sources": [], "rules": [], "origins": ["applicability"], "compute": "applicability",
-            "status": "not_applicable",
-            "value_en": "Not applicable: the record documents %s patient" % SEX_WORD.get(sex, sex),
+            "why": why, "sources": [], "rules": [], "origins": ["applicability"], "compute": "applicability",
+            "status": "not_applicable", "value_en": value,
             "evidence_word": word, "date": None, "facts": [], "passages": passages, "items": []}
 
 

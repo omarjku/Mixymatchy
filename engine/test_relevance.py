@@ -74,18 +74,22 @@ class TestNotApplicable(unittest.TestCase):
 
 class TestUnrecognisedTask(unittest.TestCase):
     def test_toenail(self):
+        """A recognised role with unrecognised task wording gets the role's own typical task (overlay
+        role_fallback_bundles; GP -> general core summary) with a visible note and suggestions, not the
+        generic safety summary."""
         for d in MODES:
             s = screen("GP, ingrown toenail", d)
             with self.subTest(detail=d):
-                self.assertLessEqual(len(s["cards"]), MAX_SUMMARY_CARDS)
-                self.assertEqual(s["screen_mode"], "fallback")
                 u = s["understood"]
-                self.assertIn("Task not recognised", u["fallback_note"])
+                self.assertEqual(s["screen_mode"], "task")
+                self.assertEqual(u["tasks_from"], "role_default")
+                self.assertEqual(u["bundle_ids"], ["B18"])
+                self.assertIn("not recognised", u["fallback_note"])
                 self.assertEqual(len(u["suggestions"]), 3)
                 for title in u["suggestions"]:
                     self.assertIn(title, u["fallback_note"])
-                self.assertNotIn("diagnoses_all", slots(s))
-                self.assertIsNone(s["blind_spot"])
+                if d == "short":
+                    self.assertLessEqual(len(s["cards"]), MAX_SUMMARY_CARDS)
 
 
 class TestLists(unittest.TestCase):
@@ -171,8 +175,9 @@ class TestTaskScope(unittest.TestCase):
 
     def test_issues_touch_the_screen(self):
         for (sid, d), s in self.s.items():
-            shown = {x for c in s["cards"] for x in c["facts"]}
-            on_card = {x for c in s["cards"] for x in c.get("conflicts") or []}
+            every = s["cards"] + (s.get("focus") or []) + (s.get("also_relevant") or [])  # incl. 'also relevant'
+            shown = {x for c in every for x in c["facts"]}
+            on_card = {x for c in every for x in c.get("conflicts") or []}
             with self.subTest(sid=sid, detail=d):
                 for c in s["contradictions"]:
                     self.assertTrue(set(c["facts"]) & shown or c["id"] in on_card, c["id"])
@@ -223,9 +228,14 @@ class TestUnseenSituations(unittest.TestCase):
                 self.assertIsNone(s["blind_spot"])
 
     def test_pregnancy_test_german(self):
+        """Pregnancy care applies up to the age limit in rulebook/applicability.json (TODO-cite); the record's
+        patient is 57 at the anchor date, so the whole request is not applicable, with the date of birth linked."""
         s = screen("Hausärztin: Schwangerschaftstest vor Beginn einer neuen Therapie")
-        self.assertEqual(s["screen_mode"], "sex_specific")
+        self.assertEqual(s["screen_mode"], "not_applicable")
         self.assertIn("pregnancy", [i["id"] for i in s["understood"]["applicability"]["items"]])
+        na = next(c for c in s["cards"] if c["status"] == "not_applicable")
+        self.assertIn("aged 57", na["value_en"])
+        self.assertTrue(na["passages"])
         self.assertLessEqual(len(s["cards"]), MAX_SUMMARY_CARDS)
 
     def test_mammography_found_in_record(self):
@@ -242,9 +252,12 @@ class TestUnseenSituations(unittest.TestCase):
         self.assertIn("med_antidiabetic", slots(s))
 
     def test_unknown_role_and_task(self):
+        """A clinical requester the lexicon knows (no KB role) with an unrecognised task: the general core
+        summary under the requester's own label, with a visible note."""
         s = screen("Dermatologist checking a mole on her back")
-        self.assertEqual(s["screen_mode"], "fallback")
+        self.assertEqual(s["understood"]["role_label"], "Dermatologist")
         self.assertIn("not recognised", s["understood"]["fallback_note"])
+        self.assertIn("Dermatologist", s["understood"]["fallback_note"])
         self.assertLessEqual(len(s["cards"]), MAX_SUMMARY_CARDS)
 
     def test_overview_request(self):

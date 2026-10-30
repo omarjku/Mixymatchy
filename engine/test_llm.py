@@ -296,7 +296,8 @@ class TestFocusConcepts(LLMTestBase):
     def test_focus_promoted_into_short_view(self):
         self.client({"role_id": "none", "bundle_ids": [], "reason": "Autoimmune disease matters for skin lesions",
                      "focus_concepts": [self.sle, "Not a record label"]})
-        s = build_screen("Dermatologist checking a mole on her back", use_llm=True, detail="short", rulebook="kb")
+        # a task whose own cards do not list diagnoses, so the model's concept is not already on the screen
+        s = build_screen("Dentist, tooth extraction", use_llm=True, detail="short", rulebook="kb")
         card = next(c for c in s["focus"] if c["need"] == "llm_focus")
         self.assertEqual(card["label_en"], "AI-highlighted for this task")
         self.assertTrue(set(card["facts"]) <= set(self.by_label[self.sle]))
@@ -306,7 +307,7 @@ class TestFocusConcepts(LLMTestBase):
         self.assertTrue(u["llm_used"])
         sys.path.insert(0, os.path.join(ROOT, "backend"))
         from app import adapter
-        b = adapter.build_briefing("Dermatologist checking a mole on her back", use_llm=True)
+        b = adapter.build_briefing("Dentist, tooth extraction", use_llm=True)
         self.assertEqual(b.routing["llm_focus"]["concepts"], [self.sle])
         need = next(n for n in b.needs if n.need == "llm_focus")
         self.assertTrue(any("lupus" in f.label_en.lower() for f in need.facts))
@@ -333,7 +334,8 @@ class TestTaskTermFocus(unittest.TestCase):
                            ("Endocrinologist, osteoporosis treatment", "osteoporosis"),
                            ("Pulmonologist, sleep apnoea follow-up", "apnoea")):
             s = build_screen(text, use_llm=False, detail="short", rulebook="kb")
-            labels = " ".join(it["label_en"].lower() for c in s["focus"] for it in c["items"])
+            labels = " ".join(it["label_en"].lower() for c in s["cards"] + s["focus"] for it in c["items"]
+                              if not it.get("collapsed"))
             with self.subTest(text=text):
                 self.assertIn(word, labels)
 

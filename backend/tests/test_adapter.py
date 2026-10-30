@@ -206,7 +206,8 @@ def test_not_authorised_shows_no_patient_data(text):
 
 
 @pytest.mark.parametrize("text,label", [("Rheumatologist, joint pain review", "Rheumatologist"),
-                                        ("Urologist, catheter check", "Urologist"), ("Hebamme", "Hebamme"),
+                                        ("Urologist, catheter check", "Urologist"),
+                                        ("Hebamme", "Obstetrician / midwife"),  # overlay role (TODO-cite)
                                         ("medical student, ward round", "Medical student")])
 def test_clinical_lexicon_roles_get_data(text, label):
     b = adapter.build_briefing(text, use_llm=False)

@@ -7,7 +7,12 @@
   "roles: roles the KB does not have yet; same fields as KB roles (default_bundles = what the role usually needs when the task wording is not recognised).",
   "nephrologist (role): kidney_function at P1 via the role's modifiers; default task = medication review (renal dosing).",
   "task_terms: synonym groups for the deterministic task-term promotion (engine/focus.py): a diagnosis whose label shares a significant clinical word with the situation text is shown in a 'Matches your task' group. Vocabulary only, no clinical reasoning.",
-  "task_relevance: clinical reasoning the KB does not have yet: when the situation names a task (when_any / when_all), facts whose label contains one of `terms` (or whose category is in `categories`) are shown in the same group with `why`. Every entry is source: TODO-cite until the medical team cites or rejects it."
+  "task_relevance: clinical reasoning the KB does not have yet: when the situation names a task (when_any / when_all), facts whose label contains one of `terms` (or whose category is in `categories`) are shown in the same group with `why`. Every entry is source: TODO-cite until the medical team cites or rejects it.",
+  "intl (bundle_tags, role_aliases, roles[].aliases_intl): French, Spanish, Italian, Turkish and Arabic names, written accent-folded (engine/understand.norm_text folds é->e, ş->s, ğ->g, ı->i, Arabic alef variants). Vocabulary only; source TODO-cite, needs review by native-speaking clinicians.",
+  "role_stems: word stems that name a specialty in several languages (cardiolog- / kardiyolog-, onkolog- ...). Used only when no alias matched; the matching word counts as the role word.",
+  "role_fallback_bundles: what a recognised role sees when its task wording is not recognised (instead of the 4-card safety summary). Roles not listed use their first default bundle. Clinical judgement, source TODO-cite.",
+  "roles added 31 Oct (physician, sports_medicine, occupational_medicine, palliative_care, gastroenterologist, sleep_medicine, pulmonologist, toxicologist, infectious_disease, travel_medicine, haematologist, geriatrician, gynaecologist, obstetrician, paediatrician, neonatologist): engineering proposals, source TODO-cite; slots and priorities must be reviewed by the medical team.",
+  "topics: the named-topic lexicon (engine/focus.py). When the request names a topic, its facts (fact categories / ICD-10 / ATC / label pattern, plus optional KB slots) are shown open in the short view; if the record has none, a 'not documented' card names what was searched. Exclusions ('not interested in X', 'ohne X', 'sans X') suppress a topic. Every topic is source TODO-cite."
  ],
  "bundle_tags": {
   "B01": {
@@ -26,6 +31,25 @@
     "präoperativ",
     "OP-Vorbereitung",
     "Anästhesie"
+   ],
+   "intl": [
+    "preoperatoire",
+    "bilan preoperatoire",
+    "consultation d'anesthesie",
+    "anesthesie",
+    "avant l'operation",
+    "preoperatorio",
+    "valoracion preanestesica",
+    "antes de la cirugia",
+    "anestesia",
+    "valutazione preoperatoria",
+    "prima dell'intervento",
+    "ameliyat oncesi",
+    "preoperatif",
+    "anestezi",
+    "قبل العملية",
+    "قبل الجراحة",
+    "تخدير"
    ]
   },
   "B02": {
@@ -40,6 +64,20 @@
     "Tumorkonferenz",
     "Quadrantenresektion",
     "Brustoperation"
+   ],
+   "intl": [
+    "planification chirurgicale",
+    "reunion de concertation",
+    "tumorectomie",
+    "planificacion quirurgica",
+    "comite de tumores",
+    "cuadrantectomia",
+    "pianificazione chirurgica",
+    "quadrantectomia",
+    "tumor kurulu",
+    "ameliyat planlamasi",
+    "تخطيط الجراحة",
+    "مجلس الاورام"
    ]
   },
   "B03": {
@@ -56,6 +94,17 @@
     "Blutzucker",
     "Zucker",
     "Diabeteskontrolle"
+   ],
+   "intl": [
+    "diabete",
+    "glycemie",
+    "glucemia",
+    "glicemia",
+    "diyabet",
+    "seker hastaligi",
+    "kan sekeri",
+    "السكري",
+    "سكر الدم"
    ]
   },
   "B04": {
@@ -72,6 +121,22 @@
     "Sehstörung",
     "Nachtdienst",
     "Schlaganfall"
+   ],
+   "intl": [
+    "vertige",
+    "vertiges",
+    "trouble visuel",
+    "mareo",
+    "vision borrosa",
+    "ictus",
+    "capogiro",
+    "vista offuscata",
+    "bas donmesi",
+    "gorme bozuklugu",
+    "inme",
+    "دوخة",
+    "دوار",
+    "سكتة"
    ]
   },
   "B05": {
@@ -86,6 +151,16 @@
     "Kontrastmittel",
     "KM-Gabe",
     "CT-Angiographie"
+   ],
+   "intl": [
+    "produit de contraste",
+    "scanner injecte",
+    "medio de contraste",
+    "contraste yodado",
+    "mezzo di contrasto",
+    "kontrast madde",
+    "مادة التباين",
+    "صبغة"
    ]
   },
   "B06": {
@@ -99,6 +174,15 @@
     "offene Kontrollen",
     "Nachsorge",
     "Kontrolltermine"
+   ],
+   "intl": [
+    "examens en attente",
+    "suivi apres hospitalisation",
+    "controles pendientes",
+    "seguimiento tras el alta",
+    "controlli in sospeso",
+    "takip randevulari",
+    "المتابعة بعد الخروج"
    ]
   },
   "B07": {
@@ -115,7 +199,11 @@
     "sle",
     "kidney function",
     "renal function",
-    "renal dosing"
+    "renal dosing",
+    "travel vaccination",
+    "vaccination advice",
+    "travel advice",
+    "malaria prophylaxis"
    ],
    "de": [
     "Medikation",
@@ -125,6 +213,23 @@
     "Osteoporose",
     "Nierenfunktion",
     "Lupus"
+   ],
+   "intl": [
+    "conciliation medicamenteuse",
+    "liste des medicaments",
+    "interactions medicamenteuses",
+    "conciliacion de la medicacion",
+    "conciliacion de medicacion",
+    "interacciones",
+    "revision de medicacion",
+    "riconciliazione farmacologica",
+    "interazioni farmacologiche",
+    "ilac uzlastirmasi",
+    "ilac etkilesimi",
+    "ilac listesi",
+    "مراجعة الادوية",
+    "تداخل الادوية",
+    "قائمة الادوية"
    ]
   },
   "B08": {
@@ -140,6 +245,21 @@
     "Übergabe",
     "Pflegeanamnese",
     "Entlassungsplanung"
+   ],
+   "intl": [
+    "transmission",
+    "sortie d'hospitalisation",
+    "ingreso",
+    "informe de alta",
+    "relevo de turno",
+    "dimissione",
+    "consegne",
+    "yatis",
+    "taburcu",
+    "devir teslim",
+    "تسليم المناوبة",
+    "خروج المريضة",
+    "دخول المستشفى"
    ]
   },
   "B09": {
@@ -157,6 +277,19 @@
     "Hypertonie",
     "Herzkontrolle",
     "Bluthochdruck"
+   ],
+   "intl": [
+    "tension arterielle",
+    "hypertension arterielle",
+    "hipertension",
+    "presion arterial",
+    "pressione arteriosa",
+    "ipertensione",
+    "tansiyon",
+    "hipertansiyon",
+    "kan basinci",
+    "ضغط الدم",
+    "ارتفاع ضغط الدم"
    ]
   },
   "B10": {
@@ -173,6 +306,15 @@
     "Gewichtsverlust",
     "Ernährung",
     "Gewichtskontrolle"
+   ],
+   "intl": [
+    "poids",
+    "perte de poids",
+    "perdida de peso",
+    "perdita di peso",
+    "kilo kaybi",
+    "فقدان الوزن",
+    "الوزن"
    ]
   },
   "B11": {
@@ -186,6 +328,18 @@
     "Chemotherapie",
     "Hormontherapie",
     "Onkologie"
+   ],
+   "intl": [
+    "chimiotherapie",
+    "hormonotherapie",
+    "quimioterapia",
+    "hormonoterapia",
+    "chemioterapia",
+    "ormonoterapia",
+    "kemoterapi",
+    "hormon tedavisi",
+    "العلاج الكيميائي",
+    "العلاج الهرموني"
    ]
   },
   "B12": {
@@ -196,6 +350,12 @@
    "de": [
     "Strahlentherapie",
     "Bestrahlung"
+   ],
+   "intl": [
+    "radiotherapie",
+    "radioterapia",
+    "radyoterapi",
+    "العلاج الاشعاعي"
    ]
   },
   "B13": {
@@ -209,6 +369,17 @@
     "Physiotherapie",
     "Mobilisation",
     "Reha"
+   ],
+   "intl": [
+    "reeducation",
+    "kinesitherapie",
+    "rehabilitacion",
+    "fisioterapia",
+    "riabilitazione",
+    "fizik tedavi",
+    "rehabilitasyon",
+    "العلاج الطبيعي",
+    "اعادة التاهيل"
    ]
   },
   "B14": {
@@ -226,6 +397,15 @@
     "Fundus",
     "Augenuntersuchung",
     "Netzhaut"
+   ],
+   "intl": [
+    "fond d'oeil",
+    "examen ophtalmologique",
+    "fondo de ojo",
+    "fondo oculare",
+    "goz muayenesi",
+    "فحص العين",
+    "قاع العين"
    ]
   },
   "B15": {
@@ -234,12 +414,38 @@
     "dental extraction",
     "cystoscopy",
     "skin biopsy",
-    "small procedure"
+    "small procedure",
+    "endoscopy",
+    "gastroscopy",
+    "colonoscopy",
+    "upper gi endoscopy"
    ],
    "de": [
     "Zahnextraktion",
     "Zahnarzt",
-    "Eingriff"
+    "Eingriff",
+    "Gastroskopie",
+    "Koloskopie",
+    "Endoskopie",
+    "Magenspiegelung",
+    "Darmspiegelung"
+   ],
+   "intl": [
+    "extraction dentaire",
+    "extraccion dental",
+    "estrazione dentaria",
+    "dis cekimi",
+    "خلع الاسنان",
+    "خلع سن",
+    "endoscopie",
+    "gastroscopie",
+    "coloscopie",
+    "endoscopia",
+    "gastroscopia",
+    "colonoscopia",
+    "endoskopi",
+    "kolonoskopi",
+    "المنظار"
    ]
   },
   "B16": {
@@ -249,6 +455,12 @@
    "de": [
     "Rettung",
     "Notarzt-Übergabe"
+   ],
+   "intl": [
+    "ambulancia",
+    "ambulanza",
+    "ambulans",
+    "الاسعاف"
    ]
   },
   "B17": {
@@ -263,6 +475,14 @@
     "Carotis",
     "Stenose",
     "Duplex"
+   ],
+   "intl": [
+    "carotide",
+    "stenose carotidienne",
+    "estenosis carotidea",
+    "stenosi carotidea",
+    "karotis darligi",
+    "الشريان السباتي"
    ]
   }
  },
@@ -277,6 +497,18 @@
     "Anästhesistin",
     "Narkosearzt",
     "Narkoseärztin"
+   ],
+   "intl": [
+    "anesthesiste",
+    "medecin anesthesiste",
+    "anestesista",
+    "anestesiologo",
+    "anestesiologa",
+    "anestezi uzmani",
+    "anestezist",
+    "anesteziyolog",
+    "طبيب التخدير",
+    "اخصائي التخدير"
    ]
   },
   "surgeon": {
@@ -287,6 +519,18 @@
    "de": [
     "Chirurg",
     "Chirurgin"
+   ],
+   "intl": [
+    "chirurgien",
+    "chirurgienne",
+    "cirujano",
+    "cirujana",
+    "chirurgo",
+    "chirurga",
+    "cerrah",
+    "جراح",
+    "الجراح",
+    "جراحة"
    ]
   },
   "gp": {
@@ -301,6 +545,28 @@
     "Hausärztin",
     "Allgemeinmediziner",
     "Allgemeinmedizinerin"
+   ],
+   "intl": [
+    "medecin generaliste",
+    "generaliste",
+    "medecin traitant",
+    "medecin de famille",
+    "medico de cabecera",
+    "medico de familia",
+    "medico general",
+    "medico di base",
+    "medico di famiglia",
+    "medico di medicina generale",
+    "aile hekimi",
+    "pratisyen hekim",
+    "طبيب عام",
+    "طبيب الاسرة",
+    "طبيب اسرة",
+    "medica de familia",
+    "medica de cabecera",
+    "medica general",
+    "medecin generaliste traitant",
+    "medico generale"
    ]
   },
   "ward_nurse": {
@@ -320,6 +586,25 @@
     "Pflegeperson",
     "DGKP",
     "Stationsschwester"
+   ],
+   "intl": [
+    "infirmier",
+    "infirmiere",
+    "infirmieres",
+    "enfermero",
+    "enfermera",
+    "infermiere",
+    "infermiera",
+    "hemsire",
+    "hemsiresi",
+    "ممرض",
+    "ممرضة",
+    "الممرض",
+    "الممرضة",
+    "enfermeras",
+    "enfermeros",
+    "infermieri",
+    "hemsireler"
    ]
   },
   "pharmacist": {
@@ -329,6 +614,17 @@
    "de": [
     "Apotheker",
     "Apothekerin"
+   ],
+   "intl": [
+    "pharmacien",
+    "pharmacienne",
+    "farmaceutico",
+    "farmaceutica",
+    "farmacista",
+    "eczaci",
+    "صيدلي",
+    "الصيدلي",
+    "صيدلانية"
    ]
   },
   "ophthalmologist": {
@@ -338,6 +634,17 @@
    "de": [
     "Augenarzt",
     "Augenärztin"
+   ],
+   "intl": [
+    "ophtalmologue",
+    "ophtalmologiste",
+    "oftalmologo",
+    "oftalmologa",
+    "oculista",
+    "goz doktoru",
+    "goz hekimi",
+    "طبيب العيون",
+    "اخصائي العيون"
    ]
   },
   "dentist": {
@@ -348,6 +655,16 @@
    "de": [
     "Zahnarzt",
     "Zahnärztin"
+   ],
+   "intl": [
+    "dentiste",
+    "chirurgien-dentiste",
+    "dentista",
+    "odontologo",
+    "odontologa",
+    "dis hekimi",
+    "طبيب الاسنان",
+    "طبيب اسنان"
    ]
   },
   "physio": {
@@ -359,6 +676,15 @@
     "Physiotherapeut",
     "Physiotherapeutin",
     "Ergotherapeut"
+   ],
+   "intl": [
+    "kinesitherapeute",
+    "kine",
+    "fisioterapeuta",
+    "fisioterapista",
+    "fizyoterapist",
+    "معالج فيزيائي",
+    "اخصائي العلاج الطبيعي"
    ]
   },
   "dietitian": {
@@ -369,6 +695,15 @@
     "Diätologe",
     "Diätologin",
     "Ernährungsberater"
+   ],
+   "intl": [
+    "dieteticien",
+    "dieteticienne",
+    "nutricionista",
+    "dietista",
+    "diyetisyen",
+    "اخصائي تغذية",
+    "اخصائية تغذية"
    ]
   },
   "emergency_physician": {
@@ -381,6 +716,17 @@
     "Notfallmediziner",
     "Notärztin",
     "Notarzt"
+   ],
+   "intl": [
+    "urgentiste",
+    "medecin urgentiste",
+    "medico de urgencias",
+    "urgenciologo",
+    "medico del pronto soccorso",
+    "acil hekimi",
+    "acil servis doktoru",
+    "طبيب الطوارئ",
+    "طبيب طوارئ"
    ]
   },
   "medical_oncologist": {
@@ -390,6 +736,14 @@
    "de": [
     "Onkologe",
     "Onkologin"
+   ],
+   "intl": [
+    "oncologue",
+    "oncologo",
+    "oncologa",
+    "onkolog",
+    "طبيب الاورام",
+    "اخصائي الاورام"
    ]
   },
   "cardiologist": {
@@ -397,6 +751,14 @@
    "de": [
     "Kardiologe",
     "Kardiologin"
+   ],
+   "intl": [
+    "cardiologue",
+    "cardiologo",
+    "cardiologa",
+    "kardiyolog",
+    "طبيب القلب",
+    "اخصائي القلب"
    ]
   },
   "radiologist": {
@@ -404,6 +766,14 @@
    "de": [
     "Radiologe",
     "Radiologin"
+   ],
+   "intl": [
+    "radiologue",
+    "radiologo",
+    "radiologa",
+    "radyolog",
+    "طبيب الاشعة",
+    "اخصائي الاشعة"
    ]
   },
   "neurologist": {
@@ -411,6 +781,14 @@
    "de": [
     "Neurologe",
     "Neurologin"
+   ],
+   "intl": [
+    "neurologue",
+    "neurologo",
+    "neurologa",
+    "nörolog",
+    "طبيب الاعصاب",
+    "اخصائي الاعصاب"
    ]
   },
   "diabetologist": {
@@ -419,6 +797,54 @@
     "Diabetologe",
     "Diabetologin",
     "Endokrinologe"
+   ],
+   "intl": [
+    "diabetologue",
+    "endocrinologue",
+    "endocrinologo",
+    "endocrinologa",
+    "diabetologo",
+    "endokrinolog",
+    "طبيب السكري",
+    "اخصائي الغدد"
+   ]
+  },
+  "paramedic_triage": {
+   "en": [],
+   "de": [],
+   "intl": [
+    "ambulancier",
+    "secouriste",
+    "paramedico",
+    "paramedica",
+    "tecnico de emergencias",
+    "soccorritore",
+    "paramedik",
+    "مسعف",
+    "المسعف"
+   ]
+  },
+  "vascular_surgeon": {
+   "en": [],
+   "de": [],
+   "intl": [
+    "chirurgien vasculaire",
+    "cirujano vascular",
+    "chirurgo vascolare",
+    "damar cerrahi",
+    "جراح الاوعية الدموية"
+   ]
+  },
+  "radiation_oncologist": {
+   "en": [],
+   "de": [],
+   "intl": [
+    "radiotherapeute",
+    "oncologue radiotherapeute",
+    "radioterapeuta",
+    "radioterapista",
+    "radyasyon onkologu",
+    "طبيب العلاج الاشعاعي"
    ]
   }
  },
@@ -449,6 +875,13 @@
    "often_missing": "Lupus activity, serology and immunosuppressive treatment are not in the letters.",
    "sources": [
     "G18"
+   ],
+   "aliases_intl": [
+    "rhumatologue",
+    "reumatologo",
+    "reumatologa",
+    "romatolog",
+    "طبيب الروماتيزم"
    ]
   },
   {
@@ -472,6 +905,13 @@
    "often_missing": "No urological findings in the letters.",
    "sources": [
     "G18"
+   ],
+   "aliases_intl": [
+    "urologue",
+    "urologo",
+    "urologa",
+    "ürolog",
+    "طبيب المسالك البولية"
    ]
   },
   {
@@ -499,6 +939,13 @@
    "often_missing": "Mental state and psychosocial history are not documented.",
    "sources": [
     "G18"
+   ],
+   "aliases_intl": [
+    "psychologue",
+    "psicologo",
+    "psicologa",
+    "psikolog",
+    "اخصائي نفسي"
    ]
   },
   {
@@ -526,6 +973,15 @@
    "often_missing": "Social situation beyond family support is not documented.",
    "sources": [
     "G18"
+   ],
+   "aliases_intl": [
+    "assistante sociale",
+    "assistant social",
+    "trabajador social",
+    "trabajadora social",
+    "assistente sociale",
+    "sosyal hizmet uzmani",
+    "اخصائي اجتماعي"
    ]
   },
   {
@@ -560,7 +1016,874 @@
    "often_missing": "Creatinine / eGFR are not documented in the letters.",
    "sources": [
     "G18"
+   ],
+   "aliases_intl": [
+    "nephrologue",
+    "nefrologo",
+    "nefrologa",
+    "nefrolog",
+    "طبيب الكلى"
    ]
+  },
+  {
+   "id": "physician",
+   "name": "Physician",
+   "group": "Generic clinician",
+   "aliases_en": [
+    "physician",
+    "doctor",
+    "medical doctor",
+    "consultant",
+    "consultant physician",
+    "resident",
+    "registrar",
+    "clinician",
+    "attending physician",
+    "treating physician",
+    "hospital doctor",
+    "junior doctor",
+    "senior doctor",
+    "specialist doctor",
+    "medical specialist",
+    "ward doctor",
+    "internist",
+    "internal medicine",
+    "hospitalist",
+    "on-call doctor",
+    "covering doctor"
+   ],
+   "aliases_de": [
+    "Arzt",
+    "Ärztin",
+    "Stationsarzt",
+    "Stationsärztin",
+    "Assistenzarzt",
+    "Assistenzärztin",
+    "Oberarzt",
+    "Oberärztin",
+    "Facharzt",
+    "Fachärztin",
+    "Internist",
+    "Internistin",
+    "Mediziner",
+    "Medizinerin"
+   ],
+   "aliases_intl": [
+    "medecin",
+    "docteur",
+    "medecin specialiste",
+    "medico",
+    "medica",
+    "doctora",
+    "medico especialista",
+    "dottore",
+    "dottoressa",
+    "doktor",
+    "hekim",
+    "uzman doktor",
+    "طبيب",
+    "الطبيب",
+    "طبيبة",
+    "الطبيبة",
+    "دكتور",
+    "الدكتور",
+    "دكتورة"
+   ],
+   "typical_situations": "Any doctor whose specialty is not stated.",
+   "default_bundles": [
+    "B18"
+   ],
+   "modifiers": [],
+   "mindset": "Core summary: diagnoses, medication, allergies, age.",
+   "often_missing": "Depends on the task.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite",
+   "generic": true
+  },
+  {
+   "id": "sports_medicine",
+   "name": "Sports medicine physician",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "sports medicine",
+    "sports physician",
+    "sports doctor",
+    "team doctor",
+    "sports medicine physician",
+    "sports cardiology"
+   ],
+   "aliases_de": [
+    "Sportmediziner",
+    "Sportmedizinerin",
+    "Sportarzt",
+    "Sportärztin",
+    "Sportmedizin"
+   ],
+   "aliases_intl": [
+    "medecin du sport",
+    "medecine du sport",
+    "medicina deportiva",
+    "medico deportivo",
+    "medicina del deporte",
+    "medicina dello sport",
+    "medico sportivo",
+    "spor hekimi",
+    "spor hekimligi",
+    "الطب الرياضي",
+    "طب رياضي",
+    "طبيب رياضي"
+   ],
+   "typical_situations": "Fitness for sport / exercise.",
+   "default_bundles": [
+    "B09"
+   ],
+   "modifiers": [
+    {
+     "slot": "lvef",
+     "priority": "P1"
+    },
+    {
+     "slot": "ecg_rhythm",
+     "priority": "P1"
+    },
+    {
+     "slot": "mobility_function",
+     "priority": "P1"
+    },
+    {
+     "slot": "med_current",
+     "priority": "P1"
+    },
+    {
+     "slot": "diagnoses_all",
+     "priority": "P1"
+    }
+   ],
+   "mindset": "Cardiovascular risk, rhythm, heart function, medication affecting exercise.",
+   "often_missing": "Exercise test not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "occupational_medicine",
+   "name": "Occupational physician",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "occupational physician",
+    "occupational medicine",
+    "occupational health",
+    "occupational health physician",
+    "company doctor",
+    "works doctor"
+   ],
+   "aliases_de": [
+    "Betriebsarzt",
+    "Betriebsärztin",
+    "Arbeitsmediziner",
+    "Arbeitsmedizinerin",
+    "Arbeitsmedizin"
+   ],
+   "aliases_intl": [
+    "medecin du travail",
+    "medecine du travail",
+    "medicina del trabajo",
+    "medicina laboral",
+    "medico laboral",
+    "medico del lavoro",
+    "medicina del lavoro",
+    "isyeri hekimi",
+    "is hekimi",
+    "طب العمل",
+    "طبيب العمل"
+   ],
+   "typical_situations": "Fitness for work / return to work.",
+   "default_bundles": [
+    "B18"
+   ],
+   "modifiers": [
+    {
+     "slot": "mobility_function",
+     "priority": "P1"
+    },
+    {
+     "slot": "med_analgesic_psychotropic",
+     "priority": "P2"
+    },
+    {
+     "slot": "eye_history",
+     "priority": "P2"
+    }
+   ],
+   "mindset": "Diagnoses and medication affecting work, mobility, vision.",
+   "often_missing": "Occupation and work demands are not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "palliative_care",
+   "name": "Palliative care physician",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "palliative care",
+    "palliative medicine",
+    "palliative care physician",
+    "palliative physician",
+    "palliative team",
+    "palliative care team",
+    "hospice",
+    "hospice team"
+   ],
+   "aliases_de": [
+    "Palliativmediziner",
+    "Palliativmedizinerin",
+    "Palliativmedizin",
+    "Palliativteam",
+    "Palliativstation",
+    "Hospiz"
+   ],
+   "aliases_intl": [
+    "soins palliatifs",
+    "equipe de soins palliatifs",
+    "cuidados paliativos",
+    "cure palliative",
+    "palyatif bakim",
+    "الرعاية التلطيفية",
+    "رعاية تلطيفية"
+   ],
+   "typical_situations": "Symptom control and goals of care.",
+   "default_bundles": [
+    "B08"
+   ],
+   "modifiers": [
+    {
+     "slot": "code_status",
+     "priority": "P1"
+    },
+    {
+     "slot": "social_support",
+     "priority": "P1"
+    },
+    {
+     "slot": "cancer_histology",
+     "priority": "P1"
+    },
+    {
+     "slot": "med_analgesic_psychotropic",
+     "priority": "P1"
+    },
+    {
+     "slot": "tnm_grade",
+     "priority": "P2"
+    }
+   ],
+   "mindset": "Diagnosis and stage, wishes / advance directive, support at home, analgesia.",
+   "often_missing": "Advance directive and symptom burden are not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "gastroenterologist",
+   "name": "Gastroenterologist",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "gastroenterologist",
+    "gastroenterology",
+    "gi physician",
+    "endoscopist",
+    "hepatologist"
+   ],
+   "aliases_de": [
+    "Gastroenterologe",
+    "Gastroenterologin",
+    "Gastroenterologie",
+    "Hepatologe",
+    "Hepatologin"
+   ],
+   "aliases_intl": [
+    "gastro-enterologue",
+    "hepato-gastro-enterologue",
+    "gastroenterologo",
+    "gastroenterologa",
+    "gastroenterolog",
+    "طبيب الجهاز الهضمي"
+   ],
+   "typical_situations": "GI consult or endoscopy.",
+   "default_bundles": [
+    "B18"
+   ],
+   "modifiers": [
+    {
+     "slot": "med_antithrombotic",
+     "priority": "P1"
+    },
+    {
+     "slot": "liver_function",
+     "priority": "P2"
+    },
+    {
+     "slot": "coagulation",
+     "priority": "P2"
+    }
+   ],
+   "mindset": "GI diagnoses, blood thinners before endoscopy, allergies, medication.",
+   "often_missing": "Endoscopy findings are not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "sleep_medicine",
+   "name": "Sleep medicine physician",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "sleep medicine",
+    "sleep physician",
+    "sleep specialist",
+    "sleep lab",
+    "sleep clinic",
+    "somnologist"
+   ],
+   "aliases_de": [
+    "Schlafmediziner",
+    "Schlafmedizinerin",
+    "Schlafmedizin",
+    "Schlaflabor",
+    "Somnologe",
+    "Somnologin"
+   ],
+   "aliases_intl": [
+    "medecine du sommeil",
+    "medicina del sueno",
+    "medicina del sonno",
+    "uyku hekimi",
+    "طب النوم"
+   ],
+   "typical_situations": "Sleep apnoea and sleep disorders.",
+   "default_bundles": [
+    "B10"
+   ],
+   "modifiers": [
+    {
+     "slot": "pulmonary_hx",
+     "priority": "P1"
+    },
+    {
+     "slot": "vitals_bp_hr",
+     "priority": "P1"
+    },
+    {
+     "slot": "hypertension_hx",
+     "priority": "P2"
+    },
+    {
+     "slot": "med_analgesic_psychotropic",
+     "priority": "P2"
+    }
+   ],
+   "mindset": "Sleep apnoea, weight/BMI, blood pressure, sedating drugs.",
+   "often_missing": "Sleep study results and CPAP use are not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "pulmonologist",
+   "name": "Pulmonologist",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "pulmonologist",
+    "respiratory physician",
+    "chest physician",
+    "pneumologist",
+    "lung specialist",
+    "pulmonology"
+   ],
+   "aliases_de": [
+    "Pneumologe",
+    "Pneumologin",
+    "Lungenfacharzt",
+    "Lungenfachärztin",
+    "Pulmologe",
+    "Pulmologin"
+   ],
+   "aliases_intl": [
+    "pneumologue",
+    "neumologo",
+    "neumologa",
+    "pneumologo",
+    "pneumologa",
+    "gogus hastaliklari uzmani",
+    "طبيب الصدر"
+   ],
+   "typical_situations": "Lung disease, sleep apnoea.",
+   "default_bundles": [
+    "B18"
+   ],
+   "modifiers": [
+    {
+     "slot": "pulmonary_hx",
+     "priority": "P1"
+    },
+    {
+     "slot": "smoking_alcohol",
+     "priority": "P1"
+    },
+    {
+     "slot": "spo2_resp",
+     "priority": "P1"
+    },
+    {
+     "slot": "height_bmi",
+     "priority": "P2"
+    }
+   ],
+   "mindset": "Lung disease, smoking, oxygenation, weight.",
+   "often_missing": "Lung function tests are not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "toxicologist",
+   "name": "Clinical toxicologist",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "toxicologist",
+    "clinical toxicologist",
+    "toxicology",
+    "poison centre",
+    "poison center",
+    "poison control"
+   ],
+   "aliases_de": [
+    "Toxikologe",
+    "Toxikologin",
+    "Toxikologie",
+    "Giftnotruf",
+    "Vergiftungszentrale"
+   ],
+   "aliases_intl": [
+    "toxicologue",
+    "centre antipoison",
+    "toxicologo",
+    "toxicologa",
+    "tossicologo",
+    "tossicologa",
+    "centro antiveleni",
+    "toksikolog",
+    "علم السموم"
+   ],
+   "typical_situations": "Suspected poisoning or overdose.",
+   "default_bundles": [
+    "B07"
+   ],
+   "modifiers": [
+    {
+     "slot": "kidney_function",
+     "priority": "P1"
+    },
+    {
+     "slot": "liver_function",
+     "priority": "P1"
+    },
+    {
+     "slot": "ecg_rhythm",
+     "priority": "P1"
+    },
+    {
+     "slot": "age_sex",
+     "priority": "P1"
+    },
+    {
+     "slot": "weight",
+     "priority": "P2"
+    }
+   ],
+   "mindset": "Every drug she has access to, organ function, rhythm, weight.",
+   "often_missing": "Drug levels are not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "infectious_disease",
+   "name": "Infectious disease physician",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "infectious disease physician",
+    "infectious diseases",
+    "infectious disease",
+    "id physician",
+    "id consult",
+    "infectiologist",
+    "infection specialist"
+   ],
+   "aliases_de": [
+    "Infektiologe",
+    "Infektiologin",
+    "Infektiologie"
+   ],
+   "aliases_intl": [
+    "infectiologue",
+    "infectiologie",
+    "infectologo",
+    "infectologa",
+    "enfermedades infecciosas",
+    "infettivologo",
+    "infettivologa",
+    "malattie infettive",
+    "enfeksiyon uzmani",
+    "enfeksiyon hastaliklari",
+    "الامراض المعدية",
+    "طبيب الامراض المعدية"
+   ],
+   "typical_situations": "Infection, antibiotic choice.",
+   "default_bundles": [
+    "B07"
+   ],
+   "modifiers": [
+    {
+     "slot": "diagnoses_all",
+     "priority": "P1"
+    },
+    {
+     "slot": "kidney_function",
+     "priority": "P1"
+    },
+    {
+     "slot": "liver_function",
+     "priority": "P2"
+    },
+    {
+     "slot": "procedures_all",
+     "priority": "P2"
+    }
+   ],
+   "mindset": "Allergies, immunosuppression (e.g. SLE), kidney function for dosing, interactions.",
+   "often_missing": "Cultures and infection markers are not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "travel_medicine",
+   "name": "Travel medicine physician",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "travel medicine",
+    "travel clinic",
+    "travel health",
+    "travel medicine physician",
+    "travel doctor",
+    "tropical medicine",
+    "vaccination clinic"
+   ],
+   "aliases_de": [
+    "Reisemediziner",
+    "Reisemedizinerin",
+    "Reisemedizin",
+    "Tropenmediziner",
+    "Tropenmedizinerin",
+    "Tropenmedizin",
+    "Impfambulanz"
+   ],
+   "aliases_intl": [
+    "medecine des voyages",
+    "medecin des voyages",
+    "centre de vaccination",
+    "medicina del viajero",
+    "medicina tropical",
+    "medicina dei viaggi",
+    "medicina tropicale",
+    "seyahat hekimligi",
+    "طب السفر",
+    "طب المسافرين"
+   ],
+   "typical_situations": "Vaccination and prophylaxis before travel.",
+   "default_bundles": [
+    "B07"
+   ],
+   "modifiers": [
+    {
+     "slot": "diagnoses_all",
+     "priority": "P1"
+    },
+    {
+     "slot": "age_sex",
+     "priority": "P1"
+    }
+   ],
+   "mindset": "Immunosuppression (SLE), interactions with malaria prophylaxis, allergies, chronic disease.",
+   "often_missing": "Vaccination history is not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "haematologist",
+   "name": "Haematologist",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "haematologist",
+    "hematologist",
+    "haematology",
+    "hematology"
+   ],
+   "aliases_de": [
+    "Hämatologe",
+    "Hämatologin",
+    "Hämatologie"
+   ],
+   "aliases_intl": [
+    "hematologue",
+    "hematologo",
+    "hematologa",
+    "ematologo",
+    "ematologa",
+    "hematolog",
+    "طبيب امراض الدم"
+   ],
+   "typical_situations": "Bleeding or clotting question.",
+   "default_bundles": [
+    "B15"
+   ],
+   "modifiers": [
+    {
+     "slot": "blood_count",
+     "priority": "P1"
+    },
+    {
+     "slot": "coagulation",
+     "priority": "P1"
+    }
+   ],
+   "mindset": "Blood thinners, blood count, coagulation.",
+   "often_missing": "Blood count and coagulation are not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "geriatrician",
+   "name": "Geriatrician",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "geriatrician",
+    "geriatrics",
+    "geriatric medicine",
+    "elderly care physician",
+    "care of the elderly"
+   ],
+   "aliases_de": [
+    "Geriater",
+    "Geriaterin",
+    "Geriatrie",
+    "Altersmediziner",
+    "Altersmedizinerin"
+   ],
+   "aliases_intl": [
+    "geriatre",
+    "geriatra",
+    "geriatri uzmani",
+    "طبيب الشيخوخة"
+   ],
+   "typical_situations": "Falls, polypharmacy, function.",
+   "default_bundles": [
+    "B07"
+   ],
+   "modifiers": [
+    {
+     "slot": "mobility_function",
+     "priority": "P1"
+    },
+    {
+     "slot": "social_support",
+     "priority": "P2"
+    },
+    {
+     "slot": "diagnoses_all",
+     "priority": "P2"
+    }
+   ],
+   "mindset": "Medication burden, mobility, cognition, support.",
+   "often_missing": "Falls history and cognition beyond MMSE are not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "gynaecologist",
+   "name": "Gynaecologist",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "gynaecologist",
+    "gynecologist",
+    "ob/gyn",
+    "obgyn",
+    "gynaecological oncologist",
+    "gynecologic oncologist"
+   ],
+   "aliases_de": [
+    "Gynäkologe",
+    "Gynäkologin",
+    "Frauenarzt",
+    "Frauenärztin"
+   ],
+   "aliases_intl": [
+    "gynecologue",
+    "ginecologo",
+    "ginecologa",
+    "jinekolog",
+    "kadin dogum uzmani",
+    "طبيب النساء",
+    "طبيبة نسائية"
+   ],
+   "typical_situations": "Gynaecological review.",
+   "default_bundles": [
+    "B18"
+   ],
+   "modifiers": [
+    {
+     "slot": "planned_procedure",
+     "priority": "P1"
+    },
+    {
+     "slot": "cancer_histology",
+     "priority": "P2"
+    }
+   ],
+   "mindset": "Gynaecological history, breast cancer and its treatment plan.",
+   "often_missing": "Gynaecological history is not documented.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "obstetrician",
+   "name": "Obstetrician / midwife",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "obstetrician",
+    "midwife",
+    "antenatal clinic",
+    "obstetrics"
+   ],
+   "aliases_de": [
+    "Geburtshelfer",
+    "Geburtshelferin",
+    "Hebamme"
+   ],
+   "aliases_intl": [
+    "obstetricien",
+    "sage-femme",
+    "obstetra",
+    "matrona",
+    "partera",
+    "ostetrico",
+    "ostetrica",
+    "ebe",
+    "قابلة قانونية",
+    "طبيب التوليد"
+   ],
+   "typical_situations": "Pregnancy care.",
+   "default_bundles": [
+    "B18"
+   ],
+   "modifiers": [],
+   "mindset": "Pregnancy, obstetric history.",
+   "often_missing": "Not applicable unless the patient can be pregnant.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "paediatrician",
+   "name": "Paediatrician",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "paediatrician",
+    "pediatrician",
+    "paediatrics",
+    "pediatrics",
+    "children's doctor"
+   ],
+   "aliases_de": [
+    "Kinderarzt",
+    "Kinderärztin",
+    "Pädiater",
+    "Pädiaterin",
+    "Kinderheilkunde"
+   ],
+   "aliases_intl": [
+    "pediatre",
+    "pediatra",
+    "cocuk doktoru",
+    "pediatrist",
+    "طبيب اطفال",
+    "طبيب الاطفال"
+   ],
+   "typical_situations": "Care of children.",
+   "default_bundles": [
+    "B18"
+   ],
+   "modifiers": [],
+   "mindset": "Child health.",
+   "often_missing": "Not applicable to an adult patient.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "neonatologist",
+   "name": "Neonatologist",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "neonatologist",
+    "neonatology",
+    "neonatal team"
+   ],
+   "aliases_de": [
+    "Neonatologe",
+    "Neonatologin",
+    "Neonatologie"
+   ],
+   "aliases_intl": [
+    "neonatologue",
+    "neonatologo",
+    "neonatologa",
+    "yenidogan uzmani",
+    "طبيب حديثي الولادة"
+   ],
+   "typical_situations": "Care of newborns.",
+   "default_bundles": [
+    "B18"
+   ],
+   "modifiers": [],
+   "mindset": "Newborn health.",
+   "often_missing": "Not applicable to an adult patient.",
+   "sources": [
+    "G18"
+   ],
+   "source": "TODO-cite"
   }
  ],
  "task_terms": {
@@ -770,5 +2093,2473 @@
    "why": "Oncology discharge: the next planned procedure and its date are what the patient leaves with.",
    "source": "TODO-cite"
   }
- ]
+ ],
+ "role_stems": {
+  "_note": "Accent-folded word stems; a word starting with one names the role (first such word in the text). Only used when no alias matched. TODO-cite (vocabulary).",
+  "cardiologist": [
+   "cardiolog",
+   "kardiolog",
+   "kardiyolog"
+  ],
+  "neurologist": [
+   "neurolog",
+   "nörolog",
+   "norolog"
+  ],
+  "medical_oncologist": [
+   "oncolog",
+   "onkolog"
+  ],
+  "radiologist": [
+   "radiolog",
+   "radyolog"
+  ],
+  "nephrologist": [
+   "nephrolog",
+   "nefrolog"
+  ],
+  "rheumatologist": [
+   "rheumatolog",
+   "reumatolog",
+   "romatolog",
+   "rhumatolog"
+  ],
+  "gastroenterologist": [
+   "gastroenterolog",
+   "gastro-enterolog"
+  ],
+  "diabetologist": [
+   "diabetolog",
+   "endocrinolog",
+   "endokrinolog"
+  ],
+  "urologist": [
+   "urolog",
+   "ürolog"
+  ],
+  "anaesthetist": [
+   "anesthesist",
+   "anaesthesist",
+   "anestesist",
+   "anestezist",
+   "anesteziyolog",
+   "anestesiolog",
+   "anästhesist"
+  ],
+  "pulmonologist": [
+   "pneumolog",
+   "pulmonolog",
+   "neumolog",
+   "pulmolog"
+  ],
+  "haematologist": [
+   "hematolog",
+   "haematolog",
+   "ematolog",
+   "hämatolog"
+  ],
+  "geriatrician": [
+   "geriatr"
+  ],
+  "paediatrician": [
+   "pediatr",
+   "paediatr",
+   "pädiatr"
+  ],
+  "neonatologist": [
+   "neonatolog"
+  ],
+  "ophthalmologist": [
+   "ophtalmolog",
+   "oftalmolog",
+   "ophthalmolog"
+  ],
+  "psychologist": [
+   "psycholog",
+   "psicolog",
+   "psikolog"
+  ],
+  "gynaecologist": [
+   "gynecolog",
+   "gynaecolog",
+   "ginecolog",
+   "jinekolog",
+   "gynäkolog"
+  ],
+  "infectious_disease": [
+   "infectiolog",
+   "infectolog",
+   "infettivolog",
+   "infektiolog"
+  ],
+  "toxicologist": [
+   "toxicolog",
+   "toxikolog",
+   "tossicolog",
+   "toksikolog"
+  ],
+  "dentist": [
+   "odontolog"
+  ],
+  "pharmacist": [
+   "pharmacien",
+   "farmaceutic",
+   "farmacist",
+   "eczaci"
+  ]
+ },
+ "role_fallback_bundles": {
+  "_note": "Recognised role, task wording not recognised -> these bundles (TODO-cite). Roles not listed: their first default bundle.",
+  "gp": [
+   "B18"
+  ],
+  "emergency_physician": [
+   "B18"
+  ],
+  "neurologist": [
+   "B04"
+  ],
+  "anaesthetist": [
+   "B01"
+  ],
+  "admitting_physician": [
+   "B18"
+  ],
+  "physician": [
+   "B18"
+  ]
+ },
+ "topics": [
+  {
+   "id": "bone",
+   "label": "Bone health (osteoporosis, bone drugs)",
+   "terms": {
+    "en": [
+     "bone",
+     "bones",
+     "bone health",
+     "bone density",
+     "bone mineral density",
+     "osteoporosis",
+     "osteoporotic",
+     "osteopenia",
+     "fracture",
+     "fractures",
+     "dxa",
+     "dexa",
+     "bisphosphonate",
+     "bisphosphonates",
+     "vitamin d"
+    ],
+    "de": [
+     "Knochen",
+     "Knochendichte",
+     "Knochengesundheit",
+     "Osteoporose",
+     "Osteopenie",
+     "Fraktur",
+     "Frakturen",
+     "Knochenbruch",
+     "Bisphosphonat",
+     "Vitamin D"
+    ],
+    "intl": [
+     "osseuse",
+     "osteoporose",
+     "densite osseuse",
+     "hueso",
+     "huesos",
+     "osea",
+     "densidad osea",
+     "osteoporosis",
+     "osso",
+     "ossa",
+     "ossea",
+     "osteoporosi",
+     "kemik",
+     "kemik yogunlugu",
+     "osteoporoz",
+     "عظام",
+     "العظام",
+     "هشاشة العظام"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "categories": [
+     "bone_agent"
+    ],
+    "icd10": [
+     "M80",
+     "M81",
+     "M82",
+     "E55"
+    ],
+    "atc": [
+     "M05",
+     "A11CC",
+     "A12A"
+    ],
+    "label": "osteopor|osteopen|\\bbone|fractur|vitamin d"
+   },
+   "search": [
+    "Osteopor",
+    "Knochen",
+    "Fraktur",
+    "DXA",
+    "Densitometr",
+    "Alendron"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "cognition",
+   "label": "Cognition (MMSE, dementia)",
+   "terms": {
+    "en": [
+     "cognition",
+     "cognitive",
+     "memory",
+     "dementia",
+     "confusion",
+     "delirium",
+     "mmse",
+     "mini-mental",
+     "mental state",
+     "orientation",
+     "orientated",
+     "oriented"
+    ],
+    "de": [
+     "Kognition",
+     "kognitiv",
+     "kognitive",
+     "Gedächtnis",
+     "Demenz",
+     "Verwirrtheit",
+     "Delir",
+     "Orientierung",
+     "orientiert"
+    ],
+    "intl": [
+     "cognitif",
+     "cognitive",
+     "memoire",
+     "demence",
+     "confusion",
+     "cognicion",
+     "cognitivo",
+     "cognitiva",
+     "memoria",
+     "demencia",
+     "deterioro cognitivo",
+     "demenza",
+     "bilissel",
+     "hafiza",
+     "demans",
+     "الادراك",
+     "الذاكرة",
+     "الخرف"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "categories": [
+     "mmse"
+    ],
+    "icd10": [
+     "F00",
+     "F01",
+     "F02",
+     "F03",
+     "F05",
+     "G30",
+     "G31"
+    ],
+    "label": "mmse|cognit|dement|orient"
+   },
+   "search": [
+    "MMSE",
+    "Demenz",
+    "kognitiv",
+    "Mini-Mental",
+    "orientiert"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "social",
+   "label": "Social situation and support",
+   "terms": {
+    "en": [
+     "social situation",
+     "social history",
+     "social support",
+     "social circumstances",
+     "living situation",
+     "lives alone",
+     "living alone",
+     "home situation",
+     "family support",
+     "support at home",
+     "home care",
+     "carer",
+     "caregiver",
+     "who looks after her",
+     "going home"
+    ],
+    "de": [
+     "Sozialanamnese",
+     "soziale Situation",
+     "Wohnsituation",
+     "lebt allein",
+     "häusliche Situation",
+     "Versorgung zu Hause",
+     "familiäre Unterstützung",
+     "Unterstützung zu Hause"
+    ],
+    "intl": [
+     "situation sociale",
+     "contexte social",
+     "situacion social",
+     "apoyo familiar",
+     "situazione sociale",
+     "supporto familiare",
+     "sosyal durum",
+     "aile destegi",
+     "الوضع الاجتماعي",
+     "الدعم الاسري"
+    ]
+   },
+   "slots": [
+    "social_support"
+   ],
+   "select": {
+    "categories": [
+     "social_support"
+    ]
+   },
+   "search": [
+    "Familie",
+    "lebt",
+    "Wohn",
+    "Sozial",
+    "Angehörig",
+    "versorgt"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "medication",
+   "label": "Current medication",
+   "terms": {
+    "en": [
+     "medication",
+     "medications",
+     "medicines",
+     "drug list",
+     "list of drugs",
+     "discharge medication",
+     "discharge medications",
+     "current medication",
+     "current drugs",
+     "tablets",
+     "prescriptions",
+     "drug therapy"
+    ],
+    "de": [
+     "Medikation",
+     "Medikamente",
+     "Entlassungsmedikation",
+     "Dauermedikation",
+     "Medikamentenliste",
+     "Hausmedikation",
+     "aktuelle Therapie"
+    ],
+    "intl": [
+     "medicaments",
+     "traitement de sortie",
+     "traitement actuel",
+     "medicacion",
+     "medicamentos",
+     "tratamiento actual",
+     "farmaci",
+     "terapia domiciliare",
+     "terapia attuale",
+     "ilac",
+     "ilaclar",
+     "ilaclari",
+     "ilac listesi",
+     "الادوية",
+     "ادوية",
+     "قائمة الادوية"
+    ]
+   },
+   "slots": [
+    "med_current"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "blood_pressure",
+   "label": "Blood pressure",
+   "terms": {
+    "en": [
+     "blood pressure",
+     "bp",
+     "bp peaks",
+     "morning peaks",
+     "blood pressure peaks",
+     "hypertension",
+     "hypertensive",
+     "24h bp",
+     "24-hour blood pressure",
+     "ambulatory blood pressure",
+     "abpm",
+     "rr"
+    ],
+    "de": [
+     "Blutdruck",
+     "Blutdruckspitzen",
+     "RR-Spitzen",
+     "Langzeitblutdruck",
+     "Langzeit-RR",
+     "24h-RR",
+     "Hypertonie",
+     "Bluthochdruck",
+     "hypertensive"
+    ],
+    "intl": [
+     "tension arterielle",
+     "pression arterielle",
+     "hypertension",
+     "presion arterial",
+     "hipertension",
+     "tension",
+     "pressione arteriosa",
+     "pressione",
+     "ipertensione",
+     "tansiyon",
+     "kan basinci",
+     "hipertansiyon",
+     "ضغط الدم",
+     "ارتفاع ضغط الدم"
+    ]
+   },
+   "slots": [
+    "vitals_bp_hr"
+   ],
+   "select": {
+    "categories": [
+     "blood_pressure"
+    ],
+    "icd10": [
+     "I10",
+     "I11",
+     "I15"
+    ],
+    "label": "blood pressure|hypertens"
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "rhythm",
+   "label": "ECG, Holter and rhythm",
+   "terms": {
+    "en": [
+     "holter",
+     "holter ecg",
+     "long-term ecg",
+     "24h ecg",
+     "ecg",
+     "ekg",
+     "electrocardiogram",
+     "rhythm",
+     "arrhythmia",
+     "arrhythmias",
+     "atrial fibrillation",
+     "palpitations",
+     "heart rate",
+     "pulse"
+    ],
+    "de": [
+     "Langzeit-EKG",
+     "Holter",
+     "EKG",
+     "Rhythmus",
+     "Herzrhythmus",
+     "Rhythmusstörung",
+     "Vorhofflimmern",
+     "Herzfrequenz",
+     "Puls"
+    ],
+    "intl": [
+     "electrocardiogramme",
+     "ecg",
+     "rythme",
+     "fibrillation auriculaire",
+     "electrocardiograma",
+     "ritmo",
+     "fibrilacion auricular",
+     "elettrocardiogramma",
+     "fibrillazione atriale",
+     "ritim",
+     "ekg",
+     "ritim bozuklugu",
+     "تخطيط القلب",
+     "هولتر",
+     "نظم القلب"
+    ]
+   },
+   "slots": [
+    "ecg_rhythm"
+   ],
+   "select": {
+    "categories": [
+     "heart_rate"
+    ],
+    "icd10": [
+     "I44",
+     "I45",
+     "I47",
+     "I48",
+     "I49"
+    ],
+    "label": "holter|\\becg|rhythm|arrhythm|extrasystol|fibrill"
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "echo",
+   "label": "Echocardiography and heart function",
+   "terms": {
+    "en": [
+     "echo",
+     "echocardiography",
+     "echocardiogram",
+     "lvef",
+     "ejection fraction",
+     "heart function",
+     "cardiac function",
+     "ventricular function",
+     "heart failure",
+     "pump function"
+    ],
+    "de": [
+     "Echo",
+     "Echokardiographie",
+     "Echokardiografie",
+     "Herzecho",
+     "Herzultraschall",
+     "Herzfunktion",
+     "Pumpfunktion",
+     "Ejektionsfraktion",
+     "Herzinsuffizienz"
+    ],
+    "intl": [
+     "echocardiographie",
+     "fraction d'ejection",
+     "fonction cardiaque",
+     "ecocardiograma",
+     "ecocardiografia",
+     "fraccion de eyeccion",
+     "funcion cardiaca",
+     "frazione di eiezione",
+     "funzione cardiaca",
+     "ekokardiyografi",
+     "ejeksiyon fraksiyonu",
+     "تخطيط صدى القلب",
+     "ايكو القلب"
+    ]
+   },
+   "slots": [
+    "lvef"
+   ],
+   "select": {
+    "categories": [
+     "echo",
+     "lv_function"
+    ],
+    "label": "echocard|lvef|ventric"
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "head_imaging",
+   "label": "Head imaging (CT / MRI)",
+   "terms": {
+    "en": [
+     "head ct",
+     "brain ct",
+     "ct head",
+     "ct of the head",
+     "cranial ct",
+     "head imaging",
+     "brain imaging",
+     "brain mri",
+     "head mri",
+     "mri of the brain",
+     "neuroimaging",
+     "ct scan of the head"
+    ],
+    "de": [
+     "CCT",
+     "Schädel-CT",
+     "Kopf-CT",
+     "cMRT",
+     "Schädel-MRT",
+     "Kopf-MRT",
+     "Bildgebung des Kopfes",
+     "Bildgebung des Gehirns"
+    ],
+    "intl": [
+     "scanner cerebral",
+     "irm cerebrale",
+     "tac craneal",
+     "tc craneal",
+     "resonancia cerebral",
+     "tac cerebrale",
+     "tc cranio",
+     "risonanza cerebrale",
+     "beyin tomografisi",
+     "beyin mr",
+     "kranial bt",
+     "تصوير الدماغ",
+     "اشعة الراس"
+    ]
+   },
+   "slots": [
+    "head_imaging"
+   ],
+   "select": {
+    "label": "head ct|\\bbrain\\b|cranial|intracranial|\\bcsf\\b"
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "hba1c",
+   "label": "HbA1c",
+   "terms": {
+    "en": [
+     "hba1c",
+     "a1c",
+     "glycated haemoglobin",
+     "glycated hemoglobin",
+     "glycohaemoglobin",
+     "long-term sugar"
+    ],
+    "de": [
+     "HbA1c",
+     "Langzeitzucker",
+     "Langzeitblutzucker"
+    ],
+    "intl": [
+     "hemoglobine glyquee",
+     "hemoglobina glicosilada",
+     "hemoglobina glicada",
+     "emoglobina glicata",
+     "السكر التراكمي"
+    ]
+   },
+   "slots": [
+    "hba1c"
+   ],
+   "select": {
+    "categories": [
+     "hba1c"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "diabetes",
+   "label": "Diabetes and glucose-lowering treatment",
+   "terms": {
+    "en": [
+     "diabetes",
+     "diabetic",
+     "blood sugar",
+     "glucose",
+     "glycaemic",
+     "glycemic",
+     "sugar control",
+     "antidiabetic",
+     "insulin"
+    ],
+    "de": [
+     "Diabetes",
+     "Diabetiker",
+     "Diabetikerin",
+     "Blutzucker",
+     "Zucker",
+     "Zuckerkrankheit",
+     "Glukose",
+     "Insulin"
+    ],
+    "intl": [
+     "diabete",
+     "diabetique",
+     "glycemie",
+     "diabetes",
+     "diabetico",
+     "diabetica",
+     "glucemia",
+     "glicemia",
+     "diyabet",
+     "seker",
+     "seker hastaligi",
+     "السكري",
+     "سكر الدم"
+    ]
+   },
+   "slots": [
+    "diabetes_dx",
+    "med_antidiabetic"
+   ],
+   "select": {
+    "categories": [
+     "hba1c",
+     "glucose",
+     "glucose_lowering"
+    ],
+    "icd10": [
+     "E10",
+     "E11",
+     "E12",
+     "E13",
+     "E14"
+    ],
+    "atc": [
+     "A10"
+    ],
+    "label": "diabet|hba1c|glucose"
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "eye",
+   "label": "Eye findings and eye follow-up",
+   "terms": {
+    "en": [
+     "eye",
+     "eyes",
+     "fundus",
+     "fundoscopy",
+     "retina",
+     "retinal",
+     "retinopathy",
+     "vision",
+     "visual",
+     "ophthalmology",
+     "ophthalmological",
+     "amaurosis",
+     "eye check",
+     "eye exam",
+     "optic"
+    ],
+    "de": [
+     "Auge",
+     "Augen",
+     "Fundus",
+     "Augenhintergrund",
+     "Netzhaut",
+     "Retinopathie",
+     "Sehstörung",
+     "Sehen",
+     "Visus",
+     "augenärztlich",
+     "Augenkontrolle"
+    ],
+    "intl": [
+     "oeil",
+     "yeux",
+     "fond d'oeil",
+     "retine",
+     "retinopathie",
+     "vision",
+     "ojo",
+     "ojos",
+     "fondo de ojo",
+     "retina",
+     "retinopatia",
+     "vista",
+     "occhio",
+     "occhi",
+     "fondo oculare",
+     "goz",
+     "gozler",
+     "retinopati",
+     "العين",
+     "العيون",
+     "قاع العين",
+     "الشبكية"
+    ]
+   },
+   "slots": [
+    "eye_history"
+   ],
+   "select": {
+    "icd10": [
+     "H30",
+     "H31",
+     "H32",
+     "H33",
+     "H34",
+     "H35",
+     "H36",
+     "H53",
+     "H54",
+     "G45.3"
+    ],
+    "label": "\\beye|fundus|retin|vision|visual|ophthalm|amaurosis|hollenhorst|papill"
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "staging",
+   "label": "Tumour stage and grade (TNM)",
+   "terms": {
+    "en": [
+     "staging",
+     "stage",
+     "tnm",
+     "tumour stage",
+     "tumor stage",
+     "tumour grade",
+     "tumor grade",
+     "grading",
+     "metastases",
+     "metastasis",
+     "metastatic"
+    ],
+    "de": [
+     "Staging",
+     "Stadium",
+     "TNM",
+     "Tumorstadium",
+     "Grading",
+     "Metastasen",
+     "Tumorformel"
+    ],
+    "intl": [
+     "stade",
+     "stadification",
+     "metastases",
+     "estadio",
+     "estadificacion",
+     "metastasis",
+     "stadiazione",
+     "stadio",
+     "metastasi",
+     "evre",
+     "evreleme",
+     "metastaz",
+     "مرحلة الورم",
+     "النقائل"
+    ]
+   },
+   "slots": [
+    "tnm_grade"
+   ],
+   "select": {
+    "categories": [
+     "tnm"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "receptors",
+   "label": "Hormone receptors, HER2, Ki-67",
+   "terms": {
+    "en": [
+     "receptor",
+     "receptors",
+     "receptor status",
+     "hormone receptor",
+     "hormone receptors",
+     "er/pr",
+     "her2",
+     "her-2",
+     "ki-67",
+     "ki67",
+     "oestrogen receptor",
+     "estrogen receptor",
+     "progesterone receptor",
+     "proliferation"
+    ],
+    "de": [
+     "Rezeptor",
+     "Rezeptoren",
+     "Rezeptorstatus",
+     "Hormonrezeptor",
+     "Hormonrezeptoren",
+     "HER2",
+     "Ki-67",
+     "Östrogenrezeptor",
+     "Proliferation"
+    ],
+    "intl": [
+     "recepteurs",
+     "statut hormonal",
+     "receptores",
+     "recettori",
+     "reseptor",
+     "reseptorler",
+     "مستقبلات"
+    ]
+   },
+   "slots": [
+    "receptors_ki67"
+   ],
+   "select": {
+    "categories": [
+     "receptor_status",
+     "ki67"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "histology",
+   "label": "Histology",
+   "terms": {
+    "en": [
+     "histology",
+     "histological",
+     "pathology",
+     "pathology report",
+     "biopsy result",
+     "biopsy results",
+     "tumour type",
+     "tumor type",
+     "cancer type"
+    ],
+    "de": [
+     "Histologie",
+     "histologisch",
+     "Pathologie",
+     "Biopsiebefund",
+     "Histo"
+    ],
+    "intl": [
+     "histologie",
+     "anatomopathologie",
+     "histologia",
+     "anatomia patologica",
+     "istologia",
+     "histoloji",
+     "patoloji",
+     "الانسجة",
+     "علم الامراض"
+    ]
+   },
+   "slots": [
+    "cancer_histology"
+   ],
+   "select": {
+    "categories": [
+     "histology"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "planned",
+   "label": "Planned procedure and date",
+   "terms": {
+    "en": [
+     "planned operation",
+     "planned surgery",
+     "planned procedure",
+     "upcoming surgery",
+     "upcoming operation",
+     "scheduled surgery",
+     "scheduled operation",
+     "date of surgery",
+     "date of the operation",
+     "surgery date",
+     "operation date",
+     "next steps",
+     "next step",
+     "what is planned",
+     "treatment plan",
+     "what happens next"
+    ],
+    "de": [
+     "geplante Operation",
+     "geplante OP",
+     "OP-Termin",
+     "Operationstermin",
+     "geplanter Eingriff",
+     "nächste Schritte",
+     "Therapieplan",
+     "Procedere",
+     "weiteres Vorgehen"
+    ],
+    "intl": [
+     "intervention prevue",
+     "operation prevue",
+     "date de l'operation",
+     "prochaines etapes",
+     "cirugia programada",
+     "fecha de la cirugia",
+     "proximos pasos",
+     "intervento programmato",
+     "data dell'intervento",
+     "prossimi passi",
+     "planlanan ameliyat",
+     "ameliyat tarihi",
+     "sonraki adimlar",
+     "العملية المخطط لها",
+     "موعد العملية"
+    ]
+   },
+   "slots": [
+    "planned_procedure"
+   ],
+   "select": {
+    "categories": [
+     "planned_procedure",
+     "planned_admission"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "gi",
+   "label": "Gastro-intestinal history (reflux, hernia)",
+   "terms": {
+    "en": [
+     "reflux",
+     "gerd",
+     "gord",
+     "heartburn",
+     "hiatus hernia",
+     "hiatal hernia",
+     "hernia",
+     "oesophagus",
+     "esophagus",
+     "oesophageal",
+     "stomach",
+     "gastric",
+     "gastrointestinal",
+     "gallbladder",
+     "bowel",
+     "gi history"
+    ],
+    "de": [
+     "Reflux",
+     "Sodbrennen",
+     "Hiatushernie",
+     "Hernie",
+     "Speiseröhre",
+     "Magen",
+     "Gallenblase",
+     "Darm",
+     "Refluxkrankheit"
+    ],
+    "intl": [
+     "reflux",
+     "hernie hiatale",
+     "oesophage",
+     "estomac",
+     "reflujo",
+     "hernia de hiato",
+     "esofago",
+     "estomago",
+     "reflusso",
+     "ernia iatale",
+     "stomaco",
+     "reflu",
+     "fitik",
+     "hiatal herni",
+     "mide",
+     "yemek borusu",
+     "الارتجاع",
+     "ارتجاع المريء",
+     "فتق",
+     "المعدة"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "icd10": [
+     "K20",
+     "K21",
+     "K22",
+     "K25",
+     "K26",
+     "K29",
+     "K40",
+     "K44",
+     "K57",
+     "K80",
+     "K81"
+    ],
+    "label": "reflux|hernia|cholecyst|gastr|oesophag"
+   },
+   "search": [
+    "Reflux",
+    "Hernie",
+    "Gastr",
+    "Ösophag",
+    "Cholezyst"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "kidney",
+   "label": "Kidney function (creatinine, eGFR)",
+   "terms": {
+    "en": [
+     "kidney",
+     "kidneys",
+     "kidney function",
+     "renal",
+     "renal function",
+     "creatinine",
+     "egfr",
+     "gfr",
+     "nephropathy",
+     "ckd"
+    ],
+    "de": [
+     "Niere",
+     "Nieren",
+     "Nierenfunktion",
+     "Nierenwerte",
+     "Kreatinin",
+     "GFR",
+     "eGFR",
+     "Niereninsuffizienz"
+    ],
+    "intl": [
+     "rein",
+     "reins",
+     "fonction renale",
+     "creatinine",
+     "rinon",
+     "rinones",
+     "funcion renal",
+     "creatinina",
+     "rene",
+     "reni",
+     "funzione renale",
+     "bobrek",
+     "bobrek fonksiyonu",
+     "kreatinin",
+     "الكلى",
+     "وظائف الكلى",
+     "الكرياتينين"
+    ]
+   },
+   "slots": [
+    "kidney_function"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "coagulation",
+   "label": "Coagulation tests",
+   "terms": {
+    "en": [
+     "coagulation",
+     "clotting",
+     "inr",
+     "ptt",
+     "aptt",
+     "prothrombin",
+     "bleeding tendency",
+     "coagulation tests",
+     "clotting tests"
+    ],
+    "de": [
+     "Gerinnung",
+     "Gerinnungswerte",
+     "Blutgerinnung",
+     "INR",
+     "PTT",
+     "Blutungsneigung",
+     "Gerinnungsstatus"
+    ],
+    "intl": [
+     "coagulation",
+     "bilan de coagulation",
+     "coagulacion",
+     "pruebas de coagulacion",
+     "coagulazione",
+     "pihtilasma",
+     "تخثر الدم",
+     "سيولة الدم"
+    ]
+   },
+   "slots": [
+    "coagulation"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "blood_count",
+   "label": "Blood count (haemoglobin, platelets)",
+   "terms": {
+    "en": [
+     "blood count",
+     "full blood count",
+     "fbc",
+     "cbc",
+     "haemoglobin",
+     "hemoglobin",
+     "hb",
+     "platelets",
+     "platelet count",
+     "anaemia",
+     "anemia",
+     "leukocytes",
+     "white cell count"
+    ],
+    "de": [
+     "Blutbild",
+     "Hämoglobin",
+     "Thrombozyten",
+     "Anämie",
+     "Leukozyten"
+    ],
+    "intl": [
+     "numeration",
+     "hemogramme",
+     "plaquettes",
+     "anemie",
+     "hemograma",
+     "plaquetas",
+     "anemia",
+     "emocromo",
+     "piastrine",
+     "kan sayimi",
+     "hemogram",
+     "trombosit",
+     "anemi",
+     "تعداد الدم",
+     "الصفائح",
+     "فقر الدم",
+     "الهيموجلوبين"
+    ]
+   },
+   "slots": [
+    "blood_count"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "liver",
+   "label": "Liver function",
+   "terms": {
+    "en": [
+     "liver",
+     "liver function",
+     "lfts",
+     "hepatic",
+     "transaminases",
+     "bilirubin"
+    ],
+    "de": [
+     "Leber",
+     "Leberwerte",
+     "Leberfunktion",
+     "Transaminasen"
+    ],
+    "intl": [
+     "foie",
+     "bilan hepatique",
+     "higado",
+     "funcion hepatica",
+     "fegato",
+     "funzione epatica",
+     "karaciger",
+     "الكبد"
+    ]
+   },
+   "slots": [
+    "liver_function"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "electrolytes",
+   "label": "Electrolytes",
+   "terms": {
+    "en": [
+     "electrolytes",
+     "potassium",
+     "sodium"
+    ],
+    "de": [
+     "Elektrolyte",
+     "Kalium",
+     "Natrium"
+    ],
+    "intl": [
+     "ionogramme",
+     "electrolitos",
+     "potasio",
+     "sodio",
+     "elettroliti",
+     "potassio",
+     "elektrolit",
+     "potasyum",
+     "الاملاح",
+     "البوتاسيوم"
+    ]
+   },
+   "slots": [
+    "electrolytes"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "lipids",
+   "label": "Lipids and lipid-lowering treatment",
+   "terms": {
+    "en": [
+     "cholesterol",
+     "ldl",
+     "hdl",
+     "lipids",
+     "lipid profile",
+     "triglycerides",
+     "statin",
+     "statins",
+     "hyperlipidaemia",
+     "hyperlipidemia"
+    ],
+    "de": [
+     "Cholesterin",
+     "Blutfette",
+     "Lipide",
+     "Triglyzeride",
+     "Statin",
+     "Fettstoffwechsel"
+    ],
+    "intl": [
+     "cholesterol",
+     "colesterol",
+     "colesterolo",
+     "kolesterol",
+     "الكوليسترول",
+     "الدهون"
+    ]
+   },
+   "slots": [
+    "lipids",
+    "med_lipid"
+   ],
+   "select": {
+    "icd10": [
+     "E78"
+    ],
+    "atc": [
+     "C10"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "weight",
+   "label": "Weight and BMI",
+   "terms": {
+    "en": [
+     "weight",
+     "bmi",
+     "body weight",
+     "weight loss",
+     "weight change",
+     "obesity",
+     "overweight",
+     "body mass index"
+    ],
+    "de": [
+     "Gewicht",
+     "BMI",
+     "Körpergewicht",
+     "Gewichtsverlust",
+     "Übergewicht",
+     "Adipositas"
+    ],
+    "intl": [
+     "poids",
+     "imc",
+     "peso",
+     "indice de masa corporal",
+     "perdita di peso",
+     "kilo",
+     "vki",
+     "الوزن",
+     "مؤشر كتلة الجسم"
+    ]
+   },
+   "slots": [
+    "weight",
+    "height_bmi"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "carotid",
+   "label": "Carotid findings",
+   "terms": {
+    "en": [
+     "carotid",
+     "carotids",
+     "carotid stenosis",
+     "stenosis",
+     "duplex",
+     "doppler",
+     "neck arteries",
+     "neck vessels"
+    ],
+    "de": [
+     "Karotis",
+     "Carotis",
+     "Stenose",
+     "Duplex",
+     "Halsgefäße",
+     "Karotisstenose"
+    ],
+    "intl": [
+     "carotide",
+     "stenose",
+     "estenosis",
+     "stenosi",
+     "karotis",
+     "darlik",
+     "الشريان السباتي",
+     "تضيق"
+    ]
+   },
+   "slots": [
+    "carotid_stenosis"
+   ],
+   "select": {
+    "categories": [
+     "carotid_stenosis",
+     "carotid_plaque",
+     "carotid_bruit"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "stroke",
+   "label": "Stroke / TIA history",
+   "terms": {
+    "en": [
+     "stroke",
+     "tia",
+     "transient ischaemic attack",
+     "transient ischemic attack",
+     "cerebrovascular"
+    ],
+    "de": [
+     "Schlaganfall",
+     "TIA",
+     "Insult",
+     "Hirninfarkt"
+    ],
+    "intl": [
+     "avc",
+     "ictus",
+     "inme",
+     "سكتة دماغية",
+     "السكتة"
+    ]
+   },
+   "slots": [
+    "stroke_tia_hx"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "autoimmune",
+   "label": "Autoimmune disease (lupus)",
+   "terms": {
+    "en": [
+     "lupus",
+     "sle",
+     "autoimmune",
+     "rheumatic disease",
+     "connective tissue disease",
+     "immunosuppression",
+     "immunosuppressed"
+    ],
+    "de": [
+     "Lupus",
+     "SLE",
+     "Autoimmun",
+     "Autoimmunerkrankung",
+     "Kollagenose",
+     "Immunsuppression"
+    ],
+    "intl": [
+     "lupus",
+     "auto-immune",
+     "autoinmune",
+     "autoimmune",
+     "otoimmun",
+     "الذئبة",
+     "المناعة الذاتية"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "icd10": [
+     "M32",
+     "M33",
+     "M34",
+     "M35"
+    ],
+    "label": "lupus|autoimmun|connective"
+   },
+   "search": [
+    "Lupus",
+    "SLE",
+    "Kollagenose",
+    "autoimmun"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "lungs",
+   "label": "Lung disease and sleep apnoea",
+   "terms": {
+    "en": [
+     "sleep apnoea",
+     "sleep apnea",
+     "apnoea",
+     "apnea",
+     "osa",
+     "cpap",
+     "lung",
+     "lungs",
+     "asthma",
+     "copd",
+     "breathing",
+     "respiratory",
+     "pulmonary"
+    ],
+    "de": [
+     "Schlafapnoe",
+     "Apnoe",
+     "CPAP",
+     "Lunge",
+     "Asthma",
+     "COPD",
+     "Atmung"
+    ],
+    "intl": [
+     "apnee du sommeil",
+     "apnea del sueno",
+     "apnea notturna",
+     "uyku apnesi",
+     "انقطاع النفس",
+     "الرئة"
+    ]
+   },
+   "slots": [
+    "pulmonary_hx"
+   ],
+   "select": {
+    "icd10": [
+     "G47.3",
+     "J44",
+     "J45"
+    ],
+    "label": "apnoea|apnea|asthma|copd"
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "cancer",
+   "label": "Cancer diagnosis",
+   "terms": {
+    "en": [
+     "breast cancer",
+     "cancer",
+     "carcinoma",
+     "tumour",
+     "tumor",
+     "malignancy",
+     "oncological history",
+     "cancer history"
+    ],
+    "de": [
+     "Brustkrebs",
+     "Mammakarzinom",
+     "Karzinom",
+     "Krebs",
+     "Tumor",
+     "Malignom"
+    ],
+    "intl": [
+     "cancer du sein",
+     "tumeur",
+     "cancer de mama",
+     "cancro al seno",
+     "tumore",
+     "meme kanseri",
+     "kanser",
+     "سرطان الثدي",
+     "ورم",
+     "سرطان"
+    ]
+   },
+   "slots": [
+    "cancer_histology"
+   ],
+   "select": {
+    "icd10": [
+     "C50"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "axilla",
+   "label": "Axillary lymph nodes",
+   "terms": {
+    "en": [
+     "lymph nodes",
+     "lymph node",
+     "axilla",
+     "axillary",
+     "sentinel",
+     "nodal status"
+    ],
+    "de": [
+     "Lymphknoten",
+     "Axilla",
+     "axillär",
+     "Sentinel",
+     "Nodalstatus"
+    ],
+    "intl": [
+     "ganglions",
+     "ganglion",
+     "axillaire",
+     "ganglios",
+     "axila",
+     "linfonodi",
+     "ascella",
+     "lenf nodu",
+     "lenf nodlari",
+     "aksiller",
+     "العقد اللمفاوية"
+    ]
+   },
+   "slots": [
+    "axillary_status"
+   ],
+   "select": {
+    "categories": [
+     "lymph_nodes"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "breast_imaging",
+   "label": "Breast imaging and tumour size",
+   "terms": {
+    "en": [
+     "tumour size",
+     "tumor size",
+     "size of the tumour",
+     "size of the tumor",
+     "mammography",
+     "mammogram",
+     "breast ultrasound",
+     "breast imaging",
+     "bi-rads",
+     "birads"
+    ],
+    "de": [
+     "Tumorgröße",
+     "Mammographie",
+     "Mammografie",
+     "Mammasonographie",
+     "Brustultraschall",
+     "BI-RADS"
+    ],
+    "intl": [
+     "taille tumorale",
+     "mammographie",
+     "tamano tumoral",
+     "mamografia",
+     "dimensione del tumore",
+     "mammografia",
+     "tumor boyutu",
+     "mamografi",
+     "حجم الورم"
+    ]
+   },
+   "slots": [
+    "oncology_imaging",
+    "tumour_site_laterality"
+   ],
+   "select": {
+    "categories": [
+     "tumour_size",
+     "birads",
+     "breast_density"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "smoking",
+   "label": "Smoking and alcohol",
+   "terms": {
+    "en": [
+     "smoking",
+     "smoker",
+     "tobacco",
+     "cigarettes",
+     "alcohol",
+     "drinking",
+     "pack years",
+     "nicotine"
+    ],
+    "de": [
+     "Rauchen",
+     "Raucher",
+     "Raucherin",
+     "Nikotin",
+     "Alkohol",
+     "Tabak"
+    ],
+    "intl": [
+     "tabac",
+     "fumeur",
+     "fumeuse",
+     "alcool",
+     "tabaco",
+     "fumador",
+     "fumadora",
+     "alcohol",
+     "fumo",
+     "fumatore",
+     "fumatrice",
+     "sigara",
+     "alkol",
+     "التدخين",
+     "الكحول"
+    ]
+   },
+   "slots": [
+    "smoking_alcohol"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "vaccination",
+   "label": "Vaccination status",
+   "terms": {
+    "en": [
+     "vaccination",
+     "vaccinations",
+     "vaccine",
+     "vaccines",
+     "immunisation",
+     "immunization",
+     "immunisations",
+     "vaccination status",
+     "tetanus",
+     "flu shot"
+    ],
+    "de": [
+     "Impfung",
+     "Impfungen",
+     "Impfstatus",
+     "Impfpass",
+     "Tetanus"
+    ],
+    "intl": [
+     "vaccination",
+     "vaccins",
+     "vacunacion",
+     "vacunas",
+     "vaccinazione",
+     "vaccini",
+     "asilama",
+     "asi karti",
+     "التطعيم",
+     "اللقاح",
+     "التطعيمات"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "label": "vaccin|immunis|immuniz|tetanus"
+   },
+   "search": [
+    "Impf",
+    "Vakzin",
+    "Tetanus",
+    "Influenza",
+    "Hepatitis-B-Impf"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "code_status",
+   "label": "Advance directive / resuscitation status",
+   "terms": {
+    "en": [
+     "resuscitation",
+     "dnr",
+     "dnar",
+     "advance directive",
+     "living will",
+     "code status",
+     "ceiling of care",
+     "goals of care"
+    ],
+    "de": [
+     "Reanimation",
+     "Patientenverfügung",
+     "DNR",
+     "Vorsorgevollmacht",
+     "Reanimationsstatus"
+    ],
+    "intl": [
+     "directives anticipees",
+     "reanimation",
+     "voluntades anticipadas",
+     "reanimacion",
+     "testamento biologico",
+     "rianimazione",
+     "yasam vasiyeti",
+     "الانعاش"
+    ]
+   },
+   "slots": [
+    "code_status"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "mobility",
+   "label": "Mobility, falls and function",
+   "terms": {
+    "en": [
+     "mobility",
+     "falls",
+     "fall risk",
+     "walking",
+     "gait",
+     "functional status",
+     "independence",
+     "adl",
+     "general condition",
+     "frailty"
+    ],
+    "de": [
+     "Mobilität",
+     "Sturz",
+     "Stürze",
+     "Sturzrisiko",
+     "Gangbild",
+     "Selbstständigkeit",
+     "Allgemeinzustand",
+     "Gebrechlichkeit"
+    ],
+    "intl": [
+     "mobilite",
+     "chute",
+     "chutes",
+     "etat general",
+     "movilidad",
+     "caidas",
+     "estado general",
+     "mobilita",
+     "cadute",
+     "stato generale",
+     "hareket",
+     "dusme",
+     "genel durum",
+     "الحركة",
+     "السقوط"
+    ]
+   },
+   "slots": [
+    "mobility_function"
+   ],
+   "select": {
+    "categories": [
+     "general_condition"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "prior_surgery",
+   "label": "Previous operations and anaesthesia",
+   "terms": {
+    "en": [
+     "previous anaesthesia",
+     "prior anaesthesia",
+     "previous anesthesia",
+     "anaesthetic complications",
+     "anesthesia complications",
+     "previous surgery",
+     "previous surgeries",
+     "previous operations",
+     "prior operations",
+     "surgical history",
+     "past surgery"
+    ],
+    "de": [
+     "Narkosekomplikationen",
+     "frühere Narkose",
+     "Voroperationen",
+     "frühere Operationen",
+     "Vor-OPs"
+    ],
+    "intl": [
+     "antecedents chirurgicaux",
+     "antecedentes quirurgicos",
+     "interventi precedenti",
+     "onceki ameliyatlar",
+     "العمليات السابقة"
+    ]
+   },
+   "slots": [
+    "prior_anaesthesia",
+    "procedures_all"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "airway",
+   "label": "Airway assessment",
+   "terms": {
+    "en": [
+     "airway",
+     "intubation",
+     "mallampati",
+     "difficult airway"
+    ],
+    "de": [
+     "Atemweg",
+     "Atemwege",
+     "Intubation",
+     "Mallampati"
+    ],
+    "intl": [
+     "voies aeriennes",
+     "intubation",
+     "via aerea",
+     "intubacion",
+     "vie aeree",
+     "intubazione",
+     "hava yolu",
+     "entubasyon",
+     "مجرى الهواء"
+    ]
+   },
+   "slots": [
+    "airway"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "thyroid",
+   "label": "Thyroid",
+   "terms": {
+    "en": [
+     "thyroid",
+     "tsh",
+     "hypothyroidism",
+     "hyperthyroidism",
+     "levothyroxine"
+    ],
+    "de": [
+     "Schilddrüse",
+     "TSH",
+     "Hypothyreose",
+     "Hyperthyreose",
+     "L-Thyroxin"
+    ],
+    "intl": [
+     "thyroide",
+     "tiroides",
+     "tiroide",
+     "tiroid",
+     "الغدة الدرقية"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "icd10": [
+     "E00",
+     "E01",
+     "E02",
+     "E03",
+     "E04",
+     "E05",
+     "E06",
+     "E07"
+    ],
+    "atc": [
+     "H03"
+    ],
+    "label": "thyroid|\\btsh"
+   },
+   "search": [
+    "Schilddrüse",
+    "TSH",
+    "Thyre",
+    "Thyrox",
+    "Euthyrox"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "pain",
+   "label": "Pain and analgesia",
+   "terms": {
+    "en": [
+     "pain",
+     "analgesia",
+     "painkillers",
+     "pain medication",
+     "opioids",
+     "opioid",
+     "analgesics"
+    ],
+    "de": [
+     "Schmerz",
+     "Schmerzen",
+     "Analgesie",
+     "Schmerzmittel",
+     "Opioide",
+     "Schmerztherapie"
+    ],
+    "intl": [
+     "douleur",
+     "antalgiques",
+     "dolor",
+     "analgesicos",
+     "dolore",
+     "analgesici",
+     "agri",
+     "agri kesici",
+     "الالم",
+     "مسكنات"
+    ]
+   },
+   "slots": [
+    "med_analgesic_psychotropic"
+   ],
+   "select": {
+    "label": "\\bpain|analges"
+   },
+   "search": [
+    "Schmerz",
+    "Analget",
+    "Novalgin",
+    "Opioid",
+    "Metamizol"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "infection",
+   "label": "Infection and inflammation markers",
+   "terms": {
+    "en": [
+     "crp",
+     "infection",
+     "infections",
+     "inflammation markers",
+     "inflammatory markers",
+     "procalcitonin",
+     "fever",
+     "cultures",
+     "sepsis"
+    ],
+    "de": [
+     "CRP",
+     "Infektion",
+     "Infekt",
+     "Entzündungswerte",
+     "Entzündungsparameter",
+     "Fieber",
+     "Kultur",
+     "Sepsis"
+    ],
+    "intl": [
+     "infection",
+     "fievre",
+     "infeccion",
+     "fiebre",
+     "infezione",
+     "febbre",
+     "enfeksiyon",
+     "ates",
+     "العدوى",
+     "الحمى"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "categories": [
+     "temperature"
+    ],
+    "label": "inflamm|infect|fever"
+   },
+   "search": [
+    "CRP",
+    "Infekt",
+    "Fieber",
+    "Entzündung",
+    "Leukozyt"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "family_history",
+   "label": "Family history",
+   "terms": {
+    "en": [
+     "family history",
+     "hereditary",
+     "familial",
+     "brca",
+     "genetic testing",
+     "genetic counselling"
+    ],
+    "de": [
+     "Familienanamnese",
+     "familiäre Belastung",
+     "BRCA",
+     "Gentest",
+     "erblich"
+    ],
+    "intl": [
+     "antecedents familiaux",
+     "antecedentes familiares",
+     "storia familiare",
+     "anamnesi familiare",
+     "aile oykusu",
+     "التاريخ العائلي"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "categories": [
+     "family_history"
+    ]
+   },
+   "search": [
+    "Familienanamnese",
+    "BRCA",
+    "familiär"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "hospital_stays",
+   "label": "Previous hospital stays",
+   "terms": {
+    "en": [
+     "previous admissions",
+     "hospital stays",
+     "hospitalisations",
+     "hospitalizations",
+     "prior admissions",
+     "previous hospital stays",
+     "earlier admissions"
+    ],
+    "de": [
+     "Krankenhausaufenthalte",
+     "Voraufenthalte",
+     "stationäre Aufenthalte",
+     "frühere Aufenthalte"
+    ],
+    "intl": [
+     "hospitalisations",
+     "hospitalizaciones",
+     "ingresos previos",
+     "ricoveri",
+     "ricoveri precedenti",
+     "yatislar",
+     "الدخول السابق"
+    ]
+   },
+   "slots": [
+    "hospital_stays"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "urine",
+   "label": "Urine tests",
+   "terms": {
+    "en": [
+     "urine",
+     "urinalysis",
+     "proteinuria",
+     "albuminuria",
+     "urine test"
+    ],
+    "de": [
+     "Harn",
+     "Urin",
+     "Harnbefund",
+     "Proteinurie"
+    ],
+    "intl": [
+     "urine",
+     "orina",
+     "urine",
+     "idrar",
+     "البول"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "label": "\\burin|proteinur|albuminur"
+   },
+   "search": [
+    "Harn",
+    "Urin",
+    "Protein"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "vitals",
+   "label": "Vital signs",
+   "terms": {
+    "en": [
+     "vital signs",
+     "vitals",
+     "temperature",
+     "oxygen saturation",
+     "spo2",
+     "respiratory rate",
+     "saturation"
+    ],
+    "de": [
+     "Vitalzeichen",
+     "Vitalparameter",
+     "Temperatur",
+     "Sauerstoffsättigung"
+    ],
+    "intl": [
+     "signes vitaux",
+     "constantes",
+     "signos vitales",
+     "parametri vitali",
+     "vital bulgular",
+     "العلامات الحيوية"
+    ]
+   },
+   "slots": [
+    "spo2_resp",
+    "vitals_bp_hr"
+   ],
+   "select": {
+    "categories": [
+     "temperature"
+    ]
+   },
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "mood",
+   "label": "Mood and mental health",
+   "terms": {
+    "en": [
+     "mood",
+     "depression",
+     "anxiety",
+     "mental health",
+     "psychological",
+     "psychiatric history",
+     "coping"
+    ],
+    "de": [
+     "Stimmung",
+     "Depression",
+     "Angst",
+     "psychisch",
+     "Psyche"
+    ],
+    "intl": [
+     "humeur",
+     "depression",
+     "anxiete",
+     "estado de animo",
+     "depresion",
+     "ansiedad",
+     "umore",
+     "depressione",
+     "ansia",
+     "depresyon",
+     "kaygi",
+     "الاكتئاب",
+     "القلق"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "icd10": [
+     "F3",
+     "F4"
+    ],
+    "atc": [
+     "N06A",
+     "N05B"
+    ],
+    "label": "depress|anxiet|mood"
+   },
+   "search": [
+    "Depress",
+    "Angst",
+    "Stimmung",
+    "psych"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "nutrition",
+   "label": "Nutrition and swallowing",
+   "terms": {
+    "en": [
+     "nutrition",
+     "diet",
+     "appetite",
+     "swallowing",
+     "dysphagia",
+     "malnutrition"
+    ],
+    "de": [
+     "Ernährung",
+     "Diät",
+     "Appetit",
+     "Schluckstörung",
+     "Mangelernährung"
+    ],
+    "intl": [
+     "nutrition",
+     "alimentation",
+     "appetit",
+     "nutricion",
+     "dieta",
+     "apetito",
+     "alimentazione",
+     "appetito",
+     "beslenme",
+     "diyet",
+     "istah",
+     "التغذية",
+     "الشهية"
+    ]
+   },
+   "slots": [
+    "diet_nutrition"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "allergies",
+   "label": "Allergies",
+   "terms": {
+    "en": [
+     "allergy",
+     "allergies",
+     "allergic",
+     "intolerance",
+     "intolerances",
+     "contrast allergy"
+    ],
+    "de": [
+     "Allergie",
+     "Allergien",
+     "Unverträglichkeit",
+     "Kontrastmittelallergie"
+    ],
+    "intl": [
+     "allergie",
+     "allergies",
+     "alergia",
+     "alergias",
+     "allergia",
+     "allergie",
+     "alerji",
+     "الحساسية"
+    ]
+   },
+   "slots": [
+    "allergies"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  }
+ ],
+ "topics_settings": {
+  "_note": "Named-topic display limits (engine/focus.py).",
+  "max_topic_slots": 5,
+  "max_topic_cards": 4,
+  "max_items": 6
+ }
 }
