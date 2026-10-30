@@ -10,6 +10,8 @@ const de = {
   "appbar.help": "Hilfe",
   "appbar.newRequest": "Neue Anfrage",
   "appbar.language": "Sprache: Deutsch. Auf Englisch umschalten",
+  "appbar.themeDark": "Dunkles Design einschalten",
+  "appbar.themeLight": "Helles Design einschalten",
 
   "error.404.title": "Seite nicht gefunden",
   "error.404.body": "Diese Adresse gibt es in Second Look nicht. Patientendaten sind davon nicht betroffen.",
@@ -244,6 +246,8 @@ const en: Record<StringKey, string> = {
   "appbar.help": "Help",
   "appbar.newRequest": "New request",
   "appbar.language": "Language: English. Switch to German",
+  "appbar.themeDark": "Switch to dark mode",
+  "appbar.themeLight": "Switch to light mode",
 
   "error.404.title": "Page not found",
   "error.404.body": "This address does not exist in Second Look. No patient data is affected.",

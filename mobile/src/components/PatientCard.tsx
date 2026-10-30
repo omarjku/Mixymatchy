@@ -113,7 +113,7 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
-              className="absolute inset-0 bg-ink/50"
+              className="absolute inset-0 bg-scrim/50"
             />
             <motion.div
               layoutId={layoutId}
