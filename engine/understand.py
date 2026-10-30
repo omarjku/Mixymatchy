@@ -29,16 +29,38 @@ _DRUG_WORDS = ["contrast", "iodinated contrast", "aspirin", "heparin", "insulin"
                "steroid", "cortisone", "antibiotic", "opioid", "nsaid", "ibuprofen", "propofol"]
 
 
+# Accents of French / Spanish / Italian / Turkish are folded (médecin -> medecin, kardiyoloğ -> kardiyolog) so
+# that requests typed with or without them match the same lexicon entries; German umlauts and ß are kept
+# (the German lexicon is written with them).  Arabic: diacritics dropped, alef / ya variants unified.
+_FOLD = str.maketrans({
+    "é": "e", "è": "e", "ê": "e", "ë": "e", "á": "a", "à": "a", "â": "a", "ã": "a", "í": "i", "ì": "i", "î": "i",
+    "ï": "i", "ó": "o", "ò": "o", "ô": "o", "õ": "o", "ú": "u", "ù": "u", "û": "u", "ñ": "n", "ç": "c", "ş": "s",
+    "ğ": "g", "ı": "i", "œ": "oe", "æ": "ae", "\u0307": None,
+    "أ": "ا", "إ": "ا", "آ": "ا", "ى": "ي", "ـ": None,
+    **{chr(c): None for c in range(0x064B, 0x0653)},
+})
+
+
+_UMLAUT = str.maketrans({"ä": "a", "ö": "o", "ü": "u"})
+
+
+def fold(s):
+    """Matching form of normalised text: German / Turkish umlauts folded too (ä->a, ö->o, ü->u; 1:1, so
+    positions stay valid).  Lexicon terms and request text are both folded before matching, so 'Prämedikation',
+    'pramedikation', 'ameliyat öncesi' and 'ameliyat oncesi' all match."""
+    return (s or "").translate(_UMLAUT)
+
+
 def norm_text(text):
-    t = (text or "").lower().replace("’", "'")
+    t = (text or "").lower().replace("’", "'").translate(_FOLD)
     t = re.sub(r"[‐‑‒–—]", "-", t)
     return re.sub(r"\s+", " ", t)
 
 
 def _phrase_rx(phrase, whole_word):
     p = re.escape(phrase.lower())
-    pre = r"(?<![a-z0-9äöüß])" if phrase[:1].isalnum() else ""
-    post = r"(?![a-z0-9äöüß])" if whole_word and phrase[-1:].isalnum() else ""
+    pre = r"(?<![\w])" if phrase[:1].isalnum() else ""
+    post = r"(?![\w])" if whole_word and phrase[-1:].isalnum() else ""
     return re.compile(pre + p + post)
 
 

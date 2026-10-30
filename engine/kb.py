@@ -31,6 +31,16 @@ COMPUTES = {"current_list", "latest_value", "trend", "event_history", "status_ch
             "laterality_finding", "list_all", "age_sex", "med_changes"}
 
 
+def role_aliases(r):
+    """All names of a role: English, German and the overlay's other languages (fr/es/it/tr/ar)."""
+    return (r.get("aliases_en") or []) + (r.get("aliases_de") or []) + (r.get("aliases_intl") or [])
+
+
+def bundle_tags(b):
+    """All task phrases of a bundle: English, German and the overlay's other languages."""
+    return (b.get("tags_en") or []) + (b.get("tags_de") or []) + (b.get("tags_intl") or [])
+
+
 class KBError(RuntimeError):
     def __init__(self, errors):
         self.errors = list(errors)
@@ -205,14 +215,14 @@ class KB:
                 E.append("%s: no aliases" % where)
         alias_owner = {}
         for r in self.roles:
-            for a in (r.get("aliases_en") or []) + (r.get("aliases_de") or []):
+            for a in role_aliases(r):
                 k = a.lower()
                 if k in alias_owner and alias_owner[k] != r["id"]:
                     W.append("alias %r belongs to roles %s and %s" % (a, alias_owner[k], r["id"]))
                 alias_owner.setdefault(k, r["id"])
         tag_owner = {}
         for b in self.bundles:
-            for t in (b.get("tags_en") or []) + (b.get("tags_de") or []):
+            for t in bundle_tags(b):
                 if t.startswith("("):
                     continue
                 k = t.lower()
@@ -355,11 +365,13 @@ def apply_overlay(data, overlay):
         if bid in bundles:
             add(bundles[bid].setdefault("tags_en", []), tags.get("en"))
             add(bundles[bid].setdefault("tags_de", []), tags.get("de"))
+            add(bundles[bid].setdefault("tags_intl", []), tags.get("intl"))
     roles = {r["id"]: r for r in data.get("roles") or []}
     for rid, al in (overlay.get("role_aliases") or {}).items():
         if rid in roles:
             add(roles[rid].setdefault("aliases_en", []), al.get("en"))
             add(roles[rid].setdefault("aliases_de", []), al.get("de"))
+            add(roles[rid].setdefault("aliases_intl", []), al.get("intl"))
     for r in overlay.get("roles") or []:
         if r.get("id") not in roles:
             data.setdefault("roles", []).append(dict(r, origin="overlay"))

@@ -18,9 +18,11 @@ NOT_CLINICAL = ["firefighter", "journalist, tell me about her", "I am her neighb
                 "", "Something completely different.", "Police officer at A&E asking about her medication",
                 "Feuerwehr, Einsatz bei ihr zuhause", "Ich bin ihr Nachbar", "student, tell me about her",
                 "Astrologist reading her chart", "her sugar"]
-CLINICAL_TERM = {"Hepatologist, liver review": "Hepatologist", "Geriatrician, falls assessment": "Geriatrician",
-                 "Hebamme": "Hebamme", "medical student, ward round": "Medical student",
+CLINICAL_TERM = {"medical student, ward round": "Medical student",
                  "Dermatologist checking a mole on her back": "Dermatologist", "Psychiater, Konsil": "Psychiater"}
+# requesters that became overlay roles (rulebook/kb_overlay.json roles, TODO-cite): KB role, clinical
+OVERLAY_ROLE = {"Hepatologist, liver review": "gastroenterologist", "Geriatrician, falls assessment": "geriatrician",
+                "Hebamme": "obstetrician"}
 
 
 def screen(text, detail="short"):
@@ -64,6 +66,14 @@ class TestClinical(unittest.TestCase):
                 if s["screen_mode"] == "fallback":
                     self.assertLessEqual(len(s["cards"]), MAX_SUMMARY_CARDS)
                     self.assertIn(label, s["understood"]["fallback_note"])
+
+    def test_overlay_roles(self):
+        for text, rid in OVERLAY_ROLE.items():
+            s = screen(text)
+            with self.subTest(text=text):
+                self.assertEqual(s["understood"]["role_id"], rid)
+                self.assertEqual(s["understood"]["clinical_gate"]["decision"], "kb_role")
+                self.assertNotEqual(s["screen_mode"], "not_authorised")
 
     def test_nephrologist_overlay_role(self):  # kidney function first, documented or not
         s = screen("Nephrologist, kidney review")

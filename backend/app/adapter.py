@@ -239,7 +239,8 @@ def need_result(st, card: dict) -> NeedResult:
 
     trust = _trust(status)
     for it in card.get("items") or []:
-        fact = item_fact(st, it, "stale" if it.get("not_on_latest_list") else trust)
+        fact = item_fact(st, it, "stale" if it.get("not_on_latest_list") else
+                         "conflicting" if it.get("conflicts") else trust)  # letters disagree about this item
         if it.get("collapsed"):
             fact.collapsed = True
         if it.get("not_on_latest_list"):
@@ -254,6 +255,10 @@ def need_result(st, card: dict) -> NeedResult:
         res.facts.append(item_fact(st, rec, trust))
 
     res.computed.extend(_open_checks(card))
+    for cl in card.get("computed_lines") or []:  # e.g. the 'Letters disagree' card: what compare/ found
+        if cl.get("passages"):
+            res.computed.append(Computed(label=cl["label"], value=cl.get("value") or "", formula=cl.get("formula") or "",
+                                         segment_ids=list(cl["passages"])))
     calc = card.get("calculated")
     if calc and calc.get("kind") == "age" and card.get("items"):
         res.computed.append(Computed(
