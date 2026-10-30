@@ -23,7 +23,7 @@ is mentioned nowhere.
 
 6
 00:00:22,400 --> 00:00:25,303
-Second Look starts from one sentence.
+Second Eye starts from one sentence.
 
 7
 00:00:25,423 --> 00:00:33,650
@@ -59,7 +59,7 @@ The record disagrees with itself.
 
 14
 00:01:07,200 --> 00:01:13,633
-Second Look found five contradictions
+Second Eye found five contradictions
 and shows both passages side by side.
 
 15
@@ -101,5 +101,5 @@ Other tools summarise the record.
 
 23
 00:01:52,748 --> 00:01:57,650
-Second Look checks it, for
+Second Eye checks it, for
 the task in front of you.

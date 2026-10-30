@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Second Look",
+  title: "Second Eye",
   description: "The right patient facts for every doctor's task, and a warning when the record is wrong.",
 };
 

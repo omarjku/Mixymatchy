@@ -4,8 +4,8 @@ import { getLocale, type Locale } from "@/i18n/locale";
 // Copy rule: factual only ("Verified", "Not documented"): never advisory.
 
 const de = {
-  "app.name": "Second Look",
-  "appbar.home": "Second Look: zur Startseite",
+  "app.name": "Second Eye",
+  "appbar.home": "Second Eye: zur Startseite",
   "appbar.menu": "Weitere Aktionen",
   "appbar.help": "Hilfe",
   "appbar.newRequest": "Neue Anfrage",
@@ -14,7 +14,7 @@ const de = {
   "appbar.themeLight": "Helles Design einschalten",
 
   "error.404.title": "Seite nicht gefunden",
-  "error.404.body": "Diese Adresse gibt es in Second Look nicht. Patientendaten sind davon nicht betroffen.",
+  "error.404.body": "Diese Adresse gibt es in Second Eye nicht. Patientendaten sind davon nicht betroffen.",
   "error.crash.code": "Fehler",
   "error.crash.title": "Diese Ansicht konnte nicht angezeigt werden",
   "error.crash.body": "Ein technischer Fehler ist aufgetreten. Es wurden keine Daten geändert.",
@@ -22,28 +22,28 @@ const de = {
   "error.reload": "Neu laden",
 
   "help.title": "Häufige Fragen",
-  "help.intro": "Wie Second Look arbeitet, was die Markierungen bedeuten und was die App nicht tut.",
-  "help.q1": "Was zeigt Second Look?",
+  "help.intro": "Wie Second Eye arbeitet, was die Markierungen bedeuten und was die App nicht tut.",
+  "help.q1": "Was zeigt Second Eye?",
   "help.a1":
-    "Sie geben Ihre Rolle und Aufgabe ein. Second Look zeigt nur die Angaben aus den Arztbriefen, die diese Aufgabe braucht, jeweils mit der Stelle, aus der sie stammen. Darunter steht „Gelesen als: Rolle → Aufgabe“, damit Sie sehen, wie die Eingabe verstanden wurde.",
+    "Sie geben Ihre Rolle und Aufgabe ein. Second Eye zeigt nur die Angaben aus den Arztbriefen, die diese Aufgabe braucht, jeweils mit der Stelle, aus der sie stammen. Darunter steht „Gelesen als: Rolle → Aufgabe“, damit Sie sehen, wie die Eingabe verstanden wurde.",
   "help.q2": "Woher stammen die Angaben, und was öffnet „Quelle“?",
   "help.a2":
     "Aus den Arztbriefen und Befunden. „Quelle“ öffnet den Originalbrief und markiert die zitierte Stelle; bei mehreren Stellen springen Sie mit Vor/Zurück zwischen ihnen. Zitate bleiben im deutschen Original.",
   "help.q3": "Was bedeuten die Markierungen an einer Angabe?",
   "help.a3":
-    "Übereinstimmend in mehreren Briefen: mehrere Briefe sagen dasselbe. Briefe widersprechen sich: die Briefe machen unterschiedliche Angaben. Veraltet: der letzte Wert ist alt. Einmal erwähnt: nur ein Brief nennt die Angabe. Nicht dokumentiert: kein Brief nennt sie; Second Look ergänzt nie etwas. Nicht zutreffend: passt nicht zu dieser Patientin, mit Beleg.",
+    "Übereinstimmend in mehreren Briefen: mehrere Briefe sagen dasselbe. Briefe widersprechen sich: die Briefe machen unterschiedliche Angaben. Veraltet: der letzte Wert ist alt. Einmal erwähnt: nur ein Brief nennt die Angabe. Nicht dokumentiert: kein Brief nennt sie; Second Eye ergänzt nie etwas. Nicht zutreffend: passt nicht zu dieser Patientin, mit Beleg.",
   "help.q4": "Was ist ein Widerspruch, was ein Dokumentationshinweis?",
   "help.a4":
-    "Ein Widerspruch: zwei Stellen können nicht beide stimmen, z. B. die Seite einer Stenose. Beide Stellen stehen nebeneinander, jede mit Quelle. Ein Dokumentationshinweis ist ein Schreibfehler oder eine abweichende Fallnummer; er wird nie als Widerspruch gezählt. Welche Angabe stimmt, entscheidet Second Look nicht.",
+    "Ein Widerspruch: zwei Stellen können nicht beide stimmen, z. B. die Seite einer Stenose. Beide Stellen stehen nebeneinander, jede mit Quelle. Ein Dokumentationshinweis ist ein Schreibfehler oder eine abweichende Fallnummer; er wird nie als Widerspruch gezählt. Welche Angabe stimmt, entscheidet Second Eye nicht.",
   "help.q5": "Was heißt „Nicht im letzten Brief“?",
   "help.a5":
     "Angaben für diese Aufgabe, die in älteren Briefen stehen, im neuesten aber fehlen. „X von Y“ zählt sie unter allen Angaben der Aufgabe.",
   "help.q6": "Warum sehe ich „Nicht berechtigt“?",
   "help.a6":
     "Patientendaten werden nur klinischem Personal für eine Versorgungsaufgabe gezeigt. Geben Sie Ihre klinische Rolle und Aufgabe an, z. B. „Anästhesist, Prämedikation“.",
-  "help.q7": "Gibt Second Look Diagnosen oder Empfehlungen?",
+  "help.q7": "Gibt Second Eye Diagnosen oder Empfehlungen?",
   "help.a7":
-    "Nein. Gezeigt werden nur dokumentierte Angaben und daraus berechnete Werte, etwa eine Gewichtsänderung, jeweils mit beiden Quellen. Keine Diagnosen, keine Therapieempfehlungen, keine Vorhersagen. Second Look ändert keine Daten.",
+    "Nein. Gezeigt werden nur dokumentierte Angaben und daraus berechnete Werte, etwa eine Gewichtsänderung, jeweils mit beiden Quellen. Keine Diagnosen, keine Therapieempfehlungen, keine Vorhersagen. Second Eye ändert keine Daten.",
   "help.q8": "Wie funktioniert Vorlesen?",
   "help.a8":
     "Der Browser liest die Übersicht vor, nur mit einer Stimme, die direkt auf dem Gerät läuft. Ohne solche Stimme ist Vorlesen ausgeschaltet; es wird kein Text an einen Online-Dienst geschickt.",
@@ -61,7 +61,7 @@ const de = {
   "results.needsTask.title": "Bitte beschreiben Sie Ihre Aufgabe",
   "results.needsRole.title": "Wer fragt?",
   "results.needsRole.body": "Bitte nennen Sie, wer Sie sind (Ihre klinische Rolle), und die Aufgabe, z. B. „Notaufnahme, Kopf-CT: Blutungsrisiko durch Medikamente?“ oder „Pflege, Aufnahmeübergabe“.",
-  "results.needsTask.body": "Second Look zeigt Patientendaten nur für eine klinische Aufgabe. Nennen Sie Ihre Rolle und was Sie gerade tun, z. B. „Anästhesie, Prämedikation“.",
+  "results.needsTask.body": "Second Eye zeigt Patientendaten nur für eine klinische Aufgabe. Nennen Sie Ihre Rolle und was Sie gerade tun, z. B. „Anästhesie, Prämedikation“.",
   "results.notApplicable.title": "Für diese Patientin nicht zutreffend",
   "results.evidence": "Beleg",
   "source.passage": "Stelle {n} von {m}",
@@ -70,7 +70,7 @@ const de = {
   "source.loading": "Brief wird geladen …",
   "source.error": "Der Brief konnte nicht geladen werden.",
   "source.close": "Brief schließen",
-  "readonly.title": "Nur Lesen: Second Look ändert keine Daten",
+  "readonly.title": "Nur Lesen: Second Eye ändert keine Daten",
   "readonly.body":
     "Arztbriefe, Befunde und Notizen bleiben unverändert. Fehler lassen sich nur melden; jede Meldung wird geprüft.",
   "app.disclaimer": "Keine Diagnose- oder Therapieempfehlung. Alle Angaben verweisen auf ihre Quelle.",
@@ -274,8 +274,8 @@ const de = {
 export type StringKey = keyof typeof de;
 
 const en: Record<StringKey, string> = {
-  "app.name": "Second Look",
-  "appbar.home": "Second Look: home",
+  "app.name": "Second Eye",
+  "appbar.home": "Second Eye: home",
   "appbar.menu": "More actions",
   "appbar.help": "Help",
   "appbar.newRequest": "New request",
@@ -284,7 +284,7 @@ const en: Record<StringKey, string> = {
   "appbar.themeLight": "Switch to light mode",
 
   "error.404.title": "Page not found",
-  "error.404.body": "This address does not exist in Second Look. No patient data is affected.",
+  "error.404.body": "This address does not exist in Second Eye. No patient data is affected.",
   "error.crash.code": "Error",
   "error.crash.title": "This view could not be shown",
   "error.crash.body": "A technical error occurred. No data was changed.",
@@ -292,28 +292,28 @@ const en: Record<StringKey, string> = {
   "error.reload": "Reload",
 
   "help.title": "Questions and answers",
-  "help.intro": "How Second Look works, what the labels mean and what the app never does.",
-  "help.q1": "What does Second Look show?",
+  "help.intro": "How Second Eye works, what the labels mean and what the app never does.",
+  "help.q1": "What does Second Eye show?",
   "help.a1":
-    "You type your role and task. Second Look shows only the facts from the letters that this task needs, each with the passage it comes from. The line \u201cRead as: role \u2192 task\u201d shows how your sentence was understood.",
+    "You type your role and task. Second Eye shows only the facts from the letters that this task needs, each with the passage it comes from. The line \u201cRead as: role \u2192 task\u201d shows how your sentence was understood.",
   "help.q2": "Where do the facts come from, and what does \u201cSource\u201d open?",
   "help.a2":
     "From the discharge letters and reports. \u201cSource\u201d opens the original letter with the cited passage highlighted; with several passages, step between them with Previous / Next. Quotes stay in the original German.",
   "help.q3": "What do the labels on a fact mean?",
   "help.a3":
-    "Consistent across letters: several letters say the same. Letters disagree: the letters give different values. Outdated: the latest value is old. Mentioned once: only one letter states it. Not documented: no letter states it; Second Look never fills gaps. Not applicable: does not apply to this patient, with the passage that shows why.",
+    "Consistent across letters: several letters say the same. Letters disagree: the letters give different values. Outdated: the latest value is old. Mentioned once: only one letter states it. Not documented: no letter states it; Second Eye never fills gaps. Not applicable: does not apply to this patient, with the passage that shows why.",
   "help.q4": "What is a contradiction, and what is a documentation note?",
   "help.a4":
-    "A contradiction: two passages cannot both be true, e.g. the side of a stenosis. Both passages are shown side by side, each with its source. A documentation note is a typo or a differing case number; it is never counted as a contradiction. Second Look does not decide which passage is right.",
+    "A contradiction: two passages cannot both be true, e.g. the side of a stenosis. Both passages are shown side by side, each with its source. A documentation note is a typo or a differing case number; it is never counted as a contradiction. Second Eye does not decide which passage is right.",
   "help.q5": "What does \u201cNot in the latest letter\u201d mean?",
   "help.a5":
     "Facts this task needs that older letters state but the latest letter leaves out. \u201cX of Y\u201d counts them among all facts for the task.",
   "help.q6": "Why do I see \u201cNot authorised\u201d?",
   "help.a6":
     "Patient data is shown only to clinical staff for a care task. State your clinical role and task, e.g. \u201cAnaesthetist, pre-op check\u201d.",
-  "help.q7": "Does Second Look give diagnoses or advice?",
+  "help.q7": "Does Second Eye give diagnoses or advice?",
   "help.a7":
-    "No. It shows documented facts and values calculated from them, such as a weight change, each with both sources. No diagnoses, no treatment advice, no predictions. Second Look never changes the record.",
+    "No. It shows documented facts and values calculated from them, such as a weight change, each with both sources. No diagnoses, no treatment advice, no predictions. Second Eye never changes the record.",
   "help.q8": "How does read aloud work?",
   "help.a8":
     "The browser reads the overview aloud, only with a voice that runs on the device. Without such a voice, read aloud is off; no text is sent to an online service.",
@@ -331,7 +331,7 @@ const en: Record<StringKey, string> = {
   "results.needsTask.title": "Please describe your task",
   "results.needsRole.title": "Who is asking?",
   "results.needsRole.body": "Please say who you are (your clinical role) and the task, e.g. “Emergency physician, head CT: bleeding risk medication?” or “Ward nurse, admission handover”.",
-  "results.needsTask.body": "Second Look shows patient information only for a clinical task. State your role and what you are doing, e.g. “Anaesthetist, pre-op check”.",
+  "results.needsTask.body": "Second Eye shows patient information only for a clinical task. State your role and what you are doing, e.g. “Anaesthetist, pre-op check”.",
   "results.notApplicable.title": "Not applicable to this patient",
   "results.evidence": "Evidence",
   "source.passage": "Passage {n} of {m}",
@@ -340,7 +340,7 @@ const en: Record<StringKey, string> = {
   "source.loading": "Loading the letter …",
   "source.error": "The letter could not be loaded.",
   "source.close": "Close letter",
-  "readonly.title": "Read only: Second Look never changes the record",
+  "readonly.title": "Read only: Second Eye never changes the record",
   "readonly.body":
     "Letters, reports and notes stay unchanged. Errors can only be flagged; every flag is reviewed.",
   "app.disclaimer": "Decision support only. A clinician reviews every fact before acting.",
