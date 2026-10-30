@@ -11,6 +11,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,7 +37,7 @@ def latency_line(ms, lms):
         _pct(ms, 50), _pct(ms, 95), _pct(lms, 50), _pct(lms, 95), len(lms))
 
 
-def run(use_llm=False, out=print, only=None, path=None):
+def run(use_llm=False, out=print, only=None, path=None, workers=1, progress=None):
     """-> dict(total, leaks, false_blocks, correct, ...); prints through `out`."""
     from app import adapter
     data = json.loads(Path(path or INPUTS).read_text(encoding="utf-8"))
@@ -49,23 +51,45 @@ def run(use_llm=False, out=print, only=None, path=None):
     leaks, fblocks, correct = [], [], 0
     ms, lms = [], []  # per-request engine time and LLM time (ms) for p50 / p95
     nblock = sum(d["expect"] == "block" for d in data)
-    for d in data:
+    lock = threading.Lock()  # guards the shared counters below (the engine itself is thread-safe)
+    done = [0]
+
+    def one(d):
+        e_ms = l_ms = None
         try:
             b = adapter.build_briefing(d["text"], detail="short", use_llm=use_llm)
             n = facts_shown(b)
             mode = b.routing.get("screen_mode")
-            ms.append((b.stats or {}).get("engine_ms") or 0)
-            if b.routing.get("llm_ms") is not None:
-                lms.append(b.routing["llm_ms"])
+            e_ms = (b.stats or {}).get("engine_ms") or 0
+            l_ms = b.routing.get("llm_ms")
         except Exception as e:  # a crash is a safe refusal for the leak count, but is reported
             n, mode = 0, "error:%s" % type(e).__name__
         rec = dict(d, facts=n, mode=mode)
-        if d["expect"] == "block" and n > 0:
-            leaks.append(rec)
-        elif d["expect"] == "data" and n == 0:
-            fblocks.append(rec)
-        else:
-            correct += 1
+        with lock:
+            nonlocal correct
+            if e_ms is not None:
+                ms.append(e_ms)
+            if l_ms is not None:
+                lms.append(l_ms)
+            if d["expect"] == "block" and n > 0:
+                leaks.append(rec)
+            elif d["expect"] == "data" and n == 0:
+                fblocks.append(rec)
+            else:
+                correct += 1
+            done[0] += 1
+            if progress and done[0] % 100 == 0:
+                progress(done[0], len(data), len(leaks))
+        return rec
+
+    if workers and workers > 1:
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="redteam") as ex:
+            list(ex.map(one, data))
+        leaks.sort(key=lambda r: r["id"])
+        fblocks.sort(key=lambda r: r["id"])
+    else:
+        for d in data:
+            one(d)
     res = dict(total=len(data), block=nblock, data=len(data) - nblock, leaks=leaks, false_blocks=fblocks,
                correct=correct, llm=use_llm)
     out("red-team (%s): %d inputs (%d expect block, %d expect data)" % (
@@ -91,11 +115,13 @@ def main():
     ap.add_argument("--llm", action="store_true", help="enable the LLM understand layer (needs ANTHROPIC_API_KEY)")
     ap.add_argument("--only", default="")
     ap.add_argument("--file", default="")
+    ap.add_argument("--workers", type=int, default=1, help="concurrent inputs (default 1)")
     a = ap.parse_args()
     if a.llm:
         import os
         os.environ["SECOND_LOOK_LLM"] = "1"
-    run(use_llm=a.llm, only=set(filter(None, a.only.split(","))), path=a.file or None)
+    run(use_llm=a.llm, only=set(filter(None, a.only.split(","))), path=a.file or None,
+        workers=a.workers)
     return 0
 
 
