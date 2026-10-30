@@ -90,14 +90,66 @@ def subjects(task_text):
     out = []
     for clause in re.split(r"[?;]|\.\s", t):
         tails = [m.group(1) for m in (rx.search(clause) for rx in SUBJECT_PATTERNS) if m][:1]
-        if not tails and "?" in t:  # a bare subject: 'Blutgruppe?', 'pacemaker?'
-            tails = [clause.split(":")[-1].split(",")[-1]]
+        if not tails and "?" in t:  # a bare subject: 'Blutgruppe?', 'pacemaker?' (a short phrase, not a sentence
+            bare = clause.split(":")[-1].split(",")[-1]  # in another language: 'jakie leki ... przyjmuje?')
+            tails = [bare] if len(bare.split()) <= 3 else []
         for tail in tails:
             for part in _SPLIT.split(_CUT.split(tail)[0]):
                 s = _clean(part)
-                if s and s not in out:
+                # only Latin script: the letters are German, a Cyrillic / CJK phrase cannot be searched in them
+                if s and s not in out and not NON_LATIN.search(s):
                     out.append(s)
     return out
+
+
+NON_LATIN = re.compile(r"[^\W\d_a-zA-Z\u00c0-\u024f]")
+
+
+def _wordlike(w):
+    """A real word, not keyboard mash ('asdfgh', 'qwertz'): Latin words need vowels and no long consonant run."""
+    if NON_LATIN.search(w):
+        return len(w) >= 2
+    v = sum(c in "aeiouyäöü" for c in w)
+    return (len(w) >= 4 and v / len(w) >= 0.25 and len(set(w)) > 2
+            and not re.search(r"[^aeiouyäöü\W\d]{5,}", w))
+
+
+def content_words(task_text, never=()):
+    """Words of a question that could name a clinical subject (not stop words, filler or keyboard mash)."""
+    words = re.findall(r"[^\W\d_][\w'-]*", fold(norm_text(task_text or "")))
+    return [w for w in words if w not in STOP and w not in never and _wordlike(w)]
+
+
+# medical word endings (English / Latin / German): an unknown subject with one of them is a clinical question
+MEDICAL_WORD = re.compile(r"(?:itis|osis|oses|ose|oma|omas|emia|aemia|ämie|pathy|pathie|algia|algie|ectomy|ektomie|"
+                          r"otomy|otomie|ostomy|scopy|skopie|graphy|graphie|gram|iasis|plasia|plasie|trophy|trophie|"
+                          r"penia|penie|cele|uria|urie|ism|ismus|insufficiency|insuffizienz|stenosis|stenose|"
+                          r"thrombosis|embolism|embolie|infarction|infarkt|syndrome|syndrom|disease|disorder|"
+                          r"deficiency|mangel|fracture|fraktur|cancer|karzinom|carcinoma|tumou?r|lesion|läsion|"
+                          r"infection|infektion|allergy|allergie|virus|viral|bacterial|vaccine|impfung|"
+                          r"tablet|dose|dosis|level|wert|pain|schmerz|ache)$")
+
+
+def clinical_subject(store, task_text, never=()):
+    """A content word of the question that is medical by its form ('sarcoidosis', 'gout'?) or that the letters
+    contain ('Raucherin') -> the word, else None ('what's the weather like?' is not a clinical question)."""
+    words = content_words(task_text, never)
+    for w in words:  # other scripts: only the task vocabulary (engine/intent.py) can tell, not the word's form
+        if not NON_LATIN.search(w) and MEDICAL_WORD.search(w):
+            return w
+    text = store_text(store)
+    return next((w for w in words if len(w) >= 5 and _word_rx(w).search(text)), None)
+
+
+_STORE_TEXT = {}
+
+
+def store_text(store):
+    """All passage text of the store, folded and lowercased (cached per store)."""
+    if id(store) not in _STORE_TEXT:
+        _STORE_TEXT.clear()
+        _STORE_TEXT[id(store)] = fold(" ".join(p.get("text") or "" for p in store.passages).lower())
+    return _STORE_TEXT[id(store)]
 
 
 @lru_cache(maxsize=1)
@@ -108,7 +160,8 @@ def lexicon():
     for k, v in terms.items():
         v = v if isinstance(v, dict) else {"words": v}
         out[fold(norm_text(k))] = {"words": list(v.get("words") or []), "slot": v.get("slot"),
-                                   "label": re.compile(v["label"], re.I) if v.get("label") else None}
+                                   "label": re.compile(v["label"], re.I) if v.get("label") else None,
+                                   "sections": list(v.get("sections") or [])}
     return out
 
 
@@ -184,6 +237,8 @@ def answer_card(store, subject, as_of=None):
     hit_passages = [p for p in store.passages if p["doc_id"] in known
                     and any(r.search(fold((p.get("text") or "").lower())) for r in rxs)]
     labels = [e["label"] for e in _entries(subject) if e["label"]]
+    # 'was an ultrasound done?': only procedures and plans answer it, not a diagnosis whose sentence mentions it
+    sections = {x for e in _entries(subject) for x in e["sections"]}
 
     def english(f):  # the English label without bracketed original terms ('Case (Fall) number' is no fall)
         return fold(re.sub(r"\([^)]*\)", "", str(f.get("label_en") or "")).lower())
@@ -192,6 +247,7 @@ def answer_card(store, subject, as_of=None):
     # matches the entry's label pattern; the subject's own English word only without German search words
     facts = [f for f in store.facts
              if f.get("category") not in ADMIN_CATEGORIES and set(store.fact_docs(f)) & known
+             and (not sections or f.get("ips_section") in sections)
              and (as_of is None or str(f.get("date") or "") <= str(as_of) or not f.get("date"))
              and (any(r.search(fold(str(f.get("quote") or "").lower())) for r in rxs)
                   or any(rx.search(english(f)) for rx in labels)
