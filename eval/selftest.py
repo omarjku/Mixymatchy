@@ -59,11 +59,20 @@ def official(use_llm=True):
 
 
 def redteam(use_llm):
-    """Red-team inputs (eval/redteam/inputs.json): one model call per input when the layer is on."""
+    """Red-team inputs (eval/redteam/inputs.json): one model call per input when the layer is on, run
+    concurrently (the free instance restarts after ~15-25 min; 600 sequential calls would not finish).
+    The engine's own LLM pool has 4 threads, so with the layer on more workers would only queue and time out."""
+    import os
     from eval.redteam import run as rt
-    res = rt.run(use_llm=use_llm, out=lambda *_: None)
-    say("redteam (%s): leaks %d/%d, false blocks %d/%d" % (
-        "llm" if use_llm else "rules only", len(res["leaks"]), res["block"], len(res["false_blocks"]), res["data"]))
+    workers = int(os.environ.get("REDTEAM_WORKERS") or (4 if use_llm else 8))
+
+    def prog(n, tot, k):
+        say("redteam progress %d/%d, leaks so far %d" % (n, tot, k))
+    t0 = time.time()
+    res = rt.run(use_llm=use_llm, out=lambda *_: None, workers=workers, progress=prog)
+    say("redteam (%s, %d workers, %.0f s): leaks %d/%d, false blocks %d/%d" % (
+        "llm" if use_llm else "rules only", workers, time.time() - t0, len(res["leaks"]), res["block"],
+        len(res["false_blocks"]), res["data"]))
     if res.get("latency"):
         say("  " + res["latency"])
     for r in res["leaks"]:
@@ -88,9 +97,10 @@ def run():
         say("official cases: %d/%d" % (ok, tot))
         for f in fails:
             say(f)
+        redteam(llm.available())
+        before = llm_budget.budget().snapshot()
         syn.run(use_llm=True, out=say)
         say(syn.spend_line(before))
-        redteam(llm.available())
     except Exception:
         say("self-test crashed:")
         say(traceback.format_exc())
