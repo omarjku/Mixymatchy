@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Briefing, Fact, Finding, getBriefing, Trust } from "@/lib/api";
+import { Briefing, Detail, Fact, Finding, getBriefing, NeedResult, Trust } from "@/lib/api";
 import { SourcePane } from "@/components/SourcePane";
 
 const ROLES = [
@@ -59,19 +59,36 @@ function FindingList({ title, items, tone, onSource }: { title: string; items: F
   );
 }
 
+function NotApplicableCard({ need, onSource, only }: { need: NeedResult; onSource: ShowSource; only: boolean }) {
+  return (
+    <div className="rounded border-l-4 border-amber-600 bg-amber-50 p-4" data-testid="not-applicable">
+      <p className="text-lg font-semibold text-amber-900">Not applicable: {need.label}</p>
+      <p className="text-sm">
+        {need.reason ? need.reason.charAt(0).toUpperCase() + need.reason.slice(1) : "Does not apply to this patient"}.{" "}
+        {need.reason_segment_ids.length > 0 && <SourceLink ids={need.reason_segment_ids} onSource={onSource} />}
+      </p>
+      {only && <p className="mt-1 text-xs text-[var(--muted)]">Only a safety summary is shown below.</p>}
+    </div>
+  );
+}
+
 export default function Home() {
   const [situation, setSituation] = useState("");
+  const [asked, setAsked] = useState("");
+  const [detail, setDetail] = useState<Detail>("short");
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [source, setSource] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function run(text: string) {
+  async function run(text: string, level: Detail = "short") {
     setSituation(text);
+    setAsked(text);
+    setDetail(level);
     setLoading(true);
     setError(null);
     try {
-      setBriefing(await getBriefing(text));
+      setBriefing(await getBriefing(text, level));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -79,7 +96,14 @@ export default function Home() {
     }
   }
 
-  const conflicts = briefing?.findings.filter((f) => f.kind === "conflict") ?? [];
+  const onScreen = briefing?.findings.filter((f) => f.on_screen !== false) ?? [];
+  const offScreen = briefing?.findings.filter((f) => f.on_screen === false) ?? [];
+  const conflicts = onScreen.filter((f) => f.kind === "conflict");
+  const followups = onScreen.filter((f) => f.kind === "followup");
+  const notApplicable = briefing?.needs.filter((n) => n.status === "not_applicable") ?? [];
+  const needs = briefing?.needs.filter((n) => n.status !== "not_applicable") ?? [];
+  const routing = briefing?.routing ?? {};
+  const otherIssues = briefing?.stats.other_record_issues ?? routing.other_record_issues ?? 0;
   const s = briefing?.stats;
 
   return (
@@ -118,31 +142,47 @@ export default function Home() {
       {briefing && s && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
           <section className="space-y-4">
-            {briefing.blind_spot.length > 0 && (
-              <div className="rounded border-l-4 border-red-700 bg-red-50 p-3">
-                <p className="font-semibold text-red-800">
-                  Blind spot: reading only the latest letter, you would miss {s.blind_spot} of {s.task_concepts} facts for
-                  this task
-                </p>
-                <ul className="text-sm">
-                  {briefing.blind_spot.map((f) => (
-                    <FactRow key={f.id} fact={f} onSource={setSource} />
-                  ))}
-                </ul>
+            {notApplicable.map((n) => (
+              <NotApplicableCard
+                key={n.need}
+                need={n}
+                onSource={setSource}
+                only={routing.screen_mode === "not_applicable"}
+              />
+            ))}
+
+            {routing.fallback_note && (
+              <div className="rounded border-l-4 border-slate-500 bg-slate-100 p-3 text-sm" data-testid="notice">
+                <p className="font-semibold">{routing.fallback_note}</p>
               </div>
             )}
 
             <div className="rounded bg-white p-4 shadow-sm">
-              <p className="mb-2 text-xs font-semibold uppercase text-[var(--teal)]">
-                {briefing.role.replace("_", " ")} · what you need · as of {briefing.as_of}
-              </p>
-              {briefing.needs.map((n) => (
+              <div className="mb-2 flex items-baseline justify-between gap-2">
+                <p className="text-xs font-semibold uppercase text-[var(--teal)]">
+                  {briefing.role.replace("_", " ")} · {briefing.task} · as of {briefing.as_of}
+                </p>
+                <button
+                  className="shrink-0 rounded border border-[var(--teal)] px-2 py-0.5 text-xs text-[var(--teal)]"
+                  disabled={loading}
+                  data-testid="detail-toggle"
+                  onClick={() => run(asked, detail === "short" ? "long" : "short")}
+                >
+                  {detail === "short" ? "Show more (P2/P3)" : "Show less (P1 only)"}
+                </button>
+              </div>
+              {needs.map((n) => (
                 <div key={n.need} className="border-b border-slate-100 py-2 last:border-0">
-                  <p className="text-sm font-semibold">{n.label}</p>
-                  {n.status === "not_documented" && <p className="text-sm text-[var(--muted)]">○ Not documented</p>}
-                  {n.status === "not_applicable" && (
+                  <p className="text-sm font-semibold">
+                    {n.label}
+                    {n.priority && n.priority !== "P1" && (
+                      <span className="ml-2 text-xs font-normal text-[var(--muted)]">{n.priority}</span>
+                    )}
+                  </p>
+                  {n.status === "not_documented" && (
                     <p className="text-sm text-[var(--muted)]">
-                      – Not applicable ({n.reason}) <SourceLink ids={n.reason_segment_ids} onSource={setSource} />
+                      ○ Not documented{" "}
+                      {n.reason_segment_ids.length > 0 && <SourceLink ids={n.reason_segment_ids} onSource={setSource} />}
                     </p>
                   )}
                   {n.status === "documented" && (
@@ -152,6 +192,12 @@ export default function Home() {
                       ))}
                     </ul>
                   )}
+                  {(n.more ?? 0) > 0 && (
+                    <button className="text-xs text-[var(--teal)] underline" onClick={() => run(asked, "long")}>
+                      +{n.more} more
+                    </button>
+                  )}
+                  {n.note && <p className="text-xs text-[var(--muted)]">{n.note}</p>}
                   {n.computed.map((c) => (
                     <p key={c.label + c.value} className="text-sm" title={c.formula}>
                       <span className="text-[var(--teal)]">=</span> {c.label}: <b>{c.value}</b>{" "}
@@ -169,6 +215,19 @@ export default function Home() {
               ))}
             </div>
 
+            {briefing.blind_spot.length > 0 && (
+              <div className="rounded border-l-4 border-red-700 bg-red-50 p-3" data-testid="blind-spot">
+                <p className="font-semibold text-red-800">
+                  Blind spot: {s.blind_spot} item(s) on this screen are not in the latest letter
+                </p>
+                <ul className="text-sm">
+                  {briefing.blind_spot.map((f) => (
+                    <FactRow key={f.id} fact={f} onSource={setSource} />
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <FindingList
               title={`The record disagrees · ${s.contradictions}`}
               items={conflicts.filter((f) => f.tier === "contradiction")}
@@ -181,6 +240,34 @@ export default function Home() {
               tone="text-[var(--muted)]"
               onSource={setSource}
             />
+
+            <FindingList
+              title={`Open follow-ups · ${followups.length}`}
+              items={followups}
+              tone="text-amber-700"
+              onSource={setSource}
+            />
+
+            {otherIssues > 0 && detail === "short" && (
+              <p className="text-sm text-[var(--muted)]" data-testid="other-issues">
+                {otherIssues} other record issue(s) not related to this task ·{" "}
+                <button className="text-[var(--teal)] underline" onClick={() => run(asked, "long")}>
+                  show in the long view
+                </button>
+              </p>
+            )}
+            {offScreen.length > 0 && (
+              <details className="rounded bg-white p-4 text-sm shadow-sm" data-testid="other-issues">
+                <summary className="cursor-pointer text-[var(--muted)]">
+                  {offScreen.length} other record issue(s) not related to this task
+                </summary>
+                {offScreen.map((f) => (
+                  <div key={f.id} className="py-1">
+                    <b>{f.title}.</b> {f.explanation} <SourceLink ids={f.segment_ids} onSource={setSource} />
+                  </div>
+                ))}
+              </details>
+            )}
 
             <p className="rounded bg-green-50 p-2 text-sm">
               {s.facts_shown} facts · {s.facts_verified} verified against the letters · {s.facts_dropped} dropped ·{" "}

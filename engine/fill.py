@@ -565,6 +565,105 @@ def dated_list(store, card, facts, newest_first=True, limit=12):
     return card
 
 
+_QUESTION = re.compile(r"\?\s*$|^\s*(question|fragestellung|frage)\b", re.I)
+_CONCEPT_STRIP = re.compile(r"^(history of|known|status post|s/p|diagnosis:|suspected)\s+", re.I)
+
+
+def _assertion(f):
+    return (f.get("attrs") or {}).get("assertion")
+
+
+def is_question(f):
+    """A suspicion, not a finding: IBM 'suspected', or a label ending '?' / starting 'Question'."""
+    return _assertion(f) == "suspected" or bool(_QUESTION.search(f.get("label_en") or ""))
+
+
+def concept_key(f):
+    """Same concept = same code (ICD-10 or other system), else the same normalised English label."""
+    code = f.get("code") if isinstance(f.get("code"), dict) else None
+    if code and code.get("value"):
+        return "code:%s:%s" % (code.get("system") or "", str(code["value"]).upper())
+    t = re.sub(r"\(.*?\)", " ", (f.get("label_en") or "").lower())
+    t = _CONCEPT_STRIP.sub("", t.strip())
+    return "label:" + " ".join(re.findall(r"[a-z0-9äöüß%]+", t))
+
+
+def merge_items(store, facts, keyfn):
+    """One item per concept: the newest statement is shown, the other mentions (other wording, other
+    letters) stay attached as extra source links."""
+    groups = {}
+    for f in facts:
+        groups.setdefault(keyfn(f), []).append(f)
+    out = []
+    for fs in groups.values():
+        items = group_items(store, fs)
+        items.sort(key=lambda it: (str(it["date"] or ""), it.get("status") == "current",
+                                   -len(it.get("label_en") or "")), reverse=True)
+        rep = dict(items[0])
+        others = items[1:]
+        if others:
+            rep["facts"] = [x for o in others for x in o["facts"] if x not in rep["facts"]] + list(rep["facts"])
+            rep["passages"] = list(dict.fromkeys(rep["passages"] + [x for o in others for x in o["passages"]]))
+            rep["docs"] = sorted(set(rep["docs"]) | {x for o in others for x in o["docs"]})
+            rep["first_date"] = min((str(o.get("first_date") or "") for o in items if o.get("first_date")),
+                                    default=rep.get("first_date"))
+            rep["also_as"] = [o["label_en"] for o in others if _key(o["label_en"]) != _key(rep["label_en"])]
+        out.append(rep)
+    return out
+
+
+def allergen_key(f):
+    a = f.get("attrs") or {}
+    neg = _assertion(f) == "negative"
+    sub = str(a.get("substance") or a.get("allergen") or "").strip().lower()
+    return ("neg:" if neg else "") + (sub or concept_key(f))
+
+
+LIST_LIMIT_SHORT = 8
+
+
+def list_all(store, card, facts, context=(), detail="short", keep_ruled_out=False, limit=LIST_LIMIT_SHORT):
+    """Deduplicated list: one item per concept (code or label, newest wins), no ruled-out findings
+    (unless the slot asks for them) and no open questions ('X?'); active items first, newest first.
+    Short mode shows at most `limit` items and says how many more exist."""
+    excluded = {"ruled_out": 0, "suspected": 0}
+    keep = []
+    for f in facts:
+        if _assertion(f) == "negative" and not keep_ruled_out:
+            excluded["ruled_out"] += 1
+        elif is_question(f):
+            excluded["suspected"] += 1
+        else:
+            keep.append(f)
+    items = annotate_status(store, merge_items(store, keep, concept_key))
+
+    def active(it):
+        return it.get("status") in ("current", "active") and it.get("status_display") not in ("past", "ruled out")
+    items.sort(key=lambda it: str(it["date"] or ""), reverse=True)
+    items.sort(key=lambda it: not active(it))
+    if detail != "short" and context:
+        ids = {x for it in items for x in it["facts"]}
+        ctx = [f for f in context if f["id"] not in ids and _assertion(f) != "negative" and not is_question(f)]
+        for it in annotate_status(store, merge_items(store, ctx, concept_key)):
+            it["context"] = True
+            items.append(it)
+    total = len(items)
+    shown_items = items[:limit] if detail == "short" else items
+    card["items"] = shown_items
+    card["more"] = total - len(shown_items)
+    card["excluded"] = excluded
+    card["value_en"] = "; ".join(shown(it) for it in shown_items) + (
+        " (+%d more)" % card["more"] if card["more"] else "")
+    card["date"] = max((str(it["date"] or "") for it in shown_items), default=None)
+    card["status"] = "consistent" if shown_items else "not_documented"
+    hidden = [("%d ruled out" % excluded["ruled_out"]) if excluded["ruled_out"] else "",
+              ("%d open question(s)/suspicion(s)" % excluded["suspected"]) if excluded["suspected"] else ""]
+    hidden = [h for h in hidden if h]
+    if hidden:
+        card["note"] = "Not listed: %s (see the source documents)." % ", ".join(hidden)
+    return card
+
+
 def plan(store, card, facts):
     dated_list(store, card, facts)
     for it in card["items"]:
@@ -608,7 +707,7 @@ def checklist(store, card, facts, subitems, none_match=None):
     negatives = [f for f in facts if none_rx and none_rx.search(fact_text(f))
                  or (f.get("attrs") or {}).get("assertion") == "negative"]
     positives = [f for f in facts if f not in negatives]
-    items = annotate_status(store, group_items(store, facts))
+    items = annotate_status(store, merge_items(store, facts, allergen_key))
     items.sort(key=lambda it: str(it["date"] or ""), reverse=True)
     card["items"] = items
     rows, used = [], set()

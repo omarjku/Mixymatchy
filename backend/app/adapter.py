@@ -25,6 +25,9 @@ Mapping rules (documented once, applied everywhere)
   compare blind spots  -> Briefing.blind_spot facts + Finding(kind=dropped); unstated computed
                           values (e.g. weight change never written down) -> Finding(kind=silence)
   open follow-ups      -> Finding(kind=followup)
+  task scope (KB)      -> contradictions, blind-spot items and open follow-ups that touch no slot on this
+                          screen are counted in stats.other_record_issues and listed with on_screen=False
+                          in the long view only
   stats                -> counted from the Briefing object itself
 
 Routing knowledge base (default rulebook; SECOND_LOOK_RULEBOOK=legacy for roles.json + tasks.json)
@@ -181,7 +184,7 @@ def _kb_fields(card: dict) -> dict:
                                  url=s.get("url") or None) for s in card.get("sources") or []],
            "checklist": [ChecklistItem(label=r["label"], status=r["status"], segment_ids=list(r.get("passages") or []),
                                        note=r.get("note")) for r in card.get("checklist") or []],
-           "label_panel": list(card.get("label_panel") or [])}
+           "label_panel": list(card.get("label_panel") or []), "more": card.get("more") or None}
     return {k: v for k, v in out.items() if v not in (None, [], "")}
 
 
@@ -258,53 +261,87 @@ def _concepts(st, fact_ids) -> list[str]:
     return sorted({st.fact_by_id[x]["category"] for x in fact_ids if x in st.fact_by_id})
 
 
-def findings(st, screen: dict) -> tuple[list[Finding], list[Fact]]:
-    out: list[Finding] = []
-    for c in screen.get("contradictions") or []:
-        counted = c.get("counted", True)
-        out.append(Finding(
-            id=c["id"], kind="conflict", tier="contradiction" if counted else "documentation_note",
-            title=c.get("title_en") or "Contradiction", explanation=c.get("detail_en") or "",
-            segment_ids=c.get("passages") or [], fact_ids=c.get("facts") or [],
-            concepts=_concepts(st, c.get("facts") or []),
-            severity=("high" if c.get("relevant") else "medium") if counted else "low"))
+def _conflict(st, c: dict, on_screen: bool) -> Finding:
+    counted = c.get("counted", True)
+    return Finding(
+        id=c["id"], kind="conflict", tier="contradiction" if counted else "documentation_note",
+        title=c.get("title_en") or "Contradiction", explanation=c.get("detail_en") or "",
+        segment_ids=c.get("passages") or [], fact_ids=c.get("facts") or [],
+        concepts=_concepts(st, c.get("facts") or []), on_screen=on_screen,
+        severity=("high" if c.get("relevant") else "medium") if counted else "low")
 
-    blind: list[Fact] = []
-    bs = screen.get("blind_spot") or {}
-    for i, b in enumerate(bs.get("items") or [], 1):
+
+def _followup(st, fu: dict, on_screen: bool) -> Finding:
+    return Finding(
+        id=fu["id"], kind="followup", title=fu.get("label_en") or "Open follow-up",
+        explanation="Recommended %s (document %s); no later record that it took place. %s"
+                    % (fu.get("authored_date"), fu.get("authored_doc"), fu.get("searched") or ""),
+        segment_ids=fu["passage_ids"], fact_ids=fu.get("fact_ids") or [],
+        concepts=_concepts(st, fu.get("fact_ids") or []), severity="medium", on_screen=on_screen)
+
+
+def _blind_items(st, bs: dict, items: list, on_screen: bool, out: list, blind: list) -> None:
+    for i, b in enumerate(items, 1):
         fids, pids = b.get("facts") or [], b.get("passages") or []
         if not pids:
             continue
+        key = "%02d" % i if on_screen else "x%02d" % i
         if b.get("kind") == "unstated_computed":
-            out.append(Finding(id="silence%02d" % i, kind="silence", title=b["label_en"],
+            out.append(Finding(id="silence" + key, kind="silence", title=b["label_en"],
                                explanation="Calculated from the letters; no letter states it.",
-                               segment_ids=pids, fact_ids=fids, concepts=_concepts(st, fids), severity="medium"))
+                               segment_ids=pids, fact_ids=fids, concepts=_concepts(st, fids), severity="medium",
+                               on_screen=on_screen))
             continue
-        it = {"label_en": b["label_en"], "date": b.get("last_documented"), "facts": fids,
-              "passages": pids, "docs": b.get("docs")}
-        blind.append(item_fact(st, it, "consistent"))
+        if on_screen:
+            it = {"label_en": b["label_en"], "date": b.get("last_documented"), "facts": fids,
+                  "passages": pids, "docs": b.get("docs")}
+            blind.append(item_fact(st, it, "consistent"))
         out.append(Finding(
-            id="dropped%02d" % i, kind="dropped", title=b["label_en"],
+            id="dropped" + key, kind="dropped", title=b["label_en"],
             explanation="Last documented %s; not mentioned in the latest letter (%s, %s)."
                         % (b.get("last_documented"), bs.get("latest_document"), bs.get("latest_document_date")),
-            segment_ids=pids, fact_ids=fids, concepts=_concepts(st, fids), severity="medium"))
+            segment_ids=pids, fact_ids=fids, concepts=_concepts(st, fids), severity="medium", on_screen=on_screen))
 
-    comp = st.compare if isinstance(st.compare, dict) else {}
-    for fu in comp.get("open_followups") or []:
-        if not fu.get("is_open") or not fu.get("passage_ids"):
-            continue
-        out.append(Finding(
-            id=fu["id"], kind="followup", title=fu.get("label_en") or "Open follow-up",
-            explanation="Recommended %s (document %s); no later record that it took place. %s"
-                        % (fu.get("authored_date"), fu.get("authored_doc"), fu.get("searched") or ""),
-            segment_ids=fu["passage_ids"], fact_ids=fu.get("fact_ids") or [],
-            concepts=_concepts(st, fu.get("fact_ids") or []), severity="medium"))
+
+def findings(st, screen: dict) -> tuple[list[Finding], list[Fact]]:
+    """Only what touches this task's screen.  The KB engine splits contradictions, blind-spot items and
+    open follow-ups into on-screen and other; the others are listed (on_screen=False) in the long view
+    only, and counted in stats.other_record_issues either way."""
+    long_view = screen.get("detail") != "short"
+    task_scoped = "contradictions_other" in screen
+    out: list[Finding] = []
+    for c in screen.get("contradictions") or []:
+        out.append(_conflict(st, c, True))
+    if long_view:
+        for c in screen.get("contradictions_other") or []:
+            out.append(_conflict(st, c, False))
+
+    blind: list[Fact] = []
+    bs = screen.get("blind_spot") or {}
+    _blind_items(st, bs, bs.get("items") or [], True, out, blind)
+    if long_view and screen.get("blind_spot_other"):
+        ref = st.compare.get("counts", {}) if isinstance(st.compare, dict) else {}
+        meta = bs or {"latest_document": ref.get("latest_doc"), "latest_document_date": ref.get("latest_date")}
+        _blind_items(st, meta, screen["blind_spot_other"], False, out, blind)
+
+    if task_scoped:
+        shown_fu = screen.get("open_followups") or []
+        other_fu = screen.get("open_followups_other") or [] if long_view else []
+    else:  # legacy rulebook: patient-wide, as before
+        comp = st.compare if isinstance(st.compare, dict) else {}
+        shown_fu, other_fu = [fu for fu in comp.get("open_followups") or [] if fu.get("is_open")], []
+    for fu in shown_fu:
+        if fu.get("passage_ids"):
+            out.append(_followup(st, fu, True))
+    for fu in other_fu:
+        if fu.get("passage_ids"):
+            out.append(_followup(st, fu, False))
     return out, blind
 
 
 # ----------------------------------------------------------------- briefing
 
-def stats_of(b: Briefing, facts_dropped: int, task_concepts: int | None) -> dict:
+def stats_of(b: Briefing, facts_dropped: int, task_concepts: int | None, other_issues: int = 0) -> dict:
     """Every number on screen is counted from the briefing itself."""
     known = segment_index()
     shown = [f for n in b.needs for f in n.facts]
@@ -318,9 +355,11 @@ def stats_of(b: Briefing, facts_dropped: int, task_concepts: int | None) -> dict
         "not_applicable": sum(n.status == "not_applicable" for n in b.needs),
         "blind_spot": len(b.blind_spot),
         "task_concepts": task_concepts if task_concepts is not None else len(b.blind_spot),
-        "contradictions": sum(f.kind == "conflict" and f.tier == "contradiction" for f in b.findings),
-        "documentation_notes": sum(f.kind == "conflict" and f.tier == "documentation_note" for f in b.findings),
-        "followups_open": sum(f.kind == "followup" for f in b.findings),
+        "contradictions": sum(f.kind == "conflict" and f.tier == "contradiction" and f.on_screen for f in b.findings),
+        "documentation_notes": sum(f.kind == "conflict" and f.tier == "documentation_note" and f.on_screen
+                                   for f in b.findings),
+        "followups_open": sum(f.kind == "followup" and f.on_screen for f in b.findings),
+        "other_record_issues": other_issues,
     }
 
 
@@ -332,11 +371,15 @@ def _routing(screen: dict) -> dict:
             "bundles": u.get("bundle_ids"), "bundles_matched": u.get("bundles_matched"), "implied": u.get("implied"),
             "rules_fired": u["rules"]["fired"], "rules_not_fired": u["rules"]["not_fired"],
             "fallback_note": u.get("fallback_note"), "slots_total": len(u.get("slots") or []),
-            "slots_shown": len(screen.get("cards") or []), "anchor_date": u.get("anchor_date")}
+            "slots_shown": len(screen.get("cards") or []), "anchor_date": u.get("anchor_date"),
+            "screen_mode": u.get("screen_mode"), "suggestions": u.get("suggestions") or [],
+            "applicability_note": u.get("applicability_note"), "applicability": u.get("applicability"),
+            "other_record_issues": screen.get("other_record_issues", 0),
+            "other_record_issues_en": screen.get("other_record_issues_en")}
 
 
 def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | None = None,
-                   detail: str = "long", rulebook: str | None = None) -> Briefing:
+                   detail: str = "short", rulebook: str | None = None) -> Briefing:
     st = engine_store()
     from engine.screen import build_screen
     if use_llm is None:
@@ -355,6 +398,6 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
                  needs=[need_result(st, c) for c in cards], blind_spot=blind, findings=found,
                  detail=screen.get("detail"), routing=_routing(screen))
     bs = screen.get("blind_spot") or {}
-    b.stats = stats_of(b, len(st.removed), bs.get("of_total_problems"))
+    b.stats = stats_of(b, len(st.removed), bs.get("of_total_problems"), screen.get("other_record_issues", 0))
     b.stats["engine_ms"] = screen.get("timing_ms")
     return b

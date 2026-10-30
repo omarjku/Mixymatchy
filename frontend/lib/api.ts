@@ -26,6 +26,7 @@ export interface Finding {
   explanation: string;
   segment_ids: string[];
   severity: "high" | "medium" | "low";
+  on_screen?: boolean; // false: touches nothing on this task's screen (listed in the long view only)
 }
 
 export interface Computed {
@@ -68,6 +69,17 @@ export interface NeedResult {
   note?: string | null;
   checklist?: ChecklistItem[];
   label_panel?: Record<string, unknown>[]; // rule R22: listed contraindications beside patient facts
+  more?: number; // list cards in the short view: further items shown in the long view
+}
+
+export interface Routing {
+  fallback_note?: string | null;
+  applicability_note?: string | null;
+  suggestions?: string[];
+  screen_mode?: "task" | "fallback" | "not_applicable" | "sex_specific" | "overview" | null;
+  other_record_issues?: number;
+  other_record_issues_en?: string | null;
+  [key: string]: unknown;
 }
 
 export interface Briefing {
@@ -79,7 +91,7 @@ export interface Briefing {
   blind_spot: Fact[];
   findings: Finding[];
   detail?: "short" | "long" | null;
-  routing?: Record<string, unknown>;
+  routing?: Routing;
   // Computed by the backend from this briefing; never typed in.
   stats: {
     facts_shown: number;
@@ -92,6 +104,8 @@ export interface Briefing {
     task_concepts: number;
     contradictions: number;
     documentation_notes: number;
+    followups_open?: number;
+    other_record_issues?: number;
   };
 }
 
@@ -113,7 +127,10 @@ export interface DocumentView {
   segments: Segment[];
 }
 
-export async function getBriefing(situation: string, detail: "short" | "long" = "long"): Promise<Briefing> {
+export type Detail = "short" | "long";
+
+// Short (P1 only) is the default everywhere; "Show more" re-requests the long view (P1-P3).
+export async function getBriefing(situation: string, detail: Detail = "short"): Promise<Briefing> {
   const r = await fetch(`${API}/briefing`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

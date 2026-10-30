@@ -297,6 +297,7 @@ def route(text, kb, store, as_of, detail="long", use_llm=True):
     shown = [s for s in order if detail == "long" or info[s]["priority"] == "P1"]
     return {
         "text": text,
+        "task_text": t_task,
         "role_id": role["id"] if role else "other",
         "role_label": role["name"] if role else "Not recognised",
         "role_match": {"method": method, "matched": alias},

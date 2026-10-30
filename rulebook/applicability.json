@@ -1,0 +1,290 @@
+{
+  "version": "0.1",
+  "status": "draft, hand-written; needs review by the medical team",
+  "purpose": "Sex-specific organs, examinations and tests. When the task names one of these and the record documents a patient of the other sex, the screen shows 'not applicable' with the source passage instead of a summary. Generic keywords only; no patient content.",
+  "matching": "Terms are matched in the task text (lowercase, after the role words are removed). Terms of 5+ characters also match as a word prefix (German compounds, e.g. Prostatauntersuchung); shorter terms match as whole words.",
+  "safety_block": [
+    "age_sex",
+    "allergies",
+    "med_antithrombotic",
+    "med_current"
+  ],
+  "sex_evidence": {
+    "_note": "Wording in the documents that states the patient's sex. German 'Patient' is also used generically, so it is not evidence for male.",
+    "female": [
+      "Patientin",
+      "Frau",
+      "weiblich",
+      "female"
+    ],
+    "male": [
+      "Herr",
+      "männlich",
+      "male"
+    ]
+  },
+  "items": [
+    {
+      "id": "prostate",
+      "label": "Prostate examination / prostate",
+      "applicable_sex": "male",
+      "terms_en": [
+        "prostate",
+        "prostatic",
+        "prostatectomy",
+        "psa",
+        "digital rectal exam for prostate",
+        "turp"
+      ],
+      "terms_de": [
+        "prostata",
+        "prostatektomie"
+      ],
+      "slots": [
+        "age_sex",
+        "allergies",
+        "med_antithrombotic",
+        "med_current"
+      ],
+      "record_checks": [
+        {
+          "label": "Earlier prostate findings or PSA",
+          "terms": [
+            "prostat",
+            "PSA"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "testis",
+      "label": "Testicular / scrotal examination",
+      "applicable_sex": "male",
+      "terms_en": [
+        "testicular",
+        "testis",
+        "testes",
+        "testicle",
+        "scrotal",
+        "scrotum",
+        "orchidectomy",
+        "vasectomy"
+      ],
+      "terms_de": [
+        "hoden",
+        "skrotum",
+        "skrotal",
+        "orchiektomie",
+        "vasektomie"
+      ],
+      "slots": [
+        "age_sex",
+        "allergies",
+        "med_antithrombotic",
+        "med_current"
+      ],
+      "record_checks": [
+        {
+          "label": "Earlier testicular or scrotal findings",
+          "terms": [
+            "Hoden",
+            "Skrot",
+            "testic",
+            "scrot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pregnancy",
+      "label": "Pregnancy / pregnancy test",
+      "applicable_sex": "female",
+      "terms_en": [
+        "pregnancy",
+        "pregnant",
+        "antenatal",
+        "prenatal",
+        "obstetric",
+        "beta-hcg",
+        "hcg"
+      ],
+      "terms_de": [
+        "schwangerschaft",
+        "schwanger",
+        "schwangerenvorsorge",
+        "geburtshilf"
+      ],
+      "slots": [
+        "age_sex",
+        "allergies",
+        "med_current"
+      ],
+      "record_checks": [
+        {
+          "label": "Pregnancy status, menopause, gravida/para",
+          "terms": [
+            "schwanger",
+            "Gravid",
+            "Para\\b",
+            "Menopause",
+            "postmenopaus",
+            "pregnan",
+            "hCG"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cervix",
+      "label": "Cervical smear (PAP) / cervix",
+      "applicable_sex": "female",
+      "terms_en": [
+        "cervical smear",
+        "pap smear",
+        "pap test",
+        "pap",
+        "cervix",
+        "cervical screening",
+        "colposcopy",
+        "hpv test"
+      ],
+      "terms_de": [
+        "zervix",
+        "gebärmutterhals",
+        "krebsabstrich",
+        "kolposkopie",
+        "pap-abstrich"
+      ],
+      "slots": [
+        "age_sex",
+        "allergies",
+        "med_antithrombotic"
+      ],
+      "record_checks": [
+        {
+          "label": "Last cervical smear (PAP)",
+          "terms": [
+            "Pap-Abstrich",
+            "Pap smear",
+            "Pap test",
+            "Krebsabstrich",
+            "Zervix",
+            "Cervix",
+            "Portio",
+            "Zytolog"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mammography",
+      "label": "Mammography",
+      "applicable_sex": "female",
+      "terms_en": [
+        "mammography",
+        "mammogram",
+        "breast screening"
+      ],
+      "terms_de": [
+        "mammographie",
+        "mammografie",
+        "mammascreening"
+      ],
+      "slots": [
+        "age_sex",
+        "allergies",
+        "oncology_imaging",
+        "birads",
+        "tumour_site_laterality"
+      ],
+      "record_checks": [
+        {
+          "label": "Earlier mammography",
+          "terms": [
+            "Mammogra",
+            "mammogra"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gynaecology",
+      "label": "Gynaecological examination",
+      "applicable_sex": "female",
+      "terms_en": [
+        "gynaecological",
+        "gynecological",
+        "gynaecology",
+        "gynecology",
+        "pelvic exam",
+        "transvaginal",
+        "ovarian",
+        "ovary",
+        "uterus",
+        "uterine",
+        "hysterectomy",
+        "endometrial",
+        "menopause",
+        "menstrual"
+      ],
+      "terms_de": [
+        "gynäkolog",
+        "gynaekolog",
+        "unterleib",
+        "transvaginal",
+        "eierstock",
+        "ovar",
+        "gebärmutter",
+        "uterus",
+        "hysterektomie",
+        "endometri",
+        "menopause",
+        "menstruation",
+        "regelblutung"
+      ],
+      "slots": [
+        "age_sex",
+        "allergies",
+        "med_antithrombotic",
+        "med_current"
+      ],
+      "record_checks": [
+        {
+          "label": "Earlier gynaecological findings or examinations",
+          "terms": [
+            "gynäkolog",
+            "Gynäkolog",
+            "Uterus",
+            "Ovar",
+            "Endometri",
+            "gynaecolog"
+          ]
+        },
+        {
+          "label": "Last cervical smear (PAP)",
+          "terms": [
+            "Pap-Abstrich",
+            "Pap smear",
+            "Pap test",
+            "Krebsabstrich",
+            "Zervix",
+            "Cervix",
+            "Portio",
+            "Zytolog"
+          ]
+        },
+        {
+          "label": "Menopausal status, gravida/para",
+          "terms": [
+            "Menopause",
+            "postmenopaus",
+            "Gravid",
+            "Para\\b",
+            "Menarche"
+          ]
+        }
+      ]
+    }
+  ],
+  "record_check_matching": "record_checks terms are case-insensitive regular expressions matched at a word start in each fact's English text and its source quote."
+}

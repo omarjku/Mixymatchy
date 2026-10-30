@@ -28,7 +28,7 @@ from engine.test_engine import SITUATIONS  # noqa: E402  (the 5 case situations,
 from eval.core import Build, eval_question, norm  # noqa: E402
 
 
-MODES = {"kb": dict(rulebook="kb"), "kb_short": dict(rulebook="kb", detail="short"),
+MODES = {"kb": dict(rulebook="kb", detail="long"), "kb_short": dict(rulebook="kb"),
          "legacy": dict(rulebook="legacy")}
 
 
@@ -102,9 +102,15 @@ def test_stats_counted_from_briefing(briefings):
         assert s["not_documented"] == sum(n.status == "not_documented" for n in b.needs)
         assert s["not_applicable"] == sum(n.status == "not_applicable" for n in b.needs)
         assert s["blind_spot"] == len(b.blind_spot)
-        assert s["contradictions"] == sum(f.tier == "contradiction" for f in b.findings)
-        assert s["documentation_notes"] == sum(f.tier == "documentation_note" for f in b.findings)
-        assert s["contradictions"] == 5 and s["documentation_notes"] == 3
+        assert s["contradictions"] == sum(f.tier == "contradiction" and f.on_screen for f in b.findings)
+        assert s["documentation_notes"] == sum(f.tier == "documentation_note" and f.on_screen for f in b.findings)
+        conflicts = [f for f in b.findings if f.kind == "conflict"]
+        if b.detail == "short":  # only what touches the screen; the rest is one counted line
+            assert all(f.on_screen for f in b.findings)
+            assert s["other_record_issues"] >= 8 - len(conflicts)
+        else:  # the long view (and the legacy rulebook) still lists every record issue
+            assert sum(f.tier == "contradiction" for f in conflicts) == 5
+            assert sum(f.tier == "documentation_note" for f in conflicts) == 3
 
 
 def _fact_dict(f):
@@ -147,6 +153,12 @@ def test_superseded_and_computed(legacy_briefings):
     assert duplex.status == "not_documented" and duplex.computed  # linked to the recommendation
 
 
+def test_default_detail_is_short():
+    from app.schema import BriefingRequest
+    assert BriefingRequest(situation="x").detail == "short"
+    assert adapter.build_briefing(SITUATIONS["1"], use_llm=False).detail == "short"
+
+
 def test_kb_cards(kb_briefings):
     def need(sid, key):
         return next(n for n in kb_briefings[sid][0].needs if n.need == key)
@@ -177,4 +189,4 @@ def test_findings_kinds(briefings):
     b = briefings["5"][0]
     kinds = {f.kind for f in b.findings}
     assert {"conflict", "dropped", "followup"} <= kinds
-    assert len(b.blind_spot) == sum(f.kind == "dropped" for f in b.findings)
+    assert len(b.blind_spot) == sum(f.kind == "dropped" and f.on_screen for f in b.findings)

@@ -62,6 +62,7 @@ class Finding(BaseModel):
     concepts: list[str] = []     # used to attach the finding to a task's needs
     severity: Literal["high", "medium", "low"] = "medium"
     source: Literal["rule", "llm"] = "rule"
+    on_screen: bool = True       # False: touches nothing on this task's screen ("other record issues", long view)
 
 
 class Computed(BaseModel):
@@ -107,6 +108,7 @@ class NeedResult(BaseModel):
     note: Optional[str] = None   # e.g. "As of 06/2015; no later value documented."
     checklist: list[ChecklistItem] = []
     label_panel: list[dict] = []  # rule R22: listed contraindications beside patient facts (never a verdict)
+    more: int = 0                # list cards in the short view: further items shown in the long view
 
 
 class Briefing(BaseModel):
@@ -118,10 +120,10 @@ class Briefing(BaseModel):
     blind_spot: list[Fact] = []  # task facts missing from the latest letter
     findings: list[Finding] = []
     stats: dict = {}             # always computed from the briefing itself, never typed in
-    detail: Optional[str] = None  # "short" (P1) | "long" (P1-P3); KB rulebook only
+    detail: Optional[str] = None  # "short" (P1, default) | "long" (P1-P3); KB rulebook only
     routing: dict = {}           # role, bundles, matched tags, rules fired, fallback note, rulebook version
 
 
 class BriefingRequest(BaseModel):
     situation: str
-    detail: Literal["short", "long"] = "long"
+    detail: Literal["short", "long"] = "short"

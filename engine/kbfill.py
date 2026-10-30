@@ -101,7 +101,10 @@ def build_card(store, kb, slot_id, ctx, contradictions=()):
         F.plan(store, card, primary)
     elif comp == "laterality_finding":
         F.laterality(store, card, primary)
-    else:  # event_history, list_all
+    elif comp == "list_all":
+        keep_neg = any("negative" in (sel.get("assertion_in") or []) for sel in spec.get("select") or [])
+        F.list_all(store, card, primary, context, ctx.get("detail") or "short", keep_ruled_out=keep_neg)
+    else:  # event_history
         F.dated_list(store, card, primary)
         if context:
             for it in F.annotate_status(store, F.group_items(store, context)):
