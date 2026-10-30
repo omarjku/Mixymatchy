@@ -243,6 +243,19 @@ def fuzzy_non_clinical(word):
     return best_non[1] if best_non[0] >= 0.85 and best_non[0] > best_cl else None
 
 
+_QUOTES = "'\"‘’“”«»„"
+
+
+def _QUOTED(t, s, e):
+    """t[s:e] (a role word, plural s allowed) stands between quote marks: 'nurse', "doctor"."""
+    while s < e and t[s] in " ":
+        s += 1
+    while e > s and t[e - 1] in " ":
+        e -= 1
+    end = e + 1 if t[e:e + 1] == "s" and t[e + 1:e + 2] in _QUOTES and t[e + 1:e + 2] else e
+    return s > 0 and t[s - 1] in _QUOTES and end < len(t) and t[end] in _QUOTES
+
+
 def _label(term):
     return term[:1].upper() + term[1:]
 
@@ -259,6 +272,13 @@ def classify(text, kb_alias=None, task_evidence=False, kb_role=False):
     for term, rx in lex["purpose"]:  # a non-clinical purpose refuses whoever asks ('just curious', 'for court')
         if rx.search(t):
             return {"decision": "not_clinical", "clinical": False, "term": term, "label": None}
+    # a role in scare quotes ("I'm a 'nurse' 🙄", "my title says 'Doctor'") is not a claim: the speaker distances
+    # themselves from it.  Only a role word quoted on both sides counts, never a possessive ("the doctor's")
+    quoted = [h for h in clin if _QUOTED(t, h[0], h[1])]
+    if quoted:
+        clin = [h for h in clin if h not in quoted]
+        if not clin:
+            return {"decision": "not_clinical", "clinical": False, "term": "'%s'" % quoted[0][2], "label": None}
     # owner policy (clinical_roles.json 'policy'): clinical-adjacent roles that do not treat are refused
     pol = _hits(t, lex["policy"])
     clin = [h for h in clin if not any(ps <= h[0] and h[1] <= pe for ps, pe, _t in pol)]

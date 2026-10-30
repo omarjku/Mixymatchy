@@ -189,4 +189,31 @@ def has_task(text, kb, store=None, aliases=(), named_topics=(), applicability_it
     cw = clinical_words(rest, kb, store)
     if cw:
         return {"actionable": True, "reason": "clinical content word", "rest": rest, "words": cw}
+    fz = typo_words(rest, kb, store)
+    if fz:  # 'medicaton list please': a misspelt clinical word still states the task
+        return {"actionable": True, "reason": "clinical content word (misspelt)", "rest": rest, "words": fz}
     return {"actionable": False, "reason": "no clinical task in the request", "rest": rest, "words": []}
+
+
+TYPO_MIN = 6        # only words this long are checked for typos (short words collide too easily)
+TYPO_CUTOFF = 0.85  # similarity to a vocabulary word of similar length with the same first letter
+
+
+def typo_words(text, kb, store=None):
+    """Vocabulary words that words of text misspell ('medicaton' -> medication, 'diabetis' -> diabetes).
+    Same first letter, length within 1 (one dropped, added or swapped letter: 'should' is not 'shoulder'),
+    similarity >= TYPO_CUTOFF; never for 'never' words (greetings, mash) or function words (tag_stop)."""
+    import difflib
+    words, _p = vocabulary(kb, store)
+    cands = [w for w in words if len(w) >= TYPO_MIN - 1 and not NOSPACE.search(w)]
+    lex = lexicon()
+    out = []
+    for m in WORD.finditer(fold(norm_text(text or ""))):
+        w = m.group(0).strip("'-")
+        if len(w) < TYPO_MIN or w in lex["never"] or w in lex["tag_stop"]:
+            continue
+        pool = [x for x in cands if x[:1] == w[:1] and abs(len(x) - len(w)) <= 1]
+        best = difflib.get_close_matches(w, pool, n=1, cutoff=TYPO_CUTOFF)
+        if best:
+            out.append(best[0])
+    return out

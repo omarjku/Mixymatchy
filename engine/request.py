@@ -336,6 +336,9 @@ _NEG_AFTER = re.compile(r"\s*\?\s*(?:no|nope|nein|non|not really|nah|well,? no|n
 # Assistenzarzt are their own clinical terms and are not affected)
 _HYPO_BEFORE = re.compile(r"(?<![\w'])(?:as if i (?:were|was)|if i (?:were|was)|pretend(?:ing)? (?:i'm|i am|to be)|"
                           r"imagine (?:i'm|i am)|i will become|i'll become|i will be|i'll be|i want to (?:be|become)|"
+                          r"(?:when|once|after|if|until) i (?:become|qualify as|start as|am|'m)|"
+                          r"i (?:might|may|could|will|'ll|am going to|plan to) (?:start|begin|work) as|"
+                          r"i(?: am|'m)? (?:starting|beginning) (?:work )?as|i start as|"
                           r"i'd like to (?:be|become)|i hope to (?:be|become)|i'm going to be|would-be|aspiring|"
                           r"future|soon-to-be|soon to be|wannabe|wanna be|angehende[rn]?|zukünftige[rn]?|"
                           r"futur(?:e)?|futuro|futura)\s+(?:a|an|the|ein|eine|un|une|el|la)?\s*$")
