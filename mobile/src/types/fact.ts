@@ -69,6 +69,18 @@ export interface KeyFactLine {
   more: number;               // further items of these needs under "Show more"
 }
 
+// Answer lines (docs/DECISIONS.md 21): the default screen. A thin header (age · sex · allergies), then 3-4
+// one-sentence answers the backend picked (rules), wrote (LLM, code-verified) or templated; each with Source.
+export interface AnswerLineView {
+  id: string;
+  kind: "header" | "answer" | "not_documented";
+  label: string;              // need label(s): accessible name / tooltip
+  text: string;               // the sentence (English, as written by the backend)
+  sources: SourceCitation[];  // the facts' passages: Source opens the letter highlighted
+  origin: "llm" | "template";
+  trust?: string | null;      // conflicting | not_documented
+}
+
 export interface TrendSummary {
   points: { value: string; date: string; collapsed?: boolean }[]; // oldest first, value incl. unit
   numbers: number[];
@@ -115,6 +127,7 @@ export interface PatientBrief {
   applicabilityNote?: string | null;
   applicabilitySources?: SourceCitation[];
   alsoRelevant?: Fact[];          // P2 needs from the long view, shown under "Also relevant"
+  answerLines?: AnswerLineView[]; // header + answer lines (DECISIONS 21); when present key facts move behind "Show more"
   keyFacts?: KeyFactLine[];       // answer-first block; when present everything else sits behind "Show more"
   situation?: string;             // the exact sentence sent to the backend
 }

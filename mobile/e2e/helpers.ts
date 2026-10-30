@@ -24,7 +24,7 @@ async function apiToken(): Promise<string> {
   return ((await r.json()) as { token: string }).token;
 }
 
-export const FACTS_HEADING = /Key facts|Das Wichtigste/;
+export const FACTS_HEADING = /Answers|Antworten|Key facts|Das Wichtigste/;
 export const RESULT_READY = '[data-read-as]';
 export const SOURCE_BUTTON = /^(Source|Quelle)$/;
 

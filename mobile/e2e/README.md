@@ -4,7 +4,7 @@ Playwright suite for docs/FRONTEND.md §6. Runs against the real backend; no moc
 
 | Spec | Checks |
 |---|---|
-| expected answers | for each of the 5 situations (title + description from `cases/situations.md`, typed as one sentence), every answer item in `eval/answer_keys.json` is in the Key facts block (details collapsed, <= 8 lines); "Show more" opens the full cards |
+| expected answers | for each of the 5 situations (title + description from `cases/situations.md`, typed as one sentence), every answer item in `eval/answer_keys.json` is in the answer lines (header + <= 4 sentences, DECISIONS 21; key facts and details collapsed); "Show more" opens the key facts and the full cards |
 | start screen | one free-text field, no role / example chips, the sentence is sent to /briefing exactly as typed |
 | source links | up to 6 source buttons per situation open the full letter with the cited passage marked, in view, and verbatim in a document |
 | source viewer | several passages: all marked, Next steps between them; desktop opens a side pane |

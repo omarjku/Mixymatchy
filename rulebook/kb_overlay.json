@@ -4633,5 +4633,14 @@
   "max_topic_slots": 5,
   "max_topic_cards": 4,
   "max_items": 6
+ },
+ "answer_composites": {
+  "_note": "Answer lines (engine/answers.py, docs/DECISIONS.md 21): a bundle answered as ONE need made of its P1 slots (one line; a not-documented slot is named in that line).",
+  "B05": {
+   "label": "Before contrast",
+   "missing_labels": {
+    "kidney_function": "kidney function (creatinine, eGFR)"
+   }
+  }
  }
 }

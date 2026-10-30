@@ -518,10 +518,15 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     from .keyfacts import key_facts  # answer-first lines (docs/DECISIONS.md 20); the cards stay as details
     kf = key_facts(st, k, cards, focus, contra_out, patient,
                    " ".join([u.get("task_text") or req["task"] or ""] + list(u.get("task_labels") or [])), as_of, mode)
+    from .answers import answer_lines  # header + 3-4 one-sentence answers (docs/DECISIONS.md 21); the rest: details
+    al, u["answer_lines_llm"] = answer_lines(
+        st, k, cards, u, contra_out, patient,
+        " ".join([u.get("task_text") or req["task"] or ""] + list(u.get("task_labels") or [])), as_of, mode, use_llm)
     return {
         "understood": u,
         "rulebook": "kb",
         "key_facts": kf,
+        "answer_lines": al,
         "detail": detail,
         "screen_mode": mode,
         "patient": patient,

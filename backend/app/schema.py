@@ -128,13 +128,29 @@ class KeyFact(BaseModel):
     trust: Optional[str] = None
 
 
+class AnswerLine(BaseModel):
+    """Answer lines (docs/DECISIONS.md 21): the default screen. 'header' = age · sex · allergies; then 3-4 one-sentence
+    answers, one per need the rules picked. The sentence is written by the optional LLM and checked by code against
+    the line's own facts (origin 'llm'), or is the deterministic template (origin 'template')."""
+    kind: Literal["header", "answer", "not_documented"]
+    needs: list[str] = []        # need ids (KB slots) this line answers
+    label: str                   # need label(s), e.g. "Antiplatelets and anticoagulants" (small / accessible name)
+    text: str                    # the one-sentence answer
+    fact_ids: list[str] = []     # engine facts the sentence is about (Source)
+    segment_ids: list[str] = []  # their passages: Source opens the letter with these highlighted
+    origin: Literal["llm", "template"] = "template"
+    verified: bool = True        # an 'llm' sentence passed the code check (numbers, dates, names, not documented)
+    trust: Optional[str] = None  # conflicting (a letter disagrees) | not_documented
+
+
 class Briefing(BaseModel):
     situation: str
     role: str
     task: str
     as_of: str
     needs: list[NeedResult]      # full cards: the 'Show more / Details' part of an answer-first screen
-    key_facts: list[KeyFact] = []  # answer-first block shown by default (empty: gated / not-applicable screens)
+    answer_lines: list[AnswerLine] = []  # default screen (DECISIONS 21): header + 3-4 answers; key_facts and needs: 'Show more'
+    key_facts: list[KeyFact] = []  # answer-first block (DECISIONS 20); with answer_lines it sits under 'Show more'
     layout: Literal["answer_first", "cards"] = "cards"  # answer_first: everything except key_facts is details
     blind_spot: list[Fact] = []  # task facts missing from the latest letter
     findings: list[Finding] = []

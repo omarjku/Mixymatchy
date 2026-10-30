@@ -1,6 +1,6 @@
 """Opt-in start-up self-test (EVAL_ON_START=1): the synthetic eval with the LLM layer on (when the app
 has SECOND_LOOK_LLM=1 and a key), plus the 15
-questions of the 5 official situations, printed to stdout with the prefix "EVAL:" (read from the host's
+questions of the 5 official situations and their answer lines (eval/answers.py), printed to stdout with the prefix "EVAL:" (read from the host's
 logs), then the LLM spend estimate.  Runs once in a background daemon thread started by the API's
 lifespan; it never blocks serving and never raises.
 
@@ -58,6 +58,16 @@ def official(use_llm=True):
     return ok, len(qids), fails
 
 
+def answers():
+    """Answer lines (docs/DECISIONS.md 21) of the 5 official situations with the LLM writer (templates without it)."""
+    from engine import llm
+    from eval import answers as ans
+    r = ans.official(use_llm=True, out=lambda *_: None)
+    say("answers (%s): official in-lines %d/%d, avg chars %.0f, llm lines %d, rejected %d" % (
+        "llm" if llm.available() else "templates", r["ok"], r["tot"], sum(r["chars"]) / max(len(r["chars"]), 1),
+        r["llm"], r["rejected"]))
+
+
 def redteam(use_llm):
     """Red-team inputs (eval/redteam/inputs.json): one model call per input when the layer is on."""
     from eval.redteam import run as rt
@@ -88,6 +98,7 @@ def run():
         say("official cases: %d/%d" % (ok, tot))
         for f in fails:
             say(f)
+        answers()
         syn.run(use_llm=True, out=say)
         say(syn.spend_line(before))
         redteam(llm.available())

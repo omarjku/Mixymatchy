@@ -22,7 +22,7 @@ import { getResults } from "@/lib/session";
 import { formatDate } from "@/lib/stats";
 import { speak, stopSpeaking, useVoiceAvailable } from "@/lib/speech";
 import { cn } from "@/lib/utils";
-import type { Fact, FactRow, GuidelineCitation, KeyFactLine, PatientBrief, SourceCitation } from "@/types/fact";
+import type { AnswerLineView, Fact, FactRow, GuidelineCitation, KeyFactLine, PatientBrief, SourceCitation } from "@/types/fact";
 import type { BriefRequest } from "@/types/request";
 import { KeepDoses } from "@/components/ui/KeepDoses";
 
@@ -114,7 +114,9 @@ export function ResultsScreen() {
   const taskConcepts = stats.task_concepts ?? 0;
   const otherIssues = stats.other_record_issues ?? 0;
   const keyFacts = brief.keyFacts ?? [];
-  const answerFirst = !gated && keyFacts.length > 0;
+  const answerLines = brief.answerLines ?? [];
+  const answersFirst = !gated && answerLines.length > 0;  // DECISIONS 21: header + 3-4 sentences, key facts behind "Show more"
+  const answerFirst = !gated && (answersFirst || keyFacts.length > 0);
   const overview = !gated && view === "overview";
   const showDetails = overview && (!answerFirst || expanded);
 
@@ -261,7 +263,34 @@ export function ResultsScreen() {
             )}
 
             {/* Answer first: one line per question the task asks, each with its source */}
-            {overview && answerFirst && (
+            {overview && answersFirst && (
+              <section id="facts-panel" aria-labelledby="answers-heading" data-answer-lines>
+                <h2 id="answers-heading" className="mb-1 text-sm font-semibold text-ink-muted">
+                  {t("results.answers")}
+                </h2>
+                <AnswerList lines={answerLines} onOpenSources={openSources} />
+                <button
+                  type="button"
+                  data-show-more
+                  aria-expanded={expanded}
+                  aria-controls="details-more"
+                  onClick={() => setExpanded((x) => !x)}
+                  className="mt-3 w-full rounded-full border border-line bg-surface px-4 py-2.5 text-[14px] font-medium text-primary-deep hover:bg-primary-soft focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {expanded ? t("results.showLess") : t("results.showMore")}
+                </button>
+                {expanded && keyFacts.length > 0 && (
+                  <div className="mt-4" data-key-facts>
+                    <h2 id="key-facts-heading" className="mb-1 text-sm font-semibold text-ink-muted">
+                      {t("results.keyFacts")}
+                    </h2>
+                    <KeyFactList lines={keyFacts} onOpenSources={openSources} />
+                  </div>
+                )}
+              </section>
+            )}
+
+            {overview && !answersFirst && answerFirst && (
               <section id="facts-panel" aria-labelledby="key-facts-heading" data-key-facts>
                 <h2 id="key-facts-heading" className="mb-1 text-sm font-semibold text-ink-muted">
                   {t("results.keyFacts")}
@@ -392,6 +421,46 @@ export function ResultsScreen() {
   );
 }
 
+// Answer lines: the thin header (age · sex · allergies), then one sentence per picked need, each with Source.
+// The sentence is the backend's (rules picked, LLM wrote and code verified, or the template); never edited here.
+function AnswerList({ lines, onOpenSources }: {
+  lines: AnswerLineView[];
+  onOpenSources: (citations: SourceCitation[], index: number, title: string) => void;
+}) {
+  const header = lines.find((l) => l.kind === "header");
+  const answers = lines.filter((l) => l.kind !== "header");
+  const source = (line: AnswerLineView, title: string) => line.sources.length > 0 && (
+    <RowSource row={{ id: line.id, text: line.text, sources: line.sources }}
+      onPress={(r) => onOpenSources(r.sources, 0, title)} />
+  );
+  return (
+    <div>
+      {header && (
+        <p data-answer-line="header" className="flex items-start gap-2 px-2 pb-1.5 text-[13px] leading-snug text-ink-muted">
+          <span className="min-w-0 flex-1"><KeepDoses text={header.text} /></span>
+          {source(header, t("results.keySafety"))}
+        </p>
+      )}
+      <ol className="divide-y divide-line border-y border-line">
+        {answers.map((line) => (
+          <li key={line.id} data-answer-line={line.kind} data-trust={line.trust ?? undefined} data-origin={line.origin}
+            title={line.label} className="flex items-start gap-2 px-2 py-2">
+            <p className={cn("min-w-0 flex-1 text-[15px] leading-snug",
+              line.kind === "not_documented" ? "text-undocumented" : "text-ink")}>
+              <span className="sr-only">{line.label}: </span>
+              <KeepDoses text={line.text} />
+              {line.trust === "conflicting" && (
+                <span className="ml-1 text-[12px] font-medium text-contradiction-deep">· {t("results.keyConflict")}</span>
+              )}
+            </p>
+            {source(line, line.label)}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 // Key facts: one compact row per line: small label, then the answer (value · date · since · Source) as short
 // as the letters allow. Never rewritten here: every row is a backend fact, calculation or flag, with its passages.
 function KeyFactList({ lines, onOpenSources }: {
@@ -517,6 +586,10 @@ function briefToSpeech(brief: PatientBrief): string {
   if (brief.screenMode === "needs_task") return [sentence(t("results.needsTask.title")), sentence(t("results.needsTask.body"))].join(" ");
   const parts = [sentence(brief.patientLabel), sentence(brief.taskLabel ?? brief.task)];
   if (brief.screenMode === "not_authorised") return [...parts, sentence(brief.message ?? "")].join(" ");
+  if (brief.answerLines?.length) {  // answer lines: read what the screen shows by default
+    for (const a of brief.answerLines) parts.push(sentence(a.text));
+    return parts.join(" ");
+  }
   if (brief.keyFacts?.length) {  // answer first: read what the screen shows by default
     for (const k of brief.keyFacts) parts.push(sentence(`${k.label}: ${k.rows.map((r) => r.text).join("; ")}`));
     return parts.join(" ");
