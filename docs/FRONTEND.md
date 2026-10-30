@@ -45,7 +45,7 @@ The backend already answers all 15 test questions correctly in ~20 ms. **The fro
 7. **Footer on every result screen:** "Decision support only. A clinician reviews every fact before acting."
 8. **No advice, and knowledge stays apart from facts.** The current guideline excerpts that read as instructions (e.g. "pause anticoagulants...") go. Two kinds of non-patient text are allowed, each only in its own sheet and never styled like a patient fact:
    - **"Why this is shown"**: `need.why[]` (guideline title, body, link from Mani's knowledge base). Explains why the need is on the list; never a recommendation for this patient.
-   - **"From the drug label"**: `label_panels[]`, **long mode only**, each listed item beside the related patient fact status (found with source, ruled out, not documented). Never "contraindicated", never "fit".
+   - **"From the drug label"**: `needs[].label_panel[]`, **long mode only**, each listed item beside the related patient fact status (found with source, ruled out, not documented). Never "contraindicated", never "fit".
    Neither appears on the default (short) screen of the five demo situations, so the jury cannot count them as invented facts.
 9. Dates as `DD.MM.YYYY`; months as "Jun 2015".
 
@@ -119,24 +119,24 @@ Remove one accessory. If a new element is a card, a badge or a coloured block, a
 
 ## 4. Connecting to the backend
 
-**The contract is `docs/INTEGRATION.md` §3 (API v2).** Build against `docs/contract/briefing.example.json` and `docs/contract/document.example.json` (invented data) in mock mode (`VITE_MOCK=1`); switching to the real backend is then only `VITE_API_URL`. v2 fields are optional: hide a feature when its field is missing, so the app works against today's backend too.
+**The contract is `backend/app/schema.py`; `docs/INTEGRATION.md` §3 shows how the app maps it (already wired in `mobile/src/lib/backend.ts`).** Build new UI against `docs/contract/briefing.example.json` and `docs/contract/document.example.json` (invented data) in mock mode (`VITE_MOCK=1`); switching to the real backend is then only `VITE_API_URL`. Knowledge-base fields are optional in the schema: hide a feature when its field is missing.
 
 Today `mobile/src/lib/api.ts → fetchPatientBrief(role, task)` returns mock data. Replace it with a mapping layer; keep `PatientBrief` only if it still fits, otherwise adopt the backend types directly.
 
-### New in v2 (from Mani's routing knowledge base, `docs/knowledge-base/`)
+### Knowledge-base fields to use next (Mani's routing knowledge base, `rulebook/kb/`)
 | Field | UI |
 |---|---|
 | `detail: short / long` (request) | toggle "Short / Full" in the header. Short = P1 needs; Full adds P2, P3 and label panels. Default short. |
 | `need.priority` P1 / P2 / P3 | P1 always expanded; P2 under "More context"; P3 under "On request" (Full only) |
-| `route.role_label`, `route.bundle_titles` | subtitle under the user's sentence, e.g. "Pre-procedure check (anaesthesia)" |
-| `route.layer` ≠ `kb`, `route.note` | quiet note above the list: "No exact match for this request. Showing a composed selection." / "Answered by searching the letters." Never hide which layer answered. |
-| `need.status: ruled_out` | "Ruled out" with its quote (a documented negative), visually different from "Not documented" |
-| `need.searched` | "Not documented. Searched 6 letters for Mallampati, Atemweg, …" and, if set, a link to the empty lab table |
-| `need.added_by_rule` | small note "Added because a blood thinner is listed" (text from the rule title) |
+| `routing.role`, `routing.bundles` | subtitle under the user's sentence, e.g. "Pre-procedure check (anaesthesia)" (titles from `rulebook/kb` bundles) |
+| `routing.fallback_note` | quiet note above the list (already shown as a notice). Never hide that a request fell back to the general summary. |
+| `checklist[].status: documented_none` | "Ruled out" with its quote (a documented negative), visually different from "Not documented" |
+| `need.note` on `not_documented` | "Not documented" plus what was searched (already shown under the card) |
+| `need.rules[]` | small note "Added because …" (rule text from `rulebook/kb`) |
 | `need.why[]` | "Why this is shown" link opening the guideline sheet (Rule 8) |
 | `computed[].from / to / delta / delta_pct / note` | change row: "72 kg to 64 kg, −8 kg (−11.1%)", both inputs linked, note in muted text |
 | `finding.check_id` | check name in the conflict details (X01 "BMI recomputation", X03 "Laterality conflict", …) |
-| `label_panels[]` | "From the drug label" sheet beside a medication (Full only) |
+| `need.label_panel[]` | "From the drug label" sheet beside a medication (Full only) |
 | `POST /segments {ids}` | one request for all inline quotes |
 
 ### Computed values: what to show (Mani's statistics review, `docs/INTEGRATION.md` §4)
@@ -196,8 +196,8 @@ Branch per phase from `mobile-frontend`; small PRs. Before merging: `npm run bui
 
 ### Phase 4: Lens and any role (½ day)
 - Lens tabs re-run the briefing with the role swapped and the task kept; layout animation ≤ 250 ms (`motion/react`, `layout`).
-- Lens tabs send `role_override`; "Other role" opens the free-text field. Mani's knowledge base has 20 roles (`docs/knowledge-base/routing_knowledge_base.json → roles`); use their `name` for labels.
-- Example sentences: the 5 cases + 5 from `eval/unseen_situations.json`. A `route.layer` other than `kb` shows its note.
+- Lens tabs re-send the situation with the other role's name; "Andere Rolle" already sends free text. Mani's knowledge base has 20 roles (`rulebook/kb/routing_knowledge_base.json → roles`); use their `name` for labels.
+- Example sentences: the 5 cases + 5 from `eval/unseen_situations.json`. A `routing.fallback_note` shows as a notice.
 - "From the drug label" panels in Full mode (Rule 8).
 - ✅ Anaesthetist to Surgeon to Emergency re-arranges in < 1 s; all 15 unseen situations and the 22 hold-out situations in the knowledge base (`validation.extra_tests`) render without errors.
 
