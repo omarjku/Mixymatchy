@@ -55,6 +55,8 @@ Switch the doctor and keep the patient: the surgeon and the emergency physician 
   </tr>
 </table>
 
+<img src="docs/media/screenshots/10-results-desktop.png" alt="Results on a desktop screen: patient card, a contradiction between two letters, and the facts the task needs" width="100%">
+
 Results screens use the invented demo patient; no organiser data is shown.
 
 ## Results
@@ -172,7 +174,7 @@ Without the app: `python3 -m engine.query "Anaesthetist, pre-operative check bef
 ### Tests and evaluation
 
 ```bash
-make test                          # 186 unit tests: engine, knowledge base, clinical gate, LLM layer, compare, eval, security, backend
+make test                          # 207 unit tests: engine, knowledge base, clinical gate, LLM layer, compare, eval, security, backend
 python3 -m eval.run --strict       # 15 official answers; exits 1 unless 15/15 and 0 invariant violations
 python3 -m eval.run_api            # the same over HTTP, with latency
 cd mobile && npm run e2e           # 39 Playwright cases against the real backend, including axe accessibility checks
