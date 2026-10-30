@@ -18,7 +18,7 @@ Second Eye answers first, in a sentence or two. Every value comes from the lette
 
 <img src="docs/media/second-eye.webp" alt="Animation: eight letters about one patient; an error copied from letter to letter and a weight that vanishes. The Second Eye logo lands. On a phone, an anaesthetist types one sentence; the answer appears first with numbered sources, and a tap opens the cited passage in the original German letter. Overview, Details in dark mode and History follow, then a contradiction between two letters about a penicillin allergy, and the results." width="100%">
 
-**[▶ Watch the film with sound](docs/media/second-eye.mp4)** · <sub>Every screen in it is the real app running on an invented demo patient. No patient data is shown.</sub>
+**[▶ Watch the film with sound](docs/media/second-eye.mp4)** · <sub>Every screen in it is the real app running on an invented patient. No patient data is shown.</sub>
 
 </div>
 
@@ -57,7 +57,7 @@ Everything else is one tap away: **Show more** for key facts and the full fact l
 
 <img src="docs/media/screenshots/10-desktop.png" alt="Second Eye on a desktop screen: patient card, the answer with sources, and the facts the task needs" width="100%">
 
-<sub>All results screens use the invented demo patient ("Fictitious test person A"); no organiser data is shown.</sub>
+<sub>The real app, fed a set of invented letters for an invented patient; no organiser data is shown.</sub>
 
 ## Results
 
