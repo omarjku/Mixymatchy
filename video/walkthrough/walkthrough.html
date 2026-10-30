@@ -1,0 +1,280 @@
+<!doctype html>
+<!-- 30 s, 9:16 product walkthrough of Second Eye. Every frame is a pure function of time: render(t).
+     Rendered frame by frame by render.mjs (432x768 CSS px at device scale 2.5 = 1080x1920).
+     Open in a browser with ?play to preview in real time. Text on screen is only the scripted text. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Second Eye walkthrough</title>
+<style>
+  @font-face { font-family: "Plex"; font-weight: 400; src: url("../../mobile/node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2"); }
+  @font-face { font-family: "Plex"; font-weight: 500; src: url("../../mobile/node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2"); }
+  @font-face { font-family: "Plex"; font-weight: 600; src: url("../../mobile/node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2"); }
+  @font-face { font-family: "Plex"; font-weight: 700; src: url("../../mobile/node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-700-normal.woff2"); }
+  :root {
+    --navy: #0f1222; --navy-2: #171b33; --navy-3: #20264a; --line: #2c3361;
+    --white: #ffffff; --muted: #a9b0d6; --indigo: #4f5bea; --teal: #2dd4bf;
+    --amber: #f5b544; --red: #f26b6b; --marker: #ffe45c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 432px; height: 768px; overflow: hidden; background: var(--navy); color: var(--white);
+    font-family: "Plex", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .abs { position: absolute; }
+
+  #caption { left: 0; right: 0; top: 30px; height: 64px; display: flex; align-items: center; justify-content: center;
+    text-align: center; white-space: nowrap; font-size: 23px; font-weight: 600; letter-spacing: -0.01em; padding: 0 28px; }
+  #timer { right: 18px; top: 104px; display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+    background: var(--navy-3); border: 1px solid var(--line); font-size: 14px; font-weight: 500; color: var(--teal);
+    font-variant-numeric: tabular-nums; }
+  #timer i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); }
+
+  #app { left: 0; top: 96px; width: 432px; height: 672px; overflow: hidden; }
+  .logo { width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(145deg, #6875ff, var(--indigo));
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 30px; letter-spacing: 0.02em;
+    box-shadow: 0 10px 30px rgba(79, 91, 234, .35); }
+  .logo.sm { width: 34px; height: 34px; border-radius: 10px; font-size: 14px; box-shadow: none; }
+
+  /* Scene 1-2: start screen */
+  #start { left: 24px; right: 24px; top: 70px; display: flex; flex-direction: column; align-items: center; }
+  #start h1 { margin-top: 18px; font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
+  #field { margin-top: 42px; width: 100%; min-height: 112px; border-radius: 16px; background: var(--navy-2);
+    border: 1.5px solid var(--line); padding: 16px 18px; font-size: 18px; line-height: 1.45; }
+  #field .ph { color: #7c84b3; }
+  #caret { display: inline-block; width: 2px; height: 21px; background: var(--teal); vertical-align: -4px; margin-left: 1px; }
+  #go { margin-top: 18px; width: 100%; height: 56px; border-radius: 14px; background: var(--indigo); font-size: 18px;
+    font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  #go .dots { display: none; gap: 5px; }
+  #go .dots b { width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+
+  /* Scene 3-5: answer */
+  #answer { left: 0; right: 0; top: 0; padding: 0 22px; }
+  .bar { display: flex; align-items: center; gap: 10px; height: 54px; font-size: 16px; font-weight: 600; }
+  .bar .q { margin-left: auto; font-size: 14px; font-weight: 400; color: var(--muted); }
+  #card { margin-top: 18px; border-radius: 20px; background: var(--navy-2); border: 1px solid var(--line); padding: 22px 22px 20px; }
+  #card .label { font-size: 14px; font-weight: 500; color: var(--teal); letter-spacing: .02em; }
+  #sentence { margin-top: 10px; font-size: 23px; line-height: 1.42; font-weight: 500; letter-spacing: -0.01em; }
+  .nw { white-space: nowrap; }
+  #nd { border-radius: 6px; padding: 0 3px; margin: 0 -3px; }
+  .chips { margin-top: 16px; display: flex; gap: 10px; }
+  .chip { min-width: 40px; height: 32px; padding: 0 10px; border-radius: 9px; background: var(--navy-3); border: 1px solid var(--line);
+    color: var(--teal); font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  #more { margin-top: 14px; height: 50px; border-radius: 14px; border: 1.5px solid var(--line); display: flex; align-items: center;
+    justify-content: center; gap: 8px; font-size: 16px; font-weight: 600; color: var(--white); }
+  #more .chev { display: inline-block; width: 9px; height: 9px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+    transform: rotate(45deg); margin-top: -4px; }
+  #details { overflow: hidden; height: 0; }
+  #details .inner { padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .row { border-radius: 14px; background: var(--navy-2); border: 1px solid var(--line); padding: 12px 16px; }
+  .row .k { font-size: 14px; color: var(--muted); font-weight: 500; }
+  .row .v { margin-top: 3px; font-size: 18px; font-weight: 500; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tag { font-size: 14px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+  .tag.amber { color: var(--amber); background: rgba(245, 181, 68, .14); }
+  .row.red { border-color: rgba(242, 107, 107, .55); background: rgba(242, 107, 107, .08); }
+  .tag.red { color: #fff; background: var(--red); }
+
+  /* Scene 4: source letter */
+  #letter { left: 0; top: 0; width: 432px; height: 672px; background: #f6f4ee; color: #1d2030; overflow: hidden; }
+  #letter .bar { position: relative; z-index: 2; padding: 0 18px; background: #ffffff; border-bottom: 1px solid #e3e0d6; color: #1d2030; }
+  #letter .back { width: 12px; height: 12px; border-left: 2.5px solid #1d2030; border-bottom: 2.5px solid #1d2030; transform: rotate(45deg); margin-left: 4px; margin-right: 6px; }
+  #letter .src { margin-left: auto; color: #4f5bea; font-size: 15px; }
+  #page { padding: 26px 26px 0; }
+  .ln { height: 11px; border-radius: 6px; background: #dcd8cc; margin-bottom: 13px; }
+  .gap { height: 14px; }
+  #hl { font-family: "Plex", serif; font-size: 20px; font-weight: 500; line-height: 1.5; margin: 6px 0 16px; color: #1d2030;
+    background-image: linear-gradient(transparent 12%, rgba(255, 228, 92, .95) 12%, rgba(255, 228, 92, .95) 92%, transparent 92%);
+    background-repeat: no-repeat; background-size: 0% 100%; display: inline; padding: 0 2px; }
+
+  #finger { width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, .22); border: 2px solid rgba(255, 255, 255, .85);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .35); margin: -22px 0 0 -22px; left: 0; top: 0; }
+  #ripple { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--teal); margin: -22px 0 0 -22px; left: 0; top: 0; }
+
+  #end { inset: 0; background: var(--navy); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; }
+  #end .logo { width: 96px; height: 96px; border-radius: 26px; font-size: 40px; }
+  #end h2 { margin-top: 22px; font-size: 36px; font-weight: 600; letter-spacing: -0.02em; }
+  #end p { margin-top: 18px; font-size: 19px; line-height: 1.5; color: var(--muted); text-align: center; }
+  #end p b { color: var(--white); font-weight: 500; }
+</style>
+</head>
+<body>
+<div id="caption" class="abs"></div>
+<div id="timer" class="abs"><i></i><span id="tval">0.0 s</span></div>
+
+<div id="app" class="abs">
+  <div id="start" class="abs">
+    <div class="logo">SE</div>
+    <h1>Second Eye</h1>
+    <div id="field"><span class="ph" id="ph">Who are you and what do you need?</span><span id="typed"></span><span id="caret"></span></div>
+    <div id="go"><span id="golabel">Show answer</span><span class="dots"><b></b><b></b><b></b></span></div>
+  </div>
+
+  <div id="answer" class="abs">
+    <div class="bar"><div class="logo sm">SE</div>Second Eye</div>
+    <div id="card">
+      <div class="label">Answer</div>
+      <p id="sentence">Kidney function (creatinine, eGFR) is <span id="nd">not documented</span> in the 8 letters; she has type 2 diabetes and takes metformin <span class="nw">1000 mg 1-1-1</span>.</p>
+      <div class="chips"><div class="chip" id="chip1">[1]</div><div class="chip">[2]</div></div>
+    </div>
+    <div id="more"><span>Show more</span><span class="chev"></span></div>
+    <div id="details"><div class="inner">
+      <div class="row"><div class="k">Medications</div><div class="v">Metformin 1000 mg 1-1-1</div></div>
+      <div class="row"><div class="k">Diagnoses</div><div class="v">Type 2 diabetes</div></div>
+      <div class="row"><div class="k">Allergies</div><div class="v">Contrast media allergy</div></div>
+      <div class="row"><div class="k">Kidney function (creatinine, eGFR)</div><div class="v"><span class="tag amber">Not documented</span></div></div>
+      <div class="row red"><div class="v"><span class="tag red">Letters disagree</span></div><div class="v">Carotid stenosis: left vs right</div></div>
+    </div></div>
+  </div>
+
+  <div id="letter" class="abs">
+    <div class="bar"><span class="back" id="back"></span>Entlassbrief<span class="src">[1]</span></div>
+    <div id="page">
+      <div class="ln" style="width:46%"></div><div class="ln" style="width:30%"></div><div class="gap"></div>
+      <div class="ln"></div><div class="ln" style="width:92%"></div><div class="ln" style="width:97%"></div><div class="ln" style="width:64%"></div><div class="gap"></div>
+      <div class="ln" style="width:38%"></div><div class="ln"></div><div class="ln" style="width:88%"></div><div class="ln" style="width:95%"></div><div class="ln" style="width:71%"></div><div class="gap"></div>
+      <div class="ln" style="width:52%"></div><div class="ln" style="width:99%"></div><div class="ln" style="width:90%"></div><div class="ln" style="width:58%"></div><div class="gap"></div>
+      <div class="ln" style="width:34%"></div><div class="ln" style="width:94%"></div><div class="ln" style="width:81%"></div><div class="gap"></div>
+      <div class="ln" style="width:28%"></div>
+      <div><span id="hl">Glucophage 1000 mg 1-1-1</span></div>
+      <div class="ln" style="width:86%"></div><div class="ln" style="width:93%"></div><div class="ln" style="width:61%"></div><div class="gap"></div>
+      <div class="ln"></div><div class="ln" style="width:79%"></div><div class="ln" style="width:90%"></div><div class="ln" style="width:44%"></div>
+    </div>
+  </div>
+</div>
+
+<div id="ripple" class="abs"></div>
+<div id="finger" class="abs"></div>
+
+<div id="end" class="abs">
+  <div class="logo">SE</div>
+  <h2>Second Eye</h2>
+  <p><b>Other tools summarise the record.</b><br>Second Eye checks it.</p>
+</div>
+
+<script>
+const DURATION = 30;
+const QUERY = "Emergency doctor, I'm about to give IV gentamicin.";
+const CAPTIONS = [
+  [0.3, 4, "One question. Any wording."],
+  [4, 9, "Reads all 8 letters."],
+  [9, 15, "One sentence. Only what matters."],
+  [15, 21, "Every fact proven in the source."],
+  [21, 27, "Details and contradictions, one tap away."],
+];
+// Taps (also the click sounds in audio.py): time, target element id
+const TAPS = [[4.4, "field"], [6.7, "go"], [15.6, "chip1"], [21.0, "back"], [22.0, "more"]];
+// Finger visibility windows: [in, out]
+const FINGER = [[3.9, 7.1], [15.0, 16.0], [20.5, 22.5]];
+const T_GO = 6.7, T_STOP = T_GO + 2.1;
+
+const $ = (id) => document.getElementById(id);
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const ease = (x) => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const prog = (t, a, b) => ease((t - a) / (b - a));         // 0 before a, eased 0..1 over [a, b], 1 after b
+const lerp = (a, b, k) => a + (b - a) * k;
+const center = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+
+function render(t) {
+  // Caption: 300 ms fade in/out
+  const cap = CAPTIONS.find(([a, b]) => t >= a && t < b);
+  const capEl = $("caption");
+  if (cap) {
+    if (capEl.textContent !== cap[2]) {
+      capEl.textContent = cap[2];
+      // shrink long captions to one line inside the 28 px side margins
+      capEl.style.fontSize = "23px";
+      for (let fs = 23; fs > 16 && capEl.scrollWidth > capEl.clientWidth - 16; fs--) capEl.style.fontSize = fs + "px";
+    }
+    const k = Math.min(prog(t, cap[0], cap[0] + .35), 1 - prog(t, cap[1] - .3, cap[1]));
+    capEl.style.opacity = k; capEl.style.transform = `translateY(${(1 - k) * 8}px)`;
+  } else capEl.style.opacity = 0;
+
+  // Scene 1-2: start screen, typing, loading
+  const n = Math.round(lerp(0, QUERY.length, clamp((t - 4.75) / 1.6)));
+  $("typed").textContent = QUERY.slice(0, n);
+  $("ph").style.display = n > 0 ? "none" : "inline";
+  const focused = t >= 4.4 && t < T_GO;
+  $("caret").style.opacity = focused && (n < QUERY.length || Math.floor(t * 2.2) % 2 === 0) ? 1 : 0;
+  $("field").style.borderColor = t >= 4.4 && t < 9 ? "var(--indigo)" : "var(--line)";
+  const loading = t >= T_GO && t < 9.05;
+  $("golabel").style.display = loading ? "none" : "inline";
+  document.querySelector("#go .dots").style.display = loading ? "flex" : "none";
+  document.querySelectorAll("#go .dots b").forEach((b, i) => { b.style.opacity = .35 + .65 * (0.5 + 0.5 * Math.sin((t - T_GO) * 7 - i * 0.9)); });
+  $("go").style.transform = `scale(${1 - .03 * (prog(t, T_GO - .05, T_GO + .05) - prog(t, T_GO + .1, T_GO + .3))})`;
+  const out = prog(t, 9, 9.35);
+  $("start").style.opacity = 1 - out;
+  $("start").style.transform = `translateY(${-40 * out}px)`;
+
+  // Timer: counts in real time from the tap and stops at 2.1 s
+  const tv = clamp((t - T_GO) / 2.1) * 2.1;
+  $("tval").textContent = tv.toFixed(1) + " s";
+  const tk = Math.min(prog(t, T_GO, T_GO + .3), 1 - prog(t, 14.6, 14.9));
+  $("timer").style.opacity = tk;
+  $("timer").style.transform = `scale(${1 + .08 * (prog(t, T_STOP, T_STOP + .12) - prog(t, T_STOP + .12, T_STOP + .35))})`;
+
+  // Scene 3: answer slides up; "not documented" pulses amber once
+  const up = prog(t, 9.1, 9.5);
+  const ans = $("answer");
+  ans.style.opacity = up;
+  const exp = prog(t, 22.1, 22.5);
+  const details = $("details");
+  const full = details.firstElementChild.offsetHeight;
+  details.style.height = full * exp + "px";
+  details.style.opacity = exp;
+  // Scroll so the contradiction badge is in view once the list is open
+  const shift = Math.max(0, (ans.offsetHeight - details.offsetHeight + full) - 672 + 18);
+  const scroll = shift * prog(t, 22.7, 23.3);
+  ans.style.transform = `translateY(${(1 - up) * 60 - scroll}px)`;
+  const pulse = Math.sin(Math.PI * clamp((t - 10.6) / 1.1));
+  const nd = $("nd");
+  nd.style.background = `rgba(245, 181, 68, ${0.28 * pulse})`;
+  nd.style.color = pulse > 0.02 ? `rgb(255, ${Math.round(255 - 55 * pulse)}, ${Math.round(255 - 160 * pulse)})` : "#fff";
+  document.querySelector("#more .chev").style.transform = `rotate(${45 + 180 * exp}deg)`;
+
+  // Scene 4: letter slides in from the right, page scrolls, marker sweeps the sentence
+  const lin = prog(t, 15.8, 16.15), lout = prog(t, 21.05, 21.4);
+  $("letter").style.transform = `translateX(${(1 - lin + lout) * 100}%)`;
+  $("letter").style.visibility = lin > 0 && lout < 1 ? "visible" : "hidden";
+  const hl = $("hl");
+  const hlTop = hl.offsetTop;
+  const target = Math.max(0, hlTop - 300);
+  $("page").style.transform = `translateY(${-target * prog(t, 16.6, 17.6)}px)`;
+  hl.style.backgroundSize = `${100 * prog(t, 18.0, 18.9)}% 100%`;
+
+  // Finger: glides between tap targets, presses on each tap
+  let fx = 216, fy = 600, vis = 0;
+  for (const [a, b] of FINGER) vis = Math.max(vis, Math.min(prog(t, a, a + .3), 1 - prog(t, b - .3, b)));
+  const next = TAPS.find(([tt]) => tt + .25 >= t), prev = [...TAPS].reverse().find(([tt]) => tt + .25 < t);
+  if (next) {
+    const [nx, ny] = center($(next[1]));
+    const [px, py] = prev ? center($(prev[1])) : [nx + 60, ny + 140];
+    const k = prog(t, next[0] - .75, next[0] - .1);
+    fx = lerp(px, nx, k); fy = lerp(py, ny, k);
+  } else if (prev) [fx, fy] = center($(prev[1]));
+  const press = TAPS.reduce((m, [tt]) => Math.max(m, Math.sin(Math.PI * clamp((t - tt + .08) / .22))), 0);
+  const f = $("finger");
+  f.style.opacity = vis; f.style.transform = `translate(${fx}px, ${fy}px) scale(${1 - .18 * press})`;
+  const rip = TAPS.map(([tt]) => (t - tt) / .45).find((x) => x >= 0 && x <= 1);
+  const r = $("ripple");
+  r.style.opacity = rip === undefined ? 0 : (1 - rip) * vis;
+  r.style.transform = `translate(${fx}px, ${fy}px) scale(${1 + 1.1 * (rip ?? 0)})`;
+
+  // Scene 6: end card
+  const e = prog(t, 27, 27.4);
+  $("end").style.opacity = e;
+  const logo = document.querySelector("#end .logo");
+  logo.style.transform = `translateY(${(1 - prog(t, 27.15, 27.55)) * 14}px)`;
+  document.querySelector("#end p").style.opacity = prog(t, 27.5, 27.9);
+  $("end").style.visibility = e > 0 ? "visible" : "hidden";
+}
+
+window.render = render;
+window.DURATION = DURATION;
+window.TAPS = TAPS;
+render(0);
+if (location.search.includes("play")) {
+  const t0 = performance.now();
+  const loop = () => { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); };
+  document.fonts.ready.then(loop);
+}
+</script>
+</body>
+</html>
