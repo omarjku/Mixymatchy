@@ -4,7 +4,10 @@
  "_notes": [
   "bundle_tags: extra task phrases per bundle (EN/DE), matched like the KB's own tags.",
   "role_aliases: extra names for existing KB roles.",
-  "roles: roles the KB does not have yet; same fields as KB roles (default_bundles = what the role usually needs when the task wording is not recognised)."
+  "roles: roles the KB does not have yet; same fields as KB roles (default_bundles = what the role usually needs when the task wording is not recognised).",
+  "nephrologist (role): kidney_function at P1 via the role's modifiers; default task = medication review (renal dosing).",
+  "task_terms: synonym groups for the deterministic task-term promotion (engine/focus.py): a diagnosis whose label shares a significant clinical word with the situation text is shown in a 'Matches your task' group. Vocabulary only, no clinical reasoning.",
+  "task_relevance: clinical reasoning the KB does not have yet: when the situation names a task (when_any / when_all), facts whose label contains one of `terms` (or whose category is in `categories`) are shown in the same group with `why`. Every entry is source: TODO-cite until the medical team cites or rejects it."
  ],
  "bundle_tags": {
   "B01": {
@@ -524,6 +527,248 @@
    "sources": [
     "G18"
    ]
+  },
+  {
+   "id": "nephrologist",
+   "name": "Nephrologist",
+   "group": "Specialist consult",
+   "aliases_en": [
+    "nephrologist",
+    "nephrology",
+    "renal physician"
+   ],
+   "aliases_de": [
+    "Nephrologe",
+    "Nephrologin",
+    "Nephrologie"
+   ],
+   "typical_situations": "Kidney function review; renal dosing of medication.",
+   "default_bundles": [
+    "B07"
+   ],
+   "modifiers": [
+    {
+     "slot": "kidney_function",
+     "priority": "P1"
+    },
+    {
+     "slot": "med_renal_relevant",
+     "priority": "P1"
+    }
+   ],
+   "mindset": "Kidney function and its trend, kidney-relevant drugs (metformin, ACE inhibitors/ARBs, diuretics, NSAIDs), contrast exposure.",
+   "often_missing": "Creatinine / eGFR are not documented in the letters.",
+   "sources": [
+    "G18"
+   ]
+  }
+ ],
+ "task_terms": {
+  "groups": [
+   [
+    "kidney",
+    "kidneys",
+    "renal",
+    "nephro",
+    "nephropathy",
+    "niere",
+    "nieren",
+    "nierenfunktion",
+    "ckd"
+   ],
+   [
+    "reflux",
+    "gerd",
+    "gord",
+    "sodbrennen",
+    "refluxkrankheit"
+   ],
+   [
+    "osteoporosis",
+    "osteoporose",
+    "osteopenia"
+   ],
+   [
+    "lupus",
+    "sle"
+   ],
+   [
+    "carotid",
+    "carotis",
+    "karotis"
+   ],
+   [
+    "diabetes",
+    "diabetic",
+    "diabetiker",
+    "zucker",
+    "blutzucker"
+   ],
+   [
+    "hypertension",
+    "hypertensive",
+    "hypertonie"
+   ],
+   [
+    "apnoea",
+    "apnea",
+    "schlafapnoe"
+   ],
+   [
+    "hyperlipidaemia",
+    "hyperlipidemia",
+    "cholesterol",
+    "hypercholesterolaemia",
+    "dyslipidaemia",
+    "lipids",
+    "fettstoffwechsel"
+   ],
+   [
+    "breast",
+    "mamma",
+    "brust"
+   ],
+   [
+    "amaurosis",
+    "retina",
+    "retinal",
+    "netzhaut"
+   ]
+  ],
+  "stop": [
+   "review",
+   "planning",
+   "plan",
+   "treatment",
+   "therapy",
+   "check",
+   "control",
+   "function",
+   "symptoms",
+   "symptom",
+   "follow",
+   "history",
+   "patient",
+   "assessment",
+   "consult",
+   "before",
+   "after",
+   "today",
+   "current",
+   "known",
+   "status",
+   "management",
+   "discharge",
+   "admission",
+   "handover",
+   "overview",
+   "summary",
+   "nurse",
+   "doctor",
+   "physician",
+   "disease",
+   "grade",
+   "left",
+   "right",
+   "with",
+   "about",
+   "please",
+   "question",
+   "visit",
+   "clinic",
+   "surgery",
+   "operation",
+   "planned",
+   "kontrolle",
+   "therapie",
+   "planung",
+   "behandlung",
+   "untersuchung",
+   "aufnahme",
+   "entlassung",
+   "verlauf",
+   "bitte",
+   "oncology",
+   "oncological",
+   "adjuvant",
+   "endocrine",
+   "intraoperative",
+   "radiotherapy",
+   "radiation",
+   "diagnosis",
+   "diagnoses",
+   "diagnose",
+   "befund",
+   "coping",
+   "mobilisation"
+  ]
+ },
+ "task_relevance": [
+  {
+   "id": "TR01",
+   "when_any": [
+    "endocrine therapy",
+    "endocrine treatment",
+    "aromatase",
+    "letrozole",
+    "anastrozole",
+    "exemestane",
+    "tamoxifen",
+    "antihormon",
+    "endokrine therapie",
+    "hormone therapy"
+   ],
+   "terms": [
+    "osteoporosis",
+    "osteopenia",
+    "vitamin d deficiency"
+   ],
+   "why": "Adjuvant endocrine therapy (aromatase inhibitors) accelerates bone loss: known osteoporosis changes monitoring and bone-protective treatment.",
+   "source": "TODO-cite"
+  },
+  {
+   "id": "TR02",
+   "when_any": [
+    "radiotherapy",
+    "radiation",
+    "iort",
+    "irradiation",
+    "bestrahlung",
+    "strahlentherapie",
+    "radioonkolog"
+   ],
+   "terms": [
+    "lupus",
+    "scleroderma",
+    "systemic sclerosis",
+    "dermatomyositis",
+    "connective tissue"
+   ],
+   "why": "Connective-tissue disease (e.g. SLE) is a reported relative caution for radiotherapy (risk of severe acute and late toxicity).",
+   "source": "TODO-cite"
+  },
+  {
+   "id": "TR03",
+   "when_all": [
+    [
+     "discharge",
+     "entlass"
+    ],
+    [
+     "oncolog",
+     "onkolog",
+     "cancer",
+     "tumour",
+     "tumor",
+     "breast"
+    ]
+   ],
+   "categories": [
+    "planned_procedure",
+    "planned_admission"
+   ],
+   "why": "Oncology discharge: the next planned procedure and its date are what the patient leaves with.",
+   "source": "TODO-cite"
   }
  ]
 }

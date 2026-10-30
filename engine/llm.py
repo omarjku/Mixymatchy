@@ -6,6 +6,12 @@ one-line reason; code validates every id again.  It never produces patient facts
 'not documented' decisions, and it cannot authorise a requester: the clinical gate (engine/clinical.py)
 decides on the text alone.
 
+Focus facts: with the record's concept labels (engine/focus.concepts: deduplicated English diagnosis labels
+plus result/plan categories, short labels only, no other patient text) the schema also asks for
+`focus_concepts`, 0-5 labels from that enum.  Code keeps only labels of the record (max MAX_FOCUS) and
+engine/focus.py maps them back to existing fact ids, shown as an 'AI-highlighted for this task' group after
+the clinical gate.
+
 Enabled only when ALL of these hold:
   * environment variable SECOND_LOOK_LLM=1
   * ANTHROPIC_API_KEY is set (or a test client is injected with set_client)
@@ -27,13 +33,14 @@ from . import llm_budget
 
 DEFAULT_MODEL = "claude-haiku-5-5"
 MAX_BUNDLES = 3
+MAX_FOCUS = 5
 MAX_REASON = 200
 NO_ROLE = "none"
 
 _client = None            # injected by tests (set_client); otherwise built lazily from the environment
 _client_lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="llm")
-_static = {}              # kb version -> (system text, schema, role ids, bundle ids)
+_static = {}              # (kb version, concepts) -> (system text, schema, role ids, bundle ids, concepts)
 
 
 def model():
@@ -93,9 +100,11 @@ def _short(s, n):
     return s if len(s) <= n else s[: n - 1].rstrip() + "…"
 
 
-def static_prompt(kb):
-    """-> (system text, json schema, role ids, bundle ids); deterministic for a given KB (cache-stable)."""
-    key = (kb.version, id(kb))
+def static_prompt(kb, concepts=()):
+    """-> (system text, json schema, role ids, bundle ids, concepts); deterministic for a given KB and record
+    (cache-stable).  concepts: the record's concept labels (engine/focus.concepts), may be empty."""
+    concepts = tuple(concepts or ())
+    key = (kb.version, id(kb), concepts)
     if key in _static:
         return _static[key]
     role_ids = [r["id"] for r in kb.roles]
@@ -119,9 +128,15 @@ def static_prompt(kb):
         "- bundle_ids: 1-3 task bundles that match what the person is doing, most relevant first; "
         "an empty list if no bundle fits.\n"
         "- reason: one short plain-English line (max 20 words) explaining the reading, without patient facts.\n"
+        + ("- focus_concepts: 0-5 labels, copied exactly from the record concept list, that this person needs "
+           "highlighted for this task, most important first: especially a condition the task bundles may not "
+           "cover but that changes the plan (e.g. a comorbidity that is a caution for the planned treatment, "
+           "or the condition the task names). An empty list when nothing stands out.\n" if concepts else "") +
         "You only classify the request. Do not judge whether the requester may see data.\n\n"
         "Roles (id: name (aliases)):\n" + "\n".join(roles) + "\n\n"
         "Task bundles (id: title. description [tags]):\n" + "\n".join(bundles) + "\n"
+        + ("\nRecord concepts (labels present in this patient's record):\n" + "\n".join(concepts) + "\n"
+           if concepts else "")
     )
     schema = {
         "type": "object",
@@ -133,12 +148,15 @@ def static_prompt(kb):
         "required": ["role_id", "bundle_ids", "reason"],
         "additionalProperties": False,
     }
-    _static[key] = (system, schema, role_ids, bundle_ids)
+    if concepts:  # 0-5 is enforced in validate() (array length constraints are not supported by the API)
+        schema["properties"]["focus_concepts"] = {"type": "array", "items": {"type": "string", "enum": list(concepts)}}
+        schema["required"].append("focus_concepts")
+    _static[key] = (system, schema, role_ids, bundle_ids, concepts)
     return _static[key]
 
 
-def request_params(text, kb):
-    system, schema, _r, _b = static_prompt(kb)
+def request_params(text, kb, concepts=()):
+    system, schema, _r, _b, _c = static_prompt(kb, concepts)
     return dict(
         model=model(),
         max_tokens=1024,  # room for (low-effort) adaptive thinking plus the short JSON answer
@@ -150,9 +168,11 @@ def request_params(text, kb):
 
 # ----------------------------------------------------------------- call + validation
 
-def validate(raw, kb):
-    """Untrusted model output -> {"role_id": str|None, "bundle_ids": [...], "reason": str} or None."""
-    _s, _schema, role_ids, bundle_ids = static_prompt(kb)
+def validate(raw, kb, concepts=()):
+    """Untrusted model output -> {"role_id": str|None, "bundle_ids": [...], "reason": str,
+    "focus_concepts": [...]} or None.  focus_concepts: only labels of this record, deduplicated, at most
+    MAX_FOCUS."""
+    _s, _schema, role_ids, bundle_ids, concepts = static_prompt(kb, concepts)
     if not isinstance(raw, dict):
         return None
     rid = raw.get("role_id")
@@ -164,18 +184,24 @@ def validate(raw, kb):
             bids.append(x)
     reason = raw.get("reason")
     reason = _short(reason, MAX_REASON) if isinstance(reason, str) else ""
-    return {"role_id": rid, "bundle_ids": bids[:MAX_BUNDLES], "reason": reason}
+    given = raw.get("focus_concepts") if isinstance(raw.get("focus_concepts"), list) else []
+    allowed = set(concepts)
+    focus = []
+    for x in given:
+        if isinstance(x, str) and x in allowed and x not in focus:
+            focus.append(x)
+    return {"role_id": rid, "bundle_ids": bids[:MAX_BUNDLES], "reason": reason, "focus_concepts": focus[:MAX_FOCUS]}
 
 
 def _call(params):
     return _get_client().messages.create(**params)
 
 
-def cache_key(text, kb):
-    return (model(), kb.version, " ".join(str(text or "").lower().split()))
+def cache_key(text, kb, concepts=()):
+    return (model(), kb.version, hash(tuple(concepts or ())), " ".join(str(text or "").lower().split()))
 
 
-def propose(text, kb):
+def propose(text, kb, concepts=()):
     """-> (proposal | None, info).  info = {"called": bool, "cached": bool, "skipped": str|None,
     "cost_eur": float}.  Never raises."""
     info = {"called": False, "cached": False, "skipped": None, "cost_eur": 0.0}
@@ -186,7 +212,7 @@ def propose(text, kb):
         info["skipped"] = "empty"
         return None, info
     b = llm_budget.budget()
-    key = cache_key(text, kb)
+    key = cache_key(text, kb, concepts)
     hit = b.cache_get(key)
     if hit is not None:
         info["cached"] = True
@@ -196,7 +222,7 @@ def propose(text, kb):
         return None, info
     info["called"] = True
     try:
-        params = request_params(text, kb)
+        params = request_params(text, kb, concepts)
         fut = _pool.submit(_call, params)
         msg = fut.result(timeout=timeout_s())
     except FutureTimeout:
@@ -215,7 +241,7 @@ def propose(text, kb):
             info["skipped"] = "stop_reason: %s" % msg.stop_reason
             return None, info
         txt = next((getattr(x, "text", "") for x in msg.content if getattr(x, "type", None) == "text"), "")
-        out = validate(json.loads(txt), kb)
+        out = validate(json.loads(txt), kb, concepts)
     except Exception as e:
         b.error()
         info["skipped"] = "invalid: %s" % type(e).__name__

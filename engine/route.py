@@ -282,12 +282,15 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
     matched = match_bundles(t_task, kb)
     chosen = choose_bundles(matched, role)
     how = "kb_alias_tags"
-    llm_note, llm_used, llm_reason, llm_info = None, False, None, None
+    llm_note, llm_used, llm_reason, llm_info, llm_focus = None, False, None, None, None
     if use_llm:
         # every request: the model's reading is merged in (rules result + LLM-added bundles); the role is
         # taken from the model only when the rules found none or only a fuzzy (low-confidence) match
-        prop, llm_info = llm.propose(text, kb)
+        from .focus import concepts as record_concepts
+        prop, llm_info = llm.propose(text, kb, record_concepts(store)[0])
         if prop:
+            if prop.get("focus_concepts"):  # promoted by engine/focus.py after the clinical gate
+                llm_focus = {"concepts": list(prop["focus_concepts"]), "reason": prop.get("reason") or None}
             rid = prop.get("role_id")
             if rid in kb.role_by_id and (not role or (method == "fuzzy" and rid != role_id)):
                 role_id, role, alias, method = rid, kb.role_by_id[rid], None, "llm"
@@ -338,6 +341,7 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
         "llm_used": llm_used,
         "llm_reason": llm_reason,
         "llm": llm_info,
+        "llm_focus_proposal": llm_focus,
         "rules": rules,
         "detail": detail,
         "slots": [{"slot": s, "priority": info[s]["priority"], "origins": info[s]["origins"]} for s in order],

@@ -252,8 +252,9 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     if (rules_role and u["tasks_from"] == "fallback" and len(defaults) == 1 and not app["items"]
             and not OVERVIEW_RX.search(u.get("task_text") or "")):
         # a recognised role with one typical task, task wording not recognised: that task, with a visible note
+        llm_focus = u.get("llm_focus_proposal")
         u = route(text, k, st, as_of, detail=detail, use_llm=False, force_bundles=defaults)
-        u.update(as_of_date=as_of, anchor_date=anchor, clinical_gate=gate)
+        u.update(as_of_date=as_of, anchor_date=anchor, clinical_gate=gate, llm_focus_proposal=llm_focus)
         info = u.pop("slot_info")
     if not role and gate["decision"] == "clinical_term":
         u["role_label"] = gate["label"]
@@ -310,12 +311,20 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     ctx = {"as_of": as_of, "anchor": as_of, "patient": patient, "text": text, "slot_info": info,
            "bundles": u["bundle_ids"], "detail": detail}
     cards = front + [build_card(st, k, s, ctx, contras) for s in slots] + back
+    focus = []
+    if mode != "not_applicable":  # task focus (engine/focus.py): after the clinical gate, never a dump
+        from .focus import focus_cards
+        focus, finfo = focus_cards(st, k, u.get("task_text") or "", text, as_of, cards, u.get("llm_focus_proposal"))
+        u.update(finfo)
+        if finfo["llm_focus"]:
+            u["llm_used"] = True
+            u["llm_reason"] = u.get("llm_reason") or finfo["llm_focus"]["reason"]
     also = []
     if detail == "short" and mode == "task":  # P2 'also relevant' group, shown without a second request
         p2_all = {x["slot"] for x in u["slots"] if x["priority"] == "P2" and x["slot"] not in slots}
         in_bundles = [x for b_ in u["bundle_ids"] for x in (k.bundle_by_id[b_].get("slots") or {}).get("P2") or []]
         p2 = [x for x in dict.fromkeys(in_bundles + [x["slot"] for x in u["slots"]]) if x in p2_all]  # KB order
-        room = max(0, min(MAX_ALSO_RELEVANT, MAX_SHORT_TOTAL - len(cards)))
+        room = max(0, min(MAX_ALSO_RELEVANT, MAX_SHORT_TOTAL - len(cards) - len(focus)))
         also = [build_card(st, k, s, ctx, contras) for s in p2[:room]]
         built = p2
         for c in also:
@@ -330,10 +339,10 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         for c in cards:  # rule R22: label panel for every shown medication
             if c.get("shape") == "current_list" and c.get("items"):
                 c["label_panel"] = label_panel(st, k, c, status, u["bundle_ids"], detail, age)
-    _annotate_followups(st, cards + also)
+    _annotate_followups(st, cards + focus + also)
 
     # only what touches this screen: contradictions, blind spot, open follow-ups
-    contra_all, proof = _proof_and_contradictions(st, cards, contras)
+    contra_all, proof = _proof_and_contradictions(st, cards + focus, contras)
     on_card = {x for c in cards for x in c.get("conflicts") or []}
     for c in contra_all:
         c["relevant"] = c["relevant"] or c["id"] in on_card
@@ -362,6 +371,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         "patient": patient,
         "safety_strip": [],
         "cards": cards,
+        "focus": focus,
         "also_relevant": also,
         "card_status_counts": counts,
         "slot_counts": {"shown": len(cards), "by_priority": by_pr},

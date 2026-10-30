@@ -369,9 +369,10 @@ def apply_overlay(data, overlay):
 def load(kb_path=KB_PATH, slot_map_path=SLOT_MAP_PATH, strict=True, overlay_path=OVERLAY_PATH):
     """Load + validate; raise KBError (listing every problem) if anything is wrong."""
     data = _load(kb_path)
-    if overlay_path and os.path.exists(overlay_path):
-        apply_overlay(data, _load(overlay_path))
+    overlay = _load(overlay_path) if overlay_path and os.path.exists(overlay_path) else {}
+    apply_overlay(data, overlay)
     k = KB(data, _load(slot_map_path))
+    k.overlay = overlay  # task_terms / task_relevance are read by engine/focus.py
     errors, _warnings = k.validate()
     if errors and strict:
         raise KBError(errors)

@@ -74,7 +74,8 @@ class TestRequestAndValidation(LLMTestBase):
     def test_request_shape(self):
         fake = self.client({"role_id": "gp", "bundle_ids": ["B03"], "reason": "GP reviewing diabetes"})
         prop, info = llm.propose("GP here, sugar check", self.kb)
-        self.assertEqual(prop, {"role_id": "gp", "bundle_ids": ["B03"], "reason": "GP reviewing diabetes"})
+        self.assertEqual(prop, {"role_id": "gp", "bundle_ids": ["B03"], "reason": "GP reviewing diabetes",
+                                "focus_concepts": []})
         self.assertTrue(info["called"])
         kw = fake.calls[0]
         self.assertEqual(kw["model"], "claude-haiku-5-5")
@@ -251,6 +252,90 @@ class TestMergeAndGate(LLMTestBase):
         b2 = adapter.build_briefing("GP, how is her blood pressure doing", use_llm=False)
         self.assertFalse(b2.routing["llm_used"])
         self.assertIsNone(b2.routing["llm_reason"])
+
+
+@unittest.skipUnless(HAS_DATA, "no patient data")
+class TestFocusConcepts(LLMTestBase):
+    """focus_concepts: an enum of the record's concept labels; validated in code; promoted after the gate."""
+
+    def setUp(self):
+        super().setUp()
+        from engine.focus import concepts
+        from engine.screen import store
+        self.labels, self.by_label = concepts(store())
+        self.sle = next(x for x in self.labels if "lupus" in x.lower())
+
+    def test_schema_enum_is_the_record_concepts(self):
+        system, schema, _r, _b, conc = llm.static_prompt(self.kb, self.labels)
+        prop = schema["properties"]["focus_concepts"]
+        self.assertEqual(prop["items"]["enum"], list(self.labels))
+        self.assertIn("focus_concepts", schema["required"])
+        self.assertIn(self.sle, system)
+        self.assertLessEqual(max(len(x) for x in self.labels), 80)
+        # without concepts the request is unchanged (no focus field)
+        self.assertNotIn("focus_concepts", llm.static_prompt(self.kb)[1]["properties"])
+
+    def test_validation_keeps_only_record_labels_max_five(self):
+        raw = {"role_id": "gp", "bundle_ids": ["B07"], "reason": "x",
+               "focus_concepts": ["Invented disease", self.sle, self.sle, 42] + list(self.labels[:8])}
+        out = llm.validate(raw, self.kb, self.labels)
+        self.assertEqual(out["focus_concepts"][0], self.sle)
+        self.assertLessEqual(len(out["focus_concepts"]), llm.MAX_FOCUS)
+        self.assertNotIn("Invented disease", out["focus_concepts"])
+        self.assertTrue(all(x in self.labels for x in out["focus_concepts"]))
+        self.assertEqual(llm.validate(dict(raw, focus_concepts="lupus"), self.kb, self.labels)["focus_concepts"], [])
+        self.assertEqual(llm.validate(raw, self.kb, ())["focus_concepts"], [])  # no enum -> nothing accepted
+
+    def test_request_carries_the_enum(self):
+        fake = self.client({"role_id": "none", "bundle_ids": [], "reason": "r", "focus_concepts": []})
+        llm.propose("Dermatologist, skin check", self.kb, self.labels)
+        kw = fake.calls[0]
+        self.assertEqual(kw["output_config"]["format"]["schema"]["properties"]["focus_concepts"]["items"]["enum"],
+                         list(self.labels))
+
+    def test_focus_promoted_into_short_view(self):
+        self.client({"role_id": "none", "bundle_ids": [], "reason": "Autoimmune disease matters for skin lesions",
+                     "focus_concepts": [self.sle, "Not a record label"]})
+        s = build_screen("Dermatologist checking a mole on her back", use_llm=True, detail="short", rulebook="kb")
+        card = next(c for c in s["focus"] if c["need"] == "llm_focus")
+        self.assertEqual(card["label_en"], "AI-highlighted for this task")
+        self.assertTrue(set(card["facts"]) <= set(self.by_label[self.sle]))
+        self.assertEqual(card["why"], "Autoimmune disease matters for skin lesions")
+        u = s["understood"]
+        self.assertEqual(u["llm_focus"]["concepts"], [self.sle])
+        self.assertTrue(u["llm_used"])
+        sys.path.insert(0, os.path.join(ROOT, "backend"))
+        from app import adapter
+        b = adapter.build_briefing("Dermatologist checking a mole on her back", use_llm=True)
+        self.assertEqual(b.routing["llm_focus"]["concepts"], [self.sle])
+        need = next(n for n in b.needs if n.need == "llm_focus")
+        self.assertTrue(any("lupus" in f.label_en.lower() for f in need.facts))
+
+    def test_focus_still_gated(self):
+        self.client({"role_id": "gp", "bundle_ids": ["B07"], "reason": "x", "focus_concepts": [self.sle]})
+        s = build_screen("I'm her neighbour, does she have lupus?", use_llm=True, detail="short", rulebook="kb")
+        self.assertEqual(s["screen_mode"], "not_authorised")
+        self.assertEqual(s["cards"], [])
+        self.assertFalse(s.get("focus"))
+
+    def test_rules_only_has_no_llm_focus(self):
+        s = build_screen("Radiation oncologist, IORT planning", use_llm=False, detail="short", rulebook="kb")
+        self.assertIsNone(s["understood"].get("llm_focus"))
+        tf = next(c for c in s["focus"] if c["need"] == "task_focus")  # overlay TR02, deterministic
+        self.assertIn("TR02", tf["overlay_entries"])
+        self.assertEqual(tf["sources"][0]["id"], "TODO-cite")
+
+
+class TestTaskTermFocus(unittest.TestCase):
+    @unittest.skipUnless(HAS_DATA, "no patient data")
+    def test_task_terms(self):
+        for text, word in (("Gastroenterologist, reflux symptoms", "reflux"),
+                           ("Endocrinologist, osteoporosis treatment", "osteoporosis"),
+                           ("Pulmonologist, sleep apnoea follow-up", "apnoea")):
+            s = build_screen(text, use_llm=False, detail="short", rulebook="kb")
+            labels = " ".join(it["label_en"].lower() for c in s["focus"] for it in c["items"])
+            with self.subTest(text=text):
+                self.assertIn(word, labels)
 
 
 if __name__ == "__main__":

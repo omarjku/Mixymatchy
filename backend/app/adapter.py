@@ -398,6 +398,7 @@ def _routing(screen: dict) -> dict:
             "clinical_gate": (u.get("clinical_gate") or {}).get("decision"),
             "llm_used": bool(u.get("llm_used")), "llm_reason": u.get("llm_reason") if u.get("llm_used") else None,
             "applicability_note": u.get("applicability_note"), "applicability": u.get("applicability"),
+            "task_focus": u.get("task_focus"), "llm_focus": u.get("llm_focus"),
             "also_relevant": u.get("also_relevant") or [], "also_relevant_more": u.get("also_relevant_more") or 0,
             "other_record_issues": screen.get("other_record_issues", 0),
             "other_record_issues_en": screen.get("other_record_issues_en")}
@@ -413,7 +414,8 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
     u = screen["understood"]
 
     cards, seen = [], set()
-    for c in (screen.get("safety_strip") or []) + (screen.get("cards") or []) + (screen.get("also_relevant") or []):
+    for c in ((screen.get("safety_strip") or []) + (screen.get("cards") or []) + (screen.get("focus") or [])
+              + (screen.get("also_relevant") or [])):
         if c["need"] not in seen:
             seen.add(c["need"])
             cards.append(c)

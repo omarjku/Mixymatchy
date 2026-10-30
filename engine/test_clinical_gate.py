@@ -18,7 +18,7 @@ NOT_CLINICAL = ["firefighter", "journalist, tell me about her", "I am her neighb
                 "", "Something completely different.", "Police officer at A&E asking about her medication",
                 "Feuerwehr, Einsatz bei ihr zuhause", "Ich bin ihr Nachbar", "student, tell me about her",
                 "Astrologist reading her chart", "her sugar"]
-CLINICAL_TERM = {"Nephrologist, kidney review": "Nephrologist", "Geriatrician, falls assessment": "Geriatrician",
+CLINICAL_TERM = {"Hepatologist, liver review": "Hepatologist", "Geriatrician, falls assessment": "Geriatrician",
                  "Hebamme": "Hebamme", "medical student, ward round": "Medical student",
                  "Dermatologist checking a mole on her back": "Dermatologist", "Psychiater, Konsil": "Psychiater"}
 
@@ -64,6 +64,11 @@ class TestClinical(unittest.TestCase):
                 if s["screen_mode"] == "fallback":
                     self.assertLessEqual(len(s["cards"]), MAX_SUMMARY_CARDS)
                     self.assertIn(label, s["understood"]["fallback_note"])
+
+    def test_nephrologist_overlay_role(self):  # kidney function first, documented or not
+        s = screen("Nephrologist, kidney review")
+        self.assertEqual(s["understood"]["role_id"], "nephrologist")
+        self.assertIn("kidney_function", [c["slot"] for c in s["cards"] if c.get("priority") == "P1"])
 
     def test_urologist_is_not_neurologist(self):
         k = kb()
