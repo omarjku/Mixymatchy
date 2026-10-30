@@ -94,6 +94,33 @@ class Answers(unittest.TestCase):
         self.assertEqual(kf[1]["label"], "Your question: fall")
         self.assertLessEqual(len(kf), 8)
 
+    def test_clinical_question_never_needs_task(self):  # a clinician's medical question is answered
+        for q in ("GP: does she have sarcoidosis?", "GP: does she have gout?", "Doctor: is she menopausal?"):
+            s = screen(q)
+            self.assertEqual(s["screen_mode"], "task", q)
+            self.assertTrue(question_cards(s)[0]["value_en"].startswith("Nothing found"), q)
+        for q in ("GP: asdfgh?", "GP: hello?", "Nurse: ok?", "Doctor: what's the weather like?",
+                  "Я врач, какая погода?"):  # keyboard mash, greetings, small talk: still no data
+            self.assertEqual(screen(q)["screen_mode"], "needs_task", q)
+
+    def test_other_languages_get_the_role_screen_not_a_false_answer(self):
+        for q in ("Я кардиолог, какие антикоагулянты принимает?", "Jestem lekarzem, jakie leki przeciwzakrzepowe przyjmuje?"):
+            s = screen(q)
+            self.assertEqual(s["screen_mode"], "task", q)
+            self.assertEqual(question_cards(s), [], q)  # no 'Nothing found' for a phrase the German letters cannot hold
+            self.assertIn("thrombo ass", " ".join(c.get("value_en") or "" for c in s["cards"]).lower())
+
+    def test_requester_forms(self):
+        for q in ("I'm the husband's cardiologist, need rhythm history", "wife's GP calling, her ECGs please",
+                  "cards consult: EF, rhythm, pacemaker?", "endocrine consult: thyroid and steroids"):
+            self.assertEqual(screen(q)["screen_mode"], "task", q)
+        self.assertEqual(screen("doctor's wife here, her meds?")["screen_mode"], "not_authorised")
+
+    def test_was_it_done_answers_with_procedures(self):  # not the diagnosis whose sentence mentions it
+        qc = question_cards(screen("Radiologist: any ultrasound done?"))
+        self.assertTrue(qc[0]["items"])
+        self.assertFalse(any("carcinoma" in it["label_en"].lower() for it in qc[0]["items"]))
+
     def test_no_false_hit_on_german_homonym(self):
         s = screen("Doctor: did she ever have a fall?")  # 'Fall' is German for a hospital case
         qc = question_cards(s)
@@ -112,7 +139,7 @@ class Answers(unittest.TestCase):
             self.assertIn("no German search word", qc[0]["value_en"])
         qc = question_cards(screen("GP: any toenail problems?"))
         self.assertIn("no German search word", qc[0]["value_en"])
-        self.assertEqual(screen("GP: does she have quuxitis?")["screen_mode"], "needs_task")  # no task, no data
+        self.assertIn("no German search word", question_cards(screen("GP: does she have quuxitis?"))[0]["value_en"])
 
     def test_task_plus_question(self):
         s = screen("Anaesthetist, pre-op check before breast surgery: did she ever have a fall?")

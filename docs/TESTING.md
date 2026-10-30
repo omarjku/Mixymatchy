@@ -1,4 +1,4 @@
-# Testing record: Second Look
+# Testing record: Second Eye
 
 Purpose: let the team trace every test set, test run and iteration later.
 Written 30 Oct 2026. Source: git history on `main`, `docs/DECISIONS.md`, live Render logs.
@@ -11,6 +11,7 @@ Abbreviations: F = found, ND = not documented, NA = not applicable, NAUTH = not 
 | Strict official eval | 15 questions of the 5 official situations against `eval/answer_keys.json`; 0 invariant violations (quotes verbatim, numbers in quote, no IBM-only facts). Needs `data/` and a built fact store. | `python3 -m pipeline.build && python3 -m compare.build && python3 -m eval.run --strict` |
 | Official eval through the API | Same situations over HTTP, with latency (3 runs per situation) | `python3 -m eval.run_api` (`--detail short\|long`) |
 | Synthetic eval (rules only) | 70 situations, 170 questions, scored on the short view the phone shows | `python3 -m eval.synthetic.run` (`--verbose`, `--only s01,s02`) |
+| Paraphrase eval | The 15 official questions in 5 wordings each (terse, long, question, typo, German-English mix) and 30 common single questions in 3 wordings each (`eval/paraphrase/cases.json`); answer on the short screen and inside key facts. Rules only: 156/165 (official 74/75) | `python3 -m eval.paraphrase.run` (`--verbose`, `--only`, `--llm`) |
 | Synthetic eval with LLM | Same set with the Haiku understand layer on. Spends real money inside the budget guard. Needs `ANTHROPIC_API_KEY` and `SECOND_LOOK_LLM=1`. | `python3 -m eval.synthetic.run --llm` |
 | Unit, security, backend tests | Engine, KB, relevance, clinical gate, LLM layer (mocked), request understanding (`engine/test_request.py`), no task no data + self-description (`engine/test_intent.py`), compare, eval harness, security, backend | `make test` (runs `engine.kb`, `security.test_security`, the engine/compare/eval unittests and `pytest` in `backend/`) |
 | Mobile Playwright e2e | Real backend, no mocks. 5 situations with answer tokens visible, source viewer, contradictions, language toggle, banners, speed under 2 s, 15 unseen situations without console errors, axe accessibility. Files: `mobile/e2e/situations.spec.ts`, `helpers.ts`, `README.md` | Backend on :8011, then `cd mobile && npm run e2e` (see `mobile/e2e/README.md`) |

@@ -6,7 +6,7 @@ import { Faq, type FaqItem } from "@/components/Faq";
 import { Notice } from "@/components/ui/Notice";
 import { t, type StringKey } from "@/i18n/strings";
 
-// /hilfe: FAQ about what Second Look shows, what the marks mean and what it never does.
+// /hilfe: FAQ about what Second Eye shows, what the marks mean and what it never does.
 
 const questions = [1, 2, 3, 4, 5, 6, 7, 8];
 

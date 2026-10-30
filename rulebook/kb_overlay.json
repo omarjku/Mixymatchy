@@ -54,6 +54,9 @@
   },
   "B02": {
    "en": [
+    "tumor board",
+    "after the tumor board",
+    "tumorboard",
     "breast surgery planning",
     "operative planning",
     "lumpectomy",
@@ -165,6 +168,12 @@
   },
   "B06": {
    "en": [
+    "f/u",
+    "follow up",
+    "followups",
+    "carried out",
+    "took place",
+    "ever performed",
     "open follow-ups",
     "pending follow-up",
     "pending recommendations",
@@ -2160,6 +2169,16 @@
    "source": "TODO-cite"
   }
  ],
+ "task_focus_scope": [
+  {
+   "id": "TS01",
+   "label_match": "histolog|receptor|\\bher2\\b|ki-?67|proliferation|\\btnm\\b|\\bp?t[0-4][a-d]?\\b|\\bg[1-3]\\b|grading|tumou?r extent",
+   "only_roles": ["surgeon", "radiation_oncologist", "medical_oncologist", "gynaecologist", "radiologist"],
+   "unless_text": "patholog|histolog|biops|sample|specimen|tumou?r ?board|oncolog|onkolog|staging|chemo|endocrine therap",
+   "why": "Tumour pathology (histology, receptor status, Ki-67, TNM) guides cancer treatment, not anaesthesia, nursing or rehabilitation: it is left out of 'Relevant to your task' for other roles unless the request names it (challenge example: receptor status left out for the anaesthetist).",
+   "source": "TODO-cite"
+  }
+ ],
  "role_stems": {
   "_note": "Accent-folded word stems; a word starting with one names the role (first such word in the text). Only used when no alias matched. TODO-cite (vocabulary).",
   "cardiologist": [
@@ -2301,12 +2320,219 @@
    "B18"
   ]
  },
+ "role_topics": {
+  "_note": "Role-typical topics, taken from each role's own 'mindset' / 'often_missing' text (KB and overlay roles). engine/screen.py shows them as topic cards (found facts, or 'not documented' after searching every fact and passage) when the role's view comes from a bundle that is not its own: an overlay role (it borrows a KB bundle), or a KB role whose task wording was not recognised. Never on a question-only screen; within topics_settings.max_topic_cards. source: TODO-cite",
+  "rheumatologist": [
+   "immunosuppressive_tx",
+   "serology",
+   "autoimmune",
+   "bone"
+  ],
+  "psychologist": [
+   "mood",
+   "social"
+  ],
+  "social_worker": [
+   "social"
+  ],
+  "sports_medicine": [
+   "exercise_test",
+   "rhythm"
+  ],
+  "occupational_medicine": [
+   "occupation"
+  ],
+  "palliative_care": [
+   "pain",
+   "social"
+  ],
+  "gastroenterologist": [
+   "endoscopy",
+   "gi"
+  ],
+  "sleep_medicine": [
+   "sleep_study",
+   "lungs",
+   "weight"
+  ],
+  "pulmonologist": [
+   "lung_function",
+   "lungs"
+  ],
+  "infectious_disease": [
+   "immunosuppressive_tx",
+   "infection",
+   "vaccination"
+  ],
+  "travel_medicine": [
+   "vaccination",
+   "immunosuppressive_tx"
+  ],
+  "geriatrician": [
+   "mobility",
+   "cognition",
+   "social"
+  ],
+  "haematologist": [
+   "blood_count",
+   "coagulation"
+  ],
+  "nephrologist": [
+   "kidney",
+   "urine"
+  ],
+  "toxicologist": [
+   "smoking"
+  ],
+  "dietitian": [
+   "nutrition",
+   "weight"
+  ],
+  "physio": [
+   "mobility",
+   "social"
+  ],
+  "ward_nurse": [
+   "mobility",
+   "social",
+   "code_status"
+  ],
+  "preassessment_nurse": [
+   "mobility",
+   "social"
+  ],
+  "pharmacist": [
+   "kidney",
+   "liver"
+  ],
+  "cardiologist": [
+   "rhythm",
+   "lipids",
+   "kidney"
+  ],
+  "medical_oncologist": [
+   "kidney",
+   "liver",
+   "blood_count"
+  ],
+  "surgeon": [
+   "axilla"
+  ],
+  "vascular_surgeon": [
+   "smoking"
+  ],
+  "neurologist": [
+   "head_imaging",
+   "rhythm"
+  ],
+  "ophthalmologist": [
+   "eye"
+  ],
+  "radiologist": [
+   "kidney"
+  ],
+  "emergency_physician": [
+   "kidney"
+  ],
+  "anaesthetist": [
+   "kidney",
+   "airway",
+   "prior_surgery"
+  ],
+  "gp": [
+   "kidney"
+  ],
+  "diabetologist": [
+   "diabetes"
+  ]
+ },
  "topics": [
+  {
+   "id": "antihypertensive",
+   "label": "Blood pressure medication",
+   "terms": {
+    "en": [
+     "bp meds",
+     "bp medication",
+     "bp medications",
+     "bp drugs",
+     "bp tablets",
+     "blood pressure meds",
+     "blood pressure medication",
+     "blood pressure medications",
+     "blood pressure drug",
+     "blood pressure drugs",
+     "blood pressure tablets",
+     "antihypertensive",
+     "antihypertensives",
+     "antihypertensive medication",
+     "antihypertensive drug",
+     "antihypertensive therapy"
+    ],
+    "de": [
+     "Blutdruckmedikament",
+     "Blutdruckmedikamente",
+     "Blutdrucktabletten",
+     "Antihypertensivum",
+     "Antihypertensiva",
+     "blutdrucksenkend"
+    ],
+    "intl": []
+   },
+   "slots": [
+    "med_antihypertensive"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "followup_done",
+   "label": "Recommended follow-up: done or not",
+   "terms": {
+    "en": [
+     "follow-up",
+     "follow up",
+     "followup",
+     "follow-ups",
+     "follow ups",
+     "followups",
+     "f/u",
+     "ever performed",
+     "ever carried out",
+     "carried out",
+     "took place",
+     "ever done",
+     "check-up done",
+     "control examination"
+    ],
+    "de": [
+     "Kontrolle gemacht",
+     "Kontrolluntersuchung",
+     "Nachkontrolle",
+     "Verlaufskontrolle",
+     "Wiedervorstellung",
+     "durchgeführt"
+    ],
+    "intl": []
+   },
+   "slots": [
+    "discharge_followups",
+    "followup_done"
+   ],
+   "select": {},
+   "search": [],
+   "source": "TODO-cite"
+  },
   {
    "id": "bone",
    "label": "Bone health (osteoporosis, bone drugs)",
    "terms": {
     "en": [
+     "alendronate",
+     "alendronic acid",
+     "osteoporosis medication",
+     "bone medication",
      "bone",
      "bones",
      "bone health",
@@ -2389,6 +2615,12 @@
    "label": "Cognition (MMSE, dementia)",
    "terms": {
     "en": [
+     "mini mental",
+     "mini-mental score",
+     "mental status",
+     "cognitive screening",
+     "cognitive impairment",
+     "mmst",
      "cognition",
      "cognitive",
      "memory",
@@ -2464,6 +2696,9 @@
    "label": "Social situation and support",
    "terms": {
     "en": [
+     "home support",
+     "lives with",
+     "living arrangements",
      "social situation",
      "social history",
      "social support",
@@ -2526,6 +2761,13 @@
    "label": "Current medication",
    "terms": {
     "en": [
+     "meds",
+     "current meds",
+     "med list",
+     "medication list",
+     "medicine list",
+     "regular medication",
+     "home medication",
      "medication",
      "medications",
      "medicines",
@@ -2579,6 +2821,10 @@
    "label": "Blood pressure",
    "terms": {
     "en": [
+     "blood pressure values",
+     "blood pressure readings",
+     "bp values",
+     "bp readings",
      "blood pressure",
      "bp",
      "bp peaks",
@@ -2766,6 +3012,14 @@
    "label": "Head imaging (CT / MRI)",
    "terms": {
     "en": [
+     "cranial imaging",
+     "cranial ct",
+     "cerebral imaging",
+     "brain scan",
+     "head scan",
+     "cct",
+     "ct of the brain",
+     "ct scan of the brain",
      "head ct",
      "brain ct",
      "ct head",
@@ -2855,6 +3109,13 @@
    "label": "Diabetes and glucose-lowering treatment",
    "terms": {
     "en": [
+     "dm",
+     "dm2",
+     "t2dm",
+     "niddm",
+     "diabetes type",
+     "type of diabetes",
+     "kind of diabetes",
      "diabetes",
      "diabetic",
      "blood sugar",
@@ -3153,6 +3414,21 @@
    "label": "Planned procedure and date",
    "terms": {
     "en": [
+     "tumour board",
+     "tumor board",
+     "tumourboard",
+     "tumorboard",
+     "board recommendation",
+     "mdt recommendation",
+     "op date",
+     "date of op",
+     "surgery scheduled",
+     "operation scheduled",
+     "when is surgery",
+     "when is the operation",
+     "when is her operation",
+     "when is her surgery",
+     "planned op",
      "planned operation",
      "planned surgery",
      "planned procedure",
@@ -3171,6 +3447,10 @@
      "what happens next"
     ],
     "de": [
+     "Tumorkonferenz",
+     "Tumorboard",
+     "OP-Termin",
+     "Operationstermin",
      "geplante Operation",
      "geplante OP",
      "OP-Termin",
@@ -3516,6 +3796,11 @@
    "label": "Lipids and lipid-lowering treatment",
    "terms": {
     "en": [
+     "lipid lowering",
+     "lipid-lowering",
+     "cholesterol lowering",
+     "cholesterol medication",
+     "lipid medication",
      "cholesterol",
      "ldl",
      "hdl",
@@ -3652,6 +3937,10 @@
    "label": "Stroke / TIA history",
    "terms": {
     "en": [
+     "cerebrovascular event",
+     "cerebrovascular events",
+     "cva",
+     "apoplexy",
      "stroke",
      "tia",
      "transient ischaemic attack",
@@ -3830,6 +4119,11 @@
    "label": "Axillary lymph nodes",
    "terms": {
     "en": [
+     "lymphnode",
+     "lymphnodes",
+     "lymph node status",
+     "node status",
+     "nodes",
      "lymph nodes",
      "lymph node",
      "axilla",
@@ -4345,6 +4639,13 @@
    "label": "Family history",
    "terms": {
     "en": [
+     "family hx",
+     "fhx",
+     "in her family",
+     "in the family",
+     "runs in the family",
+     "family members",
+     "relatives with",
      "family history",
      "hereditary",
      "familial",
@@ -4353,6 +4654,7 @@
      "genetic counselling"
     ],
     "de": [
+     "Familienanamnese",
      "Familienanamnese",
      "familiäre Belastung",
      "BRCA",
@@ -4625,6 +4927,298 @@
    ],
    "select": {},
    "search": [],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "immunosuppressive_tx",
+   "label": "Immunosuppressive treatment (e.g. for lupus)",
+   "terms": {
+    "en": [
+     "immunosuppressive",
+     "immunosuppressants",
+     "immunosuppressive therapy",
+     "hydroxychloroquine",
+     "steroids",
+     "corticosteroids",
+     "prednisolone",
+     "methotrexate",
+     "azathioprine",
+     "dmard",
+     "lupus therapy",
+     "lupus treatment"
+    ],
+    "de": [
+     "Immunsuppressiva",
+     "immunsuppressive Therapie",
+     "Hydroxychloroquin",
+     "Quensyl",
+     "Kortison",
+     "Cortison",
+     "Prednisolon",
+     "Methotrexat",
+     "Azathioprin"
+    ],
+    "intl": [
+     "immunosuppresseur",
+     "inmunosupresor",
+     "immunosoppressore",
+     "hydroxychloroquine"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "atc": [
+     "L04",
+     "H02",
+     "P01BA02",
+     "L01BA01"
+    ],
+    "label": "immunosuppress|hydroxychloroquin|prednisol|cortison|corticoster|methotrexat|azathioprin"
+   },
+   "search": [
+    "Immunsuppress",
+    "Hydroxychloroquin",
+    "Quensyl",
+    "Prednisolon",
+    "Kortison",
+    "Cortison",
+    "Methotrexat",
+    "Azathioprin",
+    "Glukokortikoid"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "serology",
+   "label": "Autoimmune serology (ANA, anti-dsDNA, complement)",
+   "terms": {
+    "en": [
+     "serology",
+     "anti-dsdna",
+     "dsdna",
+     "antibodies",
+     "autoantibodies",
+     "complement"
+    ],
+    "de": [
+     "Serologie",
+     "Autoantikörper",
+     "Antikörper",
+     "Komplement"
+    ],
+    "intl": [
+     "serologie",
+     "serologia",
+     "anticorps",
+     "anticuerpos"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "label": "\\bana\\b|dsdna|autoantibod|antinuclear|complement"
+   },
+   "search": [
+    "\\bANA\\b",
+    "dsDNA",
+    "Autoantikörper",
+    "antinukleär",
+    "Komplement"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "exercise_test",
+   "label": "Exercise stress test (ergometry)",
+   "terms": {
+    "en": [
+     "exercise test",
+     "stress test",
+     "exercise ecg",
+     "ergometry",
+     "treadmill test",
+     "exercise tolerance test"
+    ],
+    "de": [
+     "Ergometrie",
+     "Belastungs-EKG",
+     "Belastungstest",
+     "Fahrradergometrie"
+    ],
+    "intl": [
+     "epreuve d'effort",
+     "prueba de esfuerzo",
+     "ergometria",
+     "efor testi"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "label": "ergometr|exercise test|stress test|exercise ecg"
+   },
+   "search": [
+    "Ergometrie",
+    "Belastungs-EKG",
+    "Belastungstest",
+    "Fahrradergometr"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "occupation",
+   "label": "Occupation and work",
+   "terms": {
+    "en": [
+     "occupation",
+     "work demands",
+     "employment",
+     "profession",
+     "fitness for work",
+     "return to work"
+    ],
+    "de": [
+     "Beruf",
+     "berufstätig",
+     "Arbeit",
+     "Arbeitsplatz",
+     "Arbeitsfähigkeit",
+     "Rente"
+    ],
+    "intl": [
+     "profession",
+     "metier",
+     "profesion",
+     "trabajo",
+     "lavoro",
+     "meslek"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "label": "occupation|employ|retired|profession"
+   },
+   "search": [
+    "Beruf",
+    "berufstätig",
+    "Arbeitsplatz",
+    "Arbeitsunfähig",
+    "Rentnerin",
+    "\\bRente\\b"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "endoscopy",
+   "label": "Endoscopy (gastroscopy, colonoscopy)",
+   "terms": {
+    "en": [
+     "endoscopy",
+     "gastroscopy",
+     "colonoscopy",
+     "ogd",
+     "egd",
+     "upper endoscopy"
+    ],
+    "de": [
+     "Endoskopie",
+     "Gastroskopie",
+     "Koloskopie",
+     "ÖGD",
+     "Magenspiegelung",
+     "Darmspiegelung"
+    ],
+    "intl": [
+     "endoscopie",
+     "gastroscopie",
+     "coloscopie",
+     "endoscopia",
+     "gastroscopia",
+     "colonoscopia"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "label": "endoscop|gastroscop|colonoscop|oesophagogastro|esophagogastro"
+   },
+   "search": [
+    "Endoskop",
+    "Gastroskop",
+    "Koloskop",
+    "\\bÖGD\\b",
+    "Magenspiegelung",
+    "Darmspiegelung"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "sleep_study",
+   "label": "Sleep study and CPAP",
+   "terms": {
+    "en": [
+     "sleep study",
+     "polysomnography",
+     "cpap",
+     "sleep lab",
+     "sleep apnoea test"
+    ],
+    "de": [
+     "Schlaflabor",
+     "Polysomnographie",
+     "Polygraphie",
+     "CPAP",
+     "Schlafapnoe-Screening"
+    ],
+    "intl": [
+     "polysomnographie",
+     "polisomnografia",
+     "cpap"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "label": "polysomno|polygraph|cpap|sleep study"
+   },
+   "search": [
+    "Schlaflabor",
+    "Polysomno",
+    "Polygraph",
+    "CPAP",
+    "nCPAP"
+   ],
+   "source": "TODO-cite"
+  },
+  {
+   "id": "lung_function",
+   "label": "Lung function tests (spirometry)",
+   "terms": {
+    "en": [
+     "lung function",
+     "spirometry",
+     "pulmonary function",
+     "pft",
+     "fev1"
+    ],
+    "de": [
+     "Lungenfunktion",
+     "Spirometrie",
+     "Bodyplethysmographie"
+    ],
+    "intl": [
+     "spirometrie",
+     "espirometria",
+     "spirometria",
+     "funcion pulmonar"
+    ]
+   },
+   "slots": [],
+   "select": {
+    "label": "spirometr|lung function|pulmonary function|fev1"
+   },
+   "search": [
+    "Lungenfunktion",
+    "Spirometr",
+    "Bodyplethysmo",
+    "FEV1"
+   ],
    "source": "TODO-cite"
   }
  ],

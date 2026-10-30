@@ -111,6 +111,7 @@ def build_card(store, kb, slot_id, ctx, contradictions=()):
             for it in F.annotate_status(store, F.group_items(store, context)):
                 it["context"] = True
                 card["items"].append(it)
+            card["items"] = F.drop_answered_questions(store, card["items"])
     if card["status"] == "not_documented" and comp not in ("status_check", "med_changes", "age_sex"):
         if not card.get("searched"):
             not_documented(store, kb, slot_id, spec, card, extra="")

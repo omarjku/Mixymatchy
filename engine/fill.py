@@ -633,8 +633,30 @@ def _num_attr(f):
         return None
 
 
+_Q_STOP = {"question", "suspected", "suspicion", "diagnosis", "of", "the", "with", "and", "in", "on", "left", "right"}
+
+
+def _concept_words(label):
+    t = re.sub(r"\(.*?\)", " ", str(label or "").lower())
+    return {w for w in re.findall(r"[a-zäöüß]{3,}", t) if w not in _Q_STOP}
+
+
+def drop_answered_questions(store, items):
+    """An open question or suspicion ('Amaurosis fugax?', 'Question: hypertensive retinopathy') is left out
+    when the same list has a confirmed finding that contains all its words ('Amaurosis fugax', 'Incipient
+    hypertensive retinopathy'); questions nothing answered stay."""
+    firm = [_concept_words(it["label_en"]) for it in items if not _is_question(store, it)]
+    out = []
+    for it in items:
+        q = _concept_words(it["label_en"]) if _is_question(store, it) else None
+        if q and any(q <= w for w in firm):
+            continue
+        out.append(it)
+    return out
+
+
 def dated_list(store, card, facts, newest_first=True, limit=12):
-    items = annotate_status(store, group_items(store, facts))
+    items = drop_answered_questions(store, annotate_status(store, group_items(store, facts)))
     items.sort(key=lambda it: str(it["date"] or ""), reverse=newest_first)
     card["items"] = items
     more = len(items) - limit
@@ -775,9 +797,27 @@ def laterality(store, card, facts):
                 sides[s] = sides.get(s, 0) + 1
     card["sides"] = sides
     if sides:
-        card["value_en"] = "Side: %s | %s" % (", ".join("%s (%d statement%s)" % (s, n, "" if n == 1 else "s")
-                                                       for s, n in sorted(sides.items(), key=lambda kv: -kv[1])),
-                                             card["value_en"])
+        # headline: the finding on the side most statements give (the most specific wording: a degree in %
+        # or a number first), then the other side(s) by their own finding; the statement counts stay in
+        # card['sides'] and the full list in the items
+        ranked = sorted(sides.items(), key=lambda kv: -kv[1])
+
+        def best(side):
+            its = [it for it in card["items"] if side in str(it.get("side") or "").split("/")]
+            its.sort(key=lambda it: (not re.search(r"\d", it["label_en"] or ""), it.get("collapsed", False)))
+            return its[0] if its else None
+        main_side, _ = ranked[0]
+        head = [best(main_side)]
+        head += [best(s) for s, _ in ranked[1:] if best(s) is not None and best(s) is not head[0]]
+        lead = "%s: %s" % (main_side.capitalize(), shown(head[0]))
+        # a minority side is not presented as a second finding: it says how few statements give it (often the
+        # side-swap that 'Letters disagree' flags)
+        total = sum(sides.values())
+        others = ["%s in %d of %d statements: %s" % (s, n, total, shown(best(s))) for s, n in ranked[1:]
+                  if best(s) is not None]
+        rest = [shown(it) for it in card["items"] if all(it is not h for h in head)][:6]
+        card["value_en"] = "; ".join([lead] + others) + (
+            " | " + "; ".join(rest) if rest else "")
     return card
 
 
@@ -810,11 +850,17 @@ def checklist(store, card, facts, subitems, none_match=None):
         rows.append({"label": "Other", "status": "found", "facts": [f["id"] for f in other],
                      "passages": sorted({p for f in other for p in f.get("passage_ids") or []})})
     card["checklist"] = rows
-    word = {"found": "found", "documented_none": "documented as none", "not_documented": "not documented"}
+    # one readable sentence: what was found, then what is documented as none / not documented (sub-item labels
+    # in lower case, 'found' rows are already named by their findings)
     found_txt = "; ".join(it["label_en"] for it in items if not set(it["facts"]) & {f["id"] for f in negatives})
-    card["value_en"] = " | ".join("%s: %s" % (r["label"], word[r["status"]]) for r in rows)
-    if found_txt:
-        card["value_en"] = found_txt + " || " + card["value_en"]
+    by = lambda st_: ", ".join(r["label"][:1].lower() + r["label"][1:] for r in rows  # noqa: E731
+                               if r["status"] == st_ and r["label"] != "Other")
+    parts = [found_txt] if found_txt else []
+    if by("documented_none"):
+        parts.append("documented as none: " + by("documented_none"))
+    if by("not_documented"):
+        parts.append("not documented: " + by("not_documented"))
+    card["value_en"] = ". ".join(p[:1].upper() + p[1:] for p in parts)
     card["date"] = items[0]["date"] if items else None
     card["status"] = "consistent" if items else "not_documented"
     return card

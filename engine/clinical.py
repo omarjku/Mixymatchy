@@ -35,7 +35,7 @@ PREFIX_MIN_INTL = 8
 ARABIC = re.compile(r"[\u0600-\u06FF]")
 CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff]")
 
-NOT_AUTHORISED_MESSAGE = ("Second Look shows patient information only to clinical staff for a care task. "
+NOT_AUTHORISED_MESSAGE = ("Second Eye shows patient information only to clinical staff for a care task. "
                           "Please state your clinical role and what you are doing, e.g. 'Anaesthetist, pre-op check'.")
 NOT_AUTHORISED_SUGGESTIONS = [
     "Anaesthetist, pre-op check before breast surgery",
@@ -46,7 +46,7 @@ NOT_AUTHORISED_SUGGESTIONS = [
 
 # no requester at all but a clear clinical request ('STAT CT head, any bleeding risk meds?'): still no data
 # (an explicit requester is required), but the message asks for the role and offers the request with one
-NEEDS_ROLE_MESSAGE = ("Please say who you are (your clinical role) and the task. Second Look shows patient "
+NEEDS_ROLE_MESSAGE = ("Please say who you are (your clinical role) and the task. Second Eye shows patient "
                       "information only to clinical staff for a care task, e.g. 'Emergency physician, head CT: "
                       "bleeding risk medication?' or 'Ward nurse, admission handover'.")
 ROLE_EXAMPLES = ["Emergency physician", "GP", "Ward nurse"]
@@ -271,6 +271,10 @@ def classify(text, kb_alias=None, task_evidence=False, kb_role=False):
         if not any(x in lex["title_exceptions"] for x in inside):
             non.append((s, e, term, "not_clinical"))
             clin = [h for h in clin if not (h[0] <= s and e <= h[1])]
+    # a possessor of a clinical role is not the speaker: 'the husband's cardiologist', "wife's GP calling" is
+    # that clinician (the mirror of 'doctor's wife' below)
+    starts = {cs for cs, _ce, _t, _k in clin}
+    non = [h for h in non if not ((m := re.match(r"(?:'s|s'|’s)\s+", t[h[1]:])) and h[1] + m.end() in starts)]
     # typos of non-clinical words in the leading phrase ('Cleanr') are checked before any fuzzy clinical match
     lead0 = re.search(r"[,;:.!?()]|\s[-–]\s", t)
     lead0 = lead0.start() if lead0 else len(t)

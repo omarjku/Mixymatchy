@@ -644,7 +644,19 @@
     "exames",
     "avaliacao",
     "revisao",
-    "med"
+    "med",
+    "антикоагулянт",
+    "антикоагулянты",
+    "антиагрегант",
+    "антиагреганты",
+    "антикоагулянти",
+    "抗凝",
+    "抗凝药",
+    "抗血小板",
+    "抗凝薬",
+    "przeciwzakrzepowe",
+    "antykoagulant",
+    "antykoagulanty"
   ],
   "never": [
     "hi",
@@ -1219,5 +1231,7 @@
     "سكتة قلبية",
     "توقف القلب",
     "ازرقاق"
-  ]
+  ],
+  "_judgement_notes": "judgement: a question asking for an assessment, not a fact (clearance, fitness, 'should I worry'). Used by engine/screen.py: such a question keeps the role's own view instead of the 'answering your question only' screen. Not used by the gate. source: TODO-cite",
+  "judgement": ["clearance", "cleared", "fit to", "fit for", "fitness", "eligible", "ok to", "okay to", "safe to", "go ahead", "should i worry", "anything to worry", "worry about", "watch out", "red flags", "yes or no", "freigabe", "sportfreigabe", "belastbar", "belastbarkeit", "tauglich", "tauglichkeit", "ja oder nein", "unbedenklich", "kontraindikation", "contraindication", "contraindicated"]
 }
