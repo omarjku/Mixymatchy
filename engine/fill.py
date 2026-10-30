@@ -248,8 +248,9 @@ def _series(store, need, card, facts, as_of, outdated_days):
         delta = keys[-1][1] - keys[0][1]
         months = round(((_d(keys[-1][0]) - _d(keys[0][0])).days) / 30.44)
         card["calculated"] = {"change": round(delta, 2), "unit": unit, "from": keys[0][0], "to": keys[-1][0],
-                              "months": months, "method": "last minus first documented value"}
-        card["value_en"] += "; change %+g %s over %d months (calculated)" % (delta, unit, months)
+                              "months": months, "method": "last minus first documented value",
+                              "percent": round(100 * delta / keys[0][1], 2) if keys[0][1] else None}
+        card["value_en"] += "; change %s (calculated)" % change_text(card["calculated"])
     if _older_than(card["date"], as_of, outdated_days):
         card["status"] = "outdated"
         card["note"] = "Last value from %s." % fmt_date(card["date"])
@@ -549,6 +550,13 @@ def _is_question(store, it):
     fs = [store.fact_by_id[x] for x in it.get("facts") or [] if x in store.fact_by_id]
     return lab.lower().startswith("question:") or lab.endswith("?") or \
         bool(fs) and all((f.get("attrs") or {}).get("assertion") == "suspected" for f in fs)
+
+
+def change_text(calc):
+    """'-12 kg (-15.4%) over 10 months': last minus first, relative to the first value."""
+    pct = calc.get("percent")
+    return "%+g %s%s over %d months" % (calc["change"], calc.get("unit") or "",
+                                        (" (%+.1f%%)" % pct) if pct is not None else "", calc["months"])
 
 
 def trend(store, card, facts, calculate_change=True):

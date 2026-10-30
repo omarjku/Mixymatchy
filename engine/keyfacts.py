@@ -226,7 +226,7 @@ def key_facts(st, k, cards: list, focus: list, contradictions: list, patient: di
         return []
     terms = _words(terms_text)
     groups = {s["id"]: s.get("group") for s in (k.data.get("slots") if k is not None else []) or []}
-    lines, nd, shown = [], [], set()
+    lines, nd, shown, stats_shown = [], [], set(), set()
     safety = safety_line(cards, patient or {})
     if safety:
         lines.append(safety)
@@ -265,12 +265,18 @@ def key_facts(st, k, cards: list, focus: list, contradictions: list, patient: di
         computed = []
         if c.get("shape") == "trend" and c.get("calculated") and len(fresh) >= 2:
             calc, first, last = c["calculated"], fresh[0], fresh[-1]
-            computed.append({"label": "Change", "value": "%+g %s over %d months" % (calc["change"], calc.get("unit") or "",
-                                                                                  calc["months"]),
+            from .fill import change_text
+            computed.append({"label": "Change", "value": change_text(calc),
                              "formula": "%s; %s" % (calc.get("method") or "last minus first", "inputs linked"),
                              "passages": list(dict.fromkeys((first.get("passages") or []) + (last.get("passages") or [])))})
         if not fresh:
             continue
+        # statistics of the card (engine/stats.py): daily dose change, the newest letter's BMI check, BP day/night
+        for s in c.get("computed_lines") or []:  # each statistic once per screen
+            if s.get("stat") and s.get("key") and s.get("passages") and (s["label"], s["value"]) not in stats_shown:
+                stats_shown.add((s["label"], s["value"]))
+                computed.append({"label": s["label"], "value": s["value"], "formula": s.get("formula") or "",
+                                 "passages": list(s["passages"])})
         shown |= _fact_ids(fresh)
         lines.append(_line("need", [need], c.get("label_en") or need, fresh, computed,
                            more=more + len(chosen) - len(fresh), group=groups.get(c.get("slot")),
