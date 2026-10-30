@@ -35,7 +35,7 @@ PREFIX_MIN_INTL = 8
 ARABIC = re.compile(r"[\u0600-\u06FF]")
 CJK = re.compile(r"[\u3040-\u30ff\u3400-\u9fff]")
 
-NOT_AUTHORISED_MESSAGE = ("Second Look shows patient information only to clinical staff for a care task. "
+NOT_AUTHORISED_MESSAGE = ("Second Eye shows patient information only to clinical staff for a care task. "
                           "Please state your clinical role and what you are doing, e.g. 'Anaesthetist, pre-op check'.")
 NOT_AUTHORISED_SUGGESTIONS = [
     "Anaesthetist, pre-op check before breast surgery",
@@ -46,7 +46,7 @@ NOT_AUTHORISED_SUGGESTIONS = [
 
 # no requester at all but a clear clinical request ('STAT CT head, any bleeding risk meds?'): still no data
 # (an explicit requester is required), but the message asks for the role and offers the request with one
-NEEDS_ROLE_MESSAGE = ("Please say who you are (your clinical role) and the task. Second Look shows patient "
+NEEDS_ROLE_MESSAGE = ("Please say who you are (your clinical role) and the task. Second Eye shows patient "
                       "information only to clinical staff for a care task, e.g. 'Emergency physician, head CT: "
                       "bleeding risk medication?' or 'Ward nurse, admission handover'.")
 ROLE_EXAMPLES = ["Emergency physician", "GP", "Ward nurse"]

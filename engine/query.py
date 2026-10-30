@@ -59,7 +59,7 @@ def brief(screen):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Second Look: situation text -> screen JSON")
+    ap = argparse.ArgumentParser(description="Second Eye: situation text -> screen JSON")
     ap.add_argument("text", nargs="+")
     ap.add_argument("--as-of", default=None)
     ap.add_argument("--brief", action="store_true")

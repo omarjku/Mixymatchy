@@ -38,7 +38,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Second Look API", lifespan=lifespan)
+app = FastAPI(title="Second Eye API", lifespan=lifespan)
 # No CORS middleware: the app is served from the same origin (STATIC_DIR, or the Vite dev proxy).
 app.add_exception_handler(AuthHTTPError, auth_error_handler)
 app.include_router(auth_router)
@@ -55,7 +55,7 @@ async def headers_and_gate(request: Request, call_next):
     if SITE_GATE and SITE_PASSWORD and request.url.path != "/health":
         expected = "Basic " + base64.b64encode(f"{SITE_USER}:{SITE_PASSWORD}".encode()).decode()
         if not hmac.compare_digest(request.headers.get("authorization", ""), expected):
-            return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Second Look"'})
+            return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Second Eye"'})
     response = await call_next(request)
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")

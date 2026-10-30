@@ -1,4 +1,4 @@
-"""Second Look access-security HTTP server (stdlib only).
+"""Second Eye access-security HTTP server (stdlib only).
 
     python3 -m security.server --port 8700      # demo at http://localhost:8700
 
@@ -302,7 +302,7 @@ def make_server(auth: AuthService, host: str = "127.0.0.1", port: int = 8700,
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(description="Second Look access-security demo server")
+    p = argparse.ArgumentParser(description="Second Eye access-security demo server")
     p.add_argument("--host", default="127.0.0.1", help="Use 0.0.0.0 to test from a phone on your LAN")
     p.add_argument("--port", type=int, default=8700)
     p.add_argument("--users", type=Path, default=DEFAULT_USERS_FILE)
@@ -317,7 +317,7 @@ def main(argv=None) -> int:
     auth = AuthService(load_users(args.users), AuditLog(args.audit), idle_seconds=args.idle_seconds)
     origins = DEFAULT_ALLOWED_ORIGINS + tuple(args.allow_origin or ())
     server = make_server(auth, args.host, args.port, origins, args.secure_cookie)
-    print(f"Second Look security demo on http://{'localhost' if args.host in ('127.0.0.1', '0.0.0.0') else args.host}:{args.port}"
+    print(f"Second Eye security demo on http://{'localhost' if args.host in ('127.0.0.1', '0.0.0.0') else args.host}:{args.port}"
           f"  (users: {len(auth.users)}, audit: {args.audit})", flush=True)
     try:
         server.serve_forever()

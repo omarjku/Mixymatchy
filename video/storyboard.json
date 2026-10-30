@@ -4,8 +4,8 @@
   "width": 1920,
   "height": 1080,
   "max_seconds": 120,
-  "title": "Second Look",
-  "tagline": "Other tools summarise the record. Second Look checks it, for the task in front of you.",
+  "title": "Second Eye",
+  "tagline": "Other tools summarise the record. Second Eye checks it, for the task in front of you.",
   "scenes": [
     {"id": "hook", "start": 0, "end": 8, "beat": "Eight letters, one patient, different doctors need different facts.", "audio": "soft pulse intro, rising"},
     {"id": "problem", "start": 8, "end": 22, "beat": "Letters copy each other; errors travel (left becomes right), important facts vanish (-12 kg mentioned nowhere).", "audio": "tension, low drone; subtle tick per letter"},

@@ -1,1 +1,1 @@
-"""Second Look access security module."""
+"""Second Eye access security module."""
