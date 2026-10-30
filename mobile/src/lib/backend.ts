@@ -68,7 +68,14 @@ export interface BackendBriefing {
   findings: BackendFinding[];
   stats: Record<string, number>;
   detail?: "short" | "long" | null;
-  routing?: { fallback_note?: string | null; anchor_date?: string };
+  routing?: {
+    fallback_note?: string | null;
+    anchor_date?: string;
+    // clinical gate: "not_authorised" = no clinical role stated; needs/findings are empty
+    screen_mode?: string | null;
+    message?: string | null;
+    suggestions?: string[];
+  };
 }
 
 interface BackendSegment {

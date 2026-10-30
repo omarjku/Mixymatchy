@@ -5,6 +5,7 @@
 import re
 import time
 
+from . import clinical as C
 from .conflicts import contradictions as find_contradictions
 from .data import rulebook, rulebook_mode, store
 from .fill import fill, fmt_date, group_items
@@ -234,6 +235,17 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
 
     # applicability (rulebook/applicability.json) and the safety summary for unrecognised tasks
     app = A.check(u.get("task_text") or "", st)
+
+    # clinical gate (rulebook/clinical_roles.json): patient data only for a clinical requester
+    gate = C.classify(text, kb_alias=(u.get("role_match") or {}).get("matched") if role else None,
+                      kb_role=bool(role),
+                      task_evidence=C.strong_task(u.get("bundles_matched"), k.fallback_bundle) or bool(app["items"]))
+    u["clinical_gate"] = gate
+    if not gate["clinical"]:
+        return not_authorised_screen(u, gate, detail, t0)
+    if not role and gate["decision"] == "clinical_term":
+        u["role_label"] = gate["label"]
+        u["role_match"] = {"method": "clinical_lexicon", "matched": gate["term"]}
     safety = [x for x in A.table().get("safety_block") or [] if x in k.slot_by_id]
     fallback = u["tasks_from"] == "fallback"
     front, back, mode = [], [], "task"
@@ -262,8 +274,9 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         mods = [m_["slot"] for m_ in (role or {}).get("modifiers") or [] if m_.get("priority") == "P1"]
         slots = list(dict.fromkeys(safety + mods))[:MAX_SUMMARY_CARDS]
         u["suggestions"] = _suggest_bundles(k, u.get("task_text"), role)
+        who = "" if role else (" for %s" % gate["label"]) if gate.get("label") else " (role not recognised either)"
         u["fallback_note"] = ("Task not recognised%s: showing a safety summary. Try e.g. %s." % (
-            "" if role else " (role not recognised either)", ", ".join("'%s'" % x for x in u["suggestions"])))
+            who, ", ".join("'%s'" % x for x in u["suggestions"])))
         u["task_labels"] = ["Safety summary (task not recognised)"]
     if mode != "task" or app["applicable"]:
         if mode != "task":
@@ -331,6 +344,29 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         "other_record_issues": other_n,
         "other_record_issues_en": ("%d other record issue(s) not related to this task" % other_n) if other_n else None,
         "proof_bar": proof,
+        "timing_ms": round((time.perf_counter() - t0) * 1000, 1),
+    }
+
+
+def not_authorised_screen(u, gate, detail, t0):
+    """No clinical role: zero patient facts, no record issues, no counts derived from the record."""
+    u.update({
+        "role_id": "other", "role_label": "Not authorised", "bundle_ids": [], "bundles_chosen": [], "implied": [],
+        "task_ids": [], "task_labels": ["Not authorised"], "tasks_from": "not_authorised", "slots": [],
+        "slots_shown": [], "screen_mode": "not_authorised", "suggestions": list(C.NOT_AUTHORISED_SUGGESTIONS),
+        "fallback_note": C.NOT_AUTHORISED_MESSAGE, "not_authorised_message": C.NOT_AUTHORISED_MESSAGE,
+        "applicability_note": None, "applicability": {"sex": None, "passage": None, "word": None, "items": []},
+        "rules": {"listed": [], "fired": [], "not_fired": [], "in_fill": []}, "llm_note": None,
+    })
+    return {
+        "understood": u, "rulebook": "kb", "detail": detail, "screen_mode": "not_authorised",
+        "message": C.NOT_AUTHORISED_MESSAGE, "patient": {}, "safety_strip": [], "cards": [],
+        "card_status_counts": {}, "slot_counts": {"shown": 0, "by_priority": {}},
+        "blind_spot": None, "blind_spot_other": [], "contradictions": [], "contradictions_other": [],
+        "contradictions_source": None, "open_followups": [], "open_followups_other": [],
+        "other_record_issues": 0, "other_record_issues_en": None,
+        "proof_bar": {"facts_shown": 0, "facts_verified": 0, "facts_removed_at_load": 0,
+                      "summary_en": "No patient facts shown: clinical role not stated."},
         "timing_ms": round((time.perf_counter() - t0) * 1000, 1),
     }
 

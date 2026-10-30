@@ -105,6 +105,7 @@ export default function Home() {
   const routing = briefing?.routing ?? {};
   const otherIssues = briefing?.stats.other_record_issues ?? routing.other_record_issues ?? 0;
   const s = briefing?.stats;
+  const gated = routing.screen_mode === "not_authorised"; // clinical gate: no patient data in this briefing
 
   return (
     <main className="mx-auto max-w-7xl p-6">
@@ -139,7 +140,24 @@ export default function Home() {
       </div>
       {error && <p className="mb-4 text-red-700">{error}</p>}
 
-      {briefing && s && (
+      {briefing && gated && (
+        <div className="rounded border-l-4 border-amber-600 bg-amber-50 p-4" data-testid="not-authorised">
+          <p className="font-semibold">{routing.message ?? routing.fallback_note}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(routing.suggestions ?? []).map((x) => (
+              <button
+                key={x}
+                className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs"
+                onClick={() => run(x)}
+              >
+                {x}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {briefing && s && !gated && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
           <section className="space-y-4">
             {notApplicable.map((n) => (
@@ -160,7 +178,8 @@ export default function Home() {
             <div className="rounded bg-white p-4 shadow-sm">
               <div className="mb-2 flex items-baseline justify-between gap-2">
                 <p className="text-xs font-semibold uppercase text-[var(--teal)]">
-                  {briefing.role.replace("_", " ")} · {briefing.task} · as of {briefing.as_of}
+                  {briefing.role === "other" && routing.role_label ? routing.role_label : briefing.role.replace("_", " ")} ·{" "}
+                  {briefing.task} · as of {briefing.as_of}
                 </p>
                 <button
                   className="shrink-0 rounded border border-[var(--teal)] px-2 py-0.5 text-xs text-[var(--teal)]"

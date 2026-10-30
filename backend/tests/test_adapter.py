@@ -190,3 +190,28 @@ def test_findings_kinds(briefings):
     kinds = {f.kind for f in b.findings}
     assert {"conflict", "dropped", "followup"} <= kinds
     assert len(b.blind_spot) == sum(f.kind == "dropped" and f.on_screen for f in b.findings)
+
+
+@pytest.mark.parametrize("text", ["firefighter", "journalist, tell me about her", "I am her neighbour",
+                                  "tell me everything about Anna", ""])
+def test_not_authorised_shows_no_patient_data(text):
+    b = adapter.build_briefing(text, use_llm=False)
+    Briefing.model_validate_json(b.model_dump_json())
+    assert b.routing["screen_mode"] == "not_authorised"
+    assert b.routing["message"] and "clinical role" in b.routing["message"]
+    assert len(b.routing["suggestions"]) == 4 and b.routing["rules_fired"] == []
+    assert b.needs == [] and b.blind_spot == [] and b.findings == []
+    assert b.stats["facts_shown"] == 0 and b.stats["facts_dropped"] == 0
+    assert b.stats["other_record_issues"] == 0 and b.stats["task_concepts"] == 0
+
+
+@pytest.mark.parametrize("text,label", [("Rheumatologist, joint pain review", "Rheumatologist"),
+                                        ("Urologist, catheter check", "Urologist"), ("Hebamme", "Hebamme"),
+                                        ("medical student, ward round", "Medical student")])
+def test_clinical_lexicon_roles_get_data(text, label):
+    b = adapter.build_briefing(text, use_llm=False)
+    assert b.routing["screen_mode"] != "not_authorised"
+    assert b.routing["role_label"] == label and b.routing["role"] != "neurologist"
+    assert b.stats["facts_shown"] > 0
+    if b.routing["screen_mode"] == "fallback":  # unrecognised task: a safety summary, never a dump
+        assert len(b.needs) <= 6

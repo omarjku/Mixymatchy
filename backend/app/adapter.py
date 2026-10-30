@@ -25,6 +25,8 @@ Mapping rules (documented once, applied everywhere)
   compare blind spots  -> Briefing.blind_spot facts + Finding(kind=dropped); unstated computed
                           values (e.g. weight change never written down) -> Finding(kind=silence)
   open follow-ups      -> Finding(kind=followup)
+  clinical gate        -> screen_mode "not_authorised" (no clinical role stated): no needs, findings or
+                          blind spot; routing.message / routing.suggestions say what to type instead
   task scope (KB)      -> contradictions, blind-spot items and open follow-ups that touch no slot on this
                           screen are counted in stats.other_record_issues and listed with on_screen=False
                           in the long view only
@@ -373,6 +375,8 @@ def _routing(screen: dict) -> dict:
             "fallback_note": u.get("fallback_note"), "slots_total": len(u.get("slots") or []),
             "slots_shown": len(screen.get("cards") or []), "anchor_date": u.get("anchor_date"),
             "screen_mode": u.get("screen_mode"), "suggestions": u.get("suggestions") or [],
+            "role_label": u.get("role_label"), "message": screen.get("message"),
+            "clinical_gate": (u.get("clinical_gate") or {}).get("decision"),
             "applicability_note": u.get("applicability_note"), "applicability": u.get("applicability"),
             "other_record_issues": screen.get("other_record_issues", 0),
             "other_record_issues_en": screen.get("other_record_issues_en")}
@@ -398,6 +402,8 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
                  needs=[need_result(st, c) for c in cards], blind_spot=blind, findings=found,
                  detail=screen.get("detail"), routing=_routing(screen))
     bs = screen.get("blind_spot") or {}
-    b.stats = stats_of(b, len(st.removed), bs.get("of_total_problems"), screen.get("other_record_issues", 0))
+    gated = screen.get("screen_mode") == "not_authorised"  # no counts derived from the record either
+    b.stats = stats_of(b, 0 if gated else len(st.removed), bs.get("of_total_problems"),
+                       screen.get("other_record_issues", 0))
     b.stats["engine_ms"] = screen.get("timing_ms")
     return b
