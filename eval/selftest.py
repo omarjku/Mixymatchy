@@ -69,8 +69,8 @@ def answers():
 
 
 def answers_v2():
-    """v2 answers (docs/DECISIONS.md 23): understand + cited writer + binding check + claim judge, live.  Without
-    the LLM the answer is the compact template (no fake writer in the server)."""
+    """v3 answers (docs/DECISIONS.md 24): the one cached call + code rendering, live.  Without the LLM the answer is
+    the compact template (no fake model in the server)."""
     from engine import llm
     from eval import answers_v2 as v2
     r = v2.official(use_llm=llm.available(), out=lambda *_: None, fake=False)
@@ -127,6 +127,7 @@ def probe(pause=2.0):
             len(reqs), pause, llm.available()))
         ok = tot = 0
         chars, ms_all, origins, judge_rejects = [], [], {}, 0
+        api_calls = cache_hits = 0
         for i, (n, text) in enumerate(reqs):
             if i:
                 time.sleep(pause)
@@ -140,6 +141,9 @@ def probe(pause=2.0):
                 jl = st.get("judge") or []
                 judge = "fail" if (jl and not jl[-1].get("ok")) else ("pass" if jl else "-")
                 judge_rejects += sum(1 for r in st.get("rejected") or [] if r.get("layer") == "judge")
+                if st.get("called") and not st.get("cached"):  # a real API call (not the in-process answer cache)
+                    api_calls += 1
+                    cache_hits += bool(st.get("cache_read_input_tokens"))
                 sent = a.text if a else ""
                 cites = [f for s in (a.sources if a else []) for f in s.fact_ids]
                 if n:
@@ -159,15 +163,18 @@ def probe(pause=2.0):
                 ms_all.append(ms)
                 chars.append(len(sent))
                 origins[origin] = origins.get(origin, 0) + 1
-                say("v2 | %s | origin=%s | judge=%s | ms=%.0f | %s | cites=%s" % (
-                    (text or "<empty>").replace("\n", " ")[:90], origin, judge, ms, sent.replace("\n", " ") or "-",
+                say("v2 | %s | origin=%s | judge=%s | ms=%.0f | llm_ms=%s | cache_read=%s | %s | cites=%s" % (
+                    (text or "<empty>").replace("\n", " ")[:90], origin, judge, ms, st.get("llm_ms"),
+                    st.get("cache_read_input_tokens"), sent.replace("\n", " ") or "-",
                     ",".join(dict.fromkeys(cites)) or "-"))
             except Exception as e:
                 say("v2 | %s | ERROR %r" % ((text or "<empty>")[:90], e))
         now = llm_budget.budget().snapshot()
         say("v2 summary: official answers contained %d/%d, avg chars %.0f, origins %s, judge rejects %d, "
-            "p50 %.0f ms, p95 %.0f ms, LLM spend EUR %.4f (calls %d, total EUR %.4f of %.2f)" % (
+            "p50 %.0f ms, p95 %.0f ms, prompt cache hit rate %d/%d (%.0f%%), "
+            "LLM spend EUR %.4f (calls %d, total EUR %.4f of %.2f)" % (
                 ok, tot, sum(chars) / max(len(chars), 1), origins, judge_rejects, _pct(ms_all, 0.5), _pct(ms_all, 0.95),
+                cache_hits, api_calls, 100.0 * cache_hits / max(api_calls, 1),
                 now["spend_eur"] - before["spend_eur"], now["calls_total"] - before["calls_total"],
                 now["spend_eur"], now["budget_eur"]))
     except Exception:

@@ -1,4 +1,8 @@
-"""v2 steps 4-5 (docs/DECISIONS.md 23): a 1-2 sentence answer whose every value is placed by CODE.
+"""The placeholder renderer and checks of the v2/v3 answer (docs/DECISIONS.md 23, 24): every value is placed by CODE.
+
+v3 (DECISIONS 24): the model call lives in engine/onecall.py (one cached call over the whole fact store); this
+module keeps the renderer/allowlist (render), the compact deterministic answer (compact) and the Source chips
+(sources).  The history of the v2 writer below explains the checks.
 
 WRITE   one Claude Haiku call with structured output: {"sentence": ..., "facts": [...]}.  The sentence is a
         TEMPLATE: every patient value is a placeholder that references an evidence fact (engine/evidence.py),
@@ -21,15 +25,10 @@ CHECK   code, deterministic, before display:
 """
 from __future__ import annotations
 
-import json
-import os
 import re
-import time
 import unicodedata
-from concurrent.futures import TimeoutError as FutureTimeout
 
 from . import answers as A
-from . import llm, llm_budget
 
 MAX_SENTENCES = 2
 MAX_CHARS = 650  # a matched task bundle can need 4-6 facts (official case 4: ~470 characters expected)
@@ -64,7 +63,7 @@ def _dedupe(text):
     return re.sub(r"\b((?:[\w%/+().-]+\s+){0,3}?[\w%/+().-]+)\s+(?:(?:is|was)\s+)?\1\b", r"\1", text)
 
 
-def render(sentence, chunks_by_id, required=()):
+def render(sentence, chunks_by_id, required=(), max_chars=None):
     """Model template -> (ok, why, blocks [{"text", "chunks"}], used fact ids).  Never raises."""
     if not isinstance(sentence, str) or not sentence.strip():
         return False, "empty sentence", [], []
@@ -103,7 +102,7 @@ def render(sentence, chunks_by_id, required=()):
         b["text"] = _dedupe(b["text"])
     text = "".join(b["text"] for b in blocks)
     text = re.sub(r"\s+([,.;:)])", r"\1", " ".join(text.split()))
-    if len(text) > MAX_CHARS:
+    if len(text) > (max_chars or MAX_CHARS):
         return False, "too long (%d characters)" % len(text), [], []
     if len(sentences(text)) > MAX_SENTENCES:
         return False, "more than %d sentences" % MAX_SENTENCES, [], []
@@ -112,50 +111,6 @@ def render(sentence, chunks_by_id, required=()):
         blocks[0]["text"] = blocks[0]["text"].lstrip()
         blocks[0]["text"] = blocks[0]["text"][:1].upper() + blocks[0]["text"][1:]
     return True, None, blocks, list(dict.fromkeys(used))
-
-
-# ----------------------------------------------------------------- the writer (structured output)
-
-STYLE = (
-    "You are the answer writer of Second Eye. A clinician asked about ONE patient. Answer in ONE sentence, two "
-    "at most, in English, using only the numbered facts (taken from the patient's letters).\n"
-    "Write every patient value as a placeholder, never as text: {F3} places the whole fact as the letters word it; "
-    "{F3.name}, {F3.dose}, {F3.schedule}, {F3.value}, {F3.date}, {F3.side}, {F3.status} place one field (only "
-    "fields listed for that fact), and only right after {F3} or {F3.name} of the same fact. Do not write a fact's "
-    "name before its placeholder ('HbA1c {F5}' is wrong; write '{F5}').\n"
-    "Between placeholders you may write only these words: " + ", ".join(sorted(CONNECTORS)) + ", and punctuation "
-    "(, ; : . ( ) -). No numbers, no other words: no advice, no interpretation, no negation, no causes.\n"
-    "Place every fact listed as REQUIRED. Then add only what the question itself needs. If the question asks for "
-    "something only a 'not documented' fact covers, place that fact. List the facts you placed in 'facts'."
-)
-SCHEMA = {
-    "type": "object",
-    "properties": {"sentence": {"type": "string"}, "facts": {"type": "array", "items": {"type": "string"}}},
-    "required": ["sentence", "facts"], "additionalProperties": False,
-}
-
-
-def _fact_line(c):
-    f = c["fields"]
-    extra = "; ".join("%s=%s" % (k, f[k]) for k in FIELDS if k != "text" and f.get(k))
-    return "%s [%s] %s%s" % (c["id"], c["kind"], f["text"], (" | " + extra) if extra else "")
-
-
-def writer_params(question, chunks, required):
-    facts = "\n".join(_fact_line(c) for c in chunks)
-    return dict(
-        model=llm.model(),
-        max_tokens=300,
-        thinking={"type": "disabled"},  # Haiku 5.5: allowed at effort <= high
-        system=[{"type": "text", "text": STYLE, "cache_control": {"type": "ephemeral"}}],
-        output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
-        messages=[{"role": "user", "content": "Question: %s\nREQUIRED: %s\nFacts:\n%s" % (
-            " ".join(str(question or "").split())[:600], ", ".join(required) or "none", facts)}],
-    )
-
-
-def _get(x, name, default=None):
-    return x.get(name, default) if isinstance(x, dict) else getattr(x, name, default)
 
 
 # ----------------------------------------------------------------- the compact deterministic answer
@@ -181,123 +136,6 @@ def compact(st, k, ranked, chunks_by_id):
     if blocks:
         blocks[-1]["text"] += "."
     return blocks
-
-
-# ----------------------------------------------------------------- the whole step
-
-def _timeout(name, default):
-    try:
-        return float(os.environ.get(name, default))
-    except ValueError:
-        return float(default)
-
-
-def deadline_s():
-    return _timeout("SECOND_LOOK_V2_DEADLINE", "5.0")
-
-
-def _cache_key(question, chunks, required):
-    return ("answer_v2", llm.model(), " ".join(str(question or "").lower().split()),
-            tuple(c["text"] for c in chunks), tuple(required))
-
-
-_writer_hook = None  # eval without a key: fn(question, chunks, required, compact blocks) -> {"sentence", "facts"}
-
-
-def set_writer(fn):
-    global _writer_hook
-    _writer_hook = fn
-
-
-def writer_available(use_llm):
-    return _writer_hook is not None or (use_llm and llm.available()
-                                        and os.environ.get("SECOND_LOOK_ANSWERS_LLM", "1") != "0")
-
-
-def _write(question, chunks, required, timeout, stats, fallback):
-    """-> {"sentence", "facts"} or None (stats records why)."""
-    if _writer_hook is not None:
-        stats["called"] = True
-        return _writer_hook(question, chunks, required, fallback)
-    b = llm_budget.budget()
-    if not b.reserve():
-        stats["skipped"]["writer"] = b.why_blocked() or "budget"
-        return None
-    stats["called"] = True
-    params = writer_params(question, chunks, required)
-    fut = llm._pool.submit(llm._call, params)
-    t = time.perf_counter()
-    try:
-        msg = fut.result(timeout=max(0.05, timeout))
-    except FutureTimeout:
-        b.error()
-        stats["skipped"]["writer"] = "timeout"
-        return None
-    except Exception as e:
-        b.error()
-        stats["skipped"]["writer"] = "error: %s" % type(e).__name__
-        return None
-    finally:
-        stats["ms"]["writer"] = round((time.perf_counter() - t) * 1000, 1)
-    try:
-        if _get(msg, "usage") is not None:
-            stats["cost_eur"] += b.record(params["model"], msg.usage)
-        if _get(msg, "stop_reason") in ("refusal", "max_tokens"):
-            stats["skipped"]["writer"] = "stop_reason: %s" % _get(msg, "stop_reason")
-            return None
-        txt = next((_get(x, "text", "") for x in _get(msg, "content") or [] if _get(x, "type") == "text"), "")
-        data = json.loads(txt)
-        return data if isinstance(data, dict) else None
-    except Exception as e:
-        b.error()
-        stats["skipped"]["writer"] = "invalid: %s" % type(e).__name__
-        return None
-
-
-def answer(st, k, question, chunks, ranked, use_llm=True, t0=None):
-    """-> (answer dict, stats).  answer: {"blocks", "text", "origin" llm|template, "verified"}.
-    t0: the request's start (the deadline counts from there)."""
-    t0 = t0 if t0 is not None else time.perf_counter()
-    by_id = {c["id"]: c for c in chunks}
-    stats = {"origin": "template", "called": False, "rejected": [], "skipped": {}, "ms": {}, "cost_eur": 0.0}
-    fallback = compact(st, k, ranked, by_id)
-    required = [i for n, ids in ranked if n.get("required") for i in ids
-                if by_id.get(i, {}).get("kind") in ("fact", "computed", "status")]
-
-    def done(blocks, origin):
-        stats["origin"] = origin
-        stats["ms"]["total"] = round((time.perf_counter() - t0) * 1000, 1)
-        stats["cost_eur"] = round(stats["cost_eur"], 6)
-        return {"blocks": blocks, "text": "".join(b["text"] for b in blocks).strip(), "origin": origin,
-                "verified": True}, stats
-
-    if not ranked or not chunks:
-        stats["skipped"]["writer"] = "no evidence"
-        return done(fallback, "template")
-    if not writer_available(use_llm):
-        stats["skipped"]["writer"] = "disabled" if not llm.enabled() or not use_llm else "no key"
-        return done(fallback, "template")
-    left = deadline_s() - (time.perf_counter() - t0) - 0.15
-    if left < 0.3:
-        stats["skipped"]["writer"] = "no time left"
-        return done(fallback, "template")
-    b = llm_budget.budget()
-    key = _cache_key(question, chunks, required)
-    hit = b.cache_get(key) if _writer_hook is None else None
-    if hit is not None:
-        stats["cached"] = True
-        return done(hit, "llm")
-    out = _write(question, chunks, required, min(_timeout("SECOND_LOOK_V2_WRITER_TIMEOUT", "2.5"), left),
-                 stats, [dict(x) for x in fallback])
-    if not out:
-        return done(fallback, "template")
-    ok, why, blocks, _used = render(out.get("sentence"), by_id, required)
-    if not ok:
-        stats["rejected"].append({"layer": "check", "reasons": [why], "sentence": str(out.get("sentence"))[:300]})
-        return done(fallback, "template")
-    if _writer_hook is None:
-        b.cache_put(key, blocks)
-    return done(blocks, "llm")
 
 
 def sources(blocks, chunks_by_id):

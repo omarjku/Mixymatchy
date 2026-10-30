@@ -487,7 +487,8 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
                           sources=[AnswerSource(n=x["n"], label=x.get("label") or "", segment_ids=x.get("passages") or [],
                                                 fact_ids=x.get("facts") or []) for x in a.get("sources") or []],
                           origin=a.get("origin") or "template", verified=bool(a.get("verified")),
-                          note=a.get("note"), note_segment_ids=a.get("note_passages") or [])
+                          note=a.get("note"), note_segment_ids=a.get("note_passages") or [],
+                          flags=a.get("flags") or [])
         b.layout = "answer_first"
     bs = screen.get("blind_spot") or {}
     if gated:

@@ -158,8 +158,8 @@ class AnswerSegment(BaseModel):
 
 class Answer(BaseModel):
     """v2 answer (docs/DECISIONS.md 23): ONE sentence (two at most) at the top of the screen, every claim cited.
-    origin: 'llm' (written with the Citations API, passed the binding check and the claim judge), 'regenerated'
-    (the second try passed), 'template' (deterministic compact answer from the facts' own fields)."""
+    origin: 'llm' (v3, DECISIONS 24: the one cached call's placeholder sentence, every value substituted by code),
+    'template' (deterministic compact answer from the facts' own fields; 'regenerated' is kept for old clients)."""
     kind: Literal["answer", "nothing", "not_applicable"] = "answer"
     text: str
     segments: list[AnswerSegment] = []
@@ -168,6 +168,7 @@ class Answer(BaseModel):
     verified: bool = True
     note: Optional[str] = None   # one-line applicability note (sex/age mismatch), shown above the answer
     note_segment_ids: list[str] = []
+    flags: list[str] = []        # v3: letters disagree about a cited fact (counted contradictions), one line each
 
 
 class Briefing(BaseModel):

@@ -85,7 +85,7 @@ def documented_sex(store):
 
 def check(task_text, store, full_text=None, as_of=None, extra_ids=()):
     """-> {"items": [...], "sex": ..., "passage": ..., "age": ..., "not_applicable": [...], "applicable": [...]}
-    extra_ids: item ids named by the v2 AI reading (engine/understand_v2.py) that the terms did not match."""
+    extra_ids: item ids named by an AI reading (v2 understand step, removed in v3) that the terms did not match."""
     sex, pid, word = documented_sex(store)
     anchor = as_of or (store.anchor_date() if hasattr(store, "anchor_date") else None)
     age, age_pid, dob = documented_age(store, anchor) if anchor else (None, None, None)

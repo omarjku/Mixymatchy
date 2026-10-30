@@ -1,8 +1,8 @@
 """v2 answer measurement (docs/DECISIONS.md 23): are the expected answers inside the 1-2 sentence answer?
 
-    python3 -m eval.answers_v2           # no key: a fake writer places the required facts by reference
-                                         # (placeholders) -> measures substitution + checks + coverage
-    python3 -m eval.answers_v2 --llm     # live: understand + placeholder writer + code checks
+    python3 -m eval.answers_v2           # no key: a fake one-call model that places nothing -> measures the
+                                         # deterministic merge of the required answers (DECISIONS 24)
+    python3 -m eval.answers_v2 --llm     # live: the one cached call (engine/onecall.py) + code checks
 
 Official: every item of every question must be in the answer sentence(s) (token groups and normalisation of
 eval/core.py, as eval/answers.py) and the answer's sources must include an expected document; 'forbid' patterns
@@ -35,10 +35,9 @@ def _docs(seg_ids):
     return {s.split(":")[0] for s in seg_ids or []}
 
 
-def _fake_writer(question, chunks, required, compact):
-    """A model that places every required fact (else the first few) by reference, in order, in one sentence."""
-    ids = list(required) or [c["id"] for c in chunks if c["kind"] in ("fact", "computed", "status")][:3]
-    return {"sentence": "; ".join("{%s}" % i for i in ids) + ".", "facts": ids}
+def _fake_model(text, facts_by_id):
+    """A one-call model that answers 'clinical question' and places nothing: the answer is the required merge."""
+    return {"kind": "clinical_question", "fact_ids": [], "not_documented": [], "sentence": ""}
 
 
 def _forbidden(key, text):
@@ -61,18 +60,18 @@ def _forbidden(key, text):
 
 
 def official(use_llm=False, out=print, fake=True):
-    """fake: without the LLM, install the fake placeholder writer (eval only)."""
+    """fake: without the LLM, install the fake one-call model (eval only)."""
     saved = os.environ.get("SECOND_LOOK_ROUTER")
     os.environ["SECOND_LOOK_ROUTER"] = "v2"
-    from engine import cited
+    from engine import onecall
     if not use_llm and fake:
-        cited.set_writer(_fake_writer)
+        onecall.set_model(_fake_model)
     keys = core.load_json(str(ROOT / "eval" / "answer_keys.json"))
     expected = json.loads((ROOT / "cases" / "expected.json").read_text(encoding="utf-8"))
     res = {"ok": 0, "tot": 0, "chars": [], "ms": [], "origins": [], "rejects": 0,
            "fallback": 0}
-    out("official situations, v2 answer (%s):" % ("live understand + placeholder writer" if use_llm else
-                                                 "fake writer places the required facts by reference"))
+    out("official situations, v2 answer (%s):" % ("live one call + placeholder sentence" if use_llm else
+                                                 "fake model places nothing; required answers merged"))
     try:
         for n, text in official_situations():
             t = time.perf_counter()
@@ -108,7 +107,7 @@ def official(use_llm=False, out=print, fake=True):
                 out("      rejected: %s" % "; ".join("%s %s" % (r["layer"], r["reasons"][0][:80])
                                                    for r in st["rejected"]))
     finally:
-        cited.set_writer(None)
+        onecall.set_model(None)
         if saved is None:
             os.environ.pop("SECOND_LOOK_ROUTER", None)
         else:
