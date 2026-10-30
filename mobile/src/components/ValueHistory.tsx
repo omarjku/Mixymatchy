@@ -1,4 +1,5 @@
 import { parseGermanNumber, Sparkline } from "@/components/Sparkline";
+import { intlLocale } from "@/i18n/locale";
 import { t } from "@/i18n/strings";
 import type { Fact } from "@/types/fact";
 
@@ -14,7 +15,7 @@ export function ValueHistory({ fact }: { fact: Fact }) {
   const numbers = history.map((h) => parseGermanNumber(h.value)).filter((n): n is number => n !== null);
   // unit comes from the latest value ("1,3 mg/dl" -> "mg/dl"); history entries carry the number only
   const unit = fact.value?.replace(/^[-\d.,\s]+/, "").trim() ?? "";
-  const dateFormat = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const dateFormat = new Intl.DateTimeFormat(intlLocale(), { day: "2-digit", month: "2-digit", year: "numeric" });
 
   return (
     <div className="mt-3">

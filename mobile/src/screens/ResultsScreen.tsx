@@ -12,7 +12,8 @@ import { Notice } from "@/components/ui/Notice";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { roles } from "@/data/roles";
 import { t } from "@/i18n/strings";
-import { speak, stopSpeaking, useGermanVoiceAvailable } from "@/lib/speech";
+import { speak, stopSpeaking, useVoiceAvailable } from "@/lib/speech";
+import { intlLocale, toggleLocale, useLocale } from "@/i18n/locale";
 import type { Fact, GuidelineCitation, PatientBrief, SourceCitation } from "@/types/fact";
 import type { ResultsState } from "@/types/request";
 
@@ -33,7 +34,8 @@ type View = "overview" | "history" | "dashboard";
 export function ResultsScreen() {
   const navigate = useNavigate();
   const state = useLocation().state as ResultsState | null;
-  const voiceAvailable = useGermanVoiceAvailable();
+  const voiceAvailable = useVoiceAvailable();
+  const locale = useLocale();
   const [speaking, setSpeaking] = useState(false);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [view, setView] = useState<View>("overview");
@@ -57,7 +59,7 @@ export function ResultsScreen() {
   if (!state || !brief) return <Navigate to="/" replace />;
 
   const roleName = t(roles.find((r) => r.id === brief.role)?.nameKey ?? "role.gp.name");
-  const generatedAt = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(
+  const generatedAt = new Intl.DateTimeFormat(intlLocale(), { dateStyle: "medium" }).format(
     new Date(brief.generatedAt),
   );
 
@@ -100,11 +102,11 @@ export function ResultsScreen() {
           />
           <button
             type="button"
-            onClick={() => comingSoon(t("results.language"))}
-            aria-label={`${t("results.language")}: Deutsch`}
+            onClick={toggleLocale}
+            aria-label={`${t("results.language")}: ${locale === "en" ? "English" : "Deutsch"}`}
             className="ml-1 h-9 rounded-full border border-line px-3 text-xs font-semibold text-ink-muted hover:border-primary/60 hover:text-primary-deep"
           >
-            DE
+            {locale === "en" ? "EN" : "DE"}
           </button>
         </div>
       </div>

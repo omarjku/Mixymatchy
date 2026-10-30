@@ -1,3 +1,4 @@
+import { intlLocale } from "@/i18n/locale";
 import { CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { WeightScaleIcon } from "@hugeicons/core-free-icons";
 import { Panel, SourcesButton } from "@/components/dashboard/Panel";
@@ -10,7 +11,7 @@ import type { MeasurementSet } from "@/types/stats";
 // a smoothed curve would suggest measurements between the letters that do not exist.
 
 const axisTick = { fill: "var(--color-ink-muted)", fontSize: 11 };
-const monthYear = new Intl.DateTimeFormat("de-DE", { month: "short", year: "numeric" });
+const monthYear = { format: (date: Date) => new Intl.DateTimeFormat(intlLocale(), { month: "short", year: "numeric" }).format(date) };
 
 export function WeightChart({
   measurements,
