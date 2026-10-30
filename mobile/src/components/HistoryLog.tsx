@@ -1,6 +1,9 @@
+import { parseGermanNumber } from "@/components/Sparkline";
 import { intlLocale } from "@/i18n/locale";
 import { t } from "@/i18n/strings";
+import { formatNumber } from "@/lib/stats";
 import type { Fact, PatientBrief, SourceCitation } from "@/types/fact";
+import { KeepDoses } from "@/components/ui/KeepDoses";
 
 // "History" level of the results: a plain log of every dated entry in the brief, newest first.
 // Date | what | value as the letter wrote it | Source. No charts, no status marks, no calculations:
@@ -21,10 +24,10 @@ interface Entry {
 const dateFormat = () =>
   new Intl.DateTimeFormat(intlLocale(), { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
 
-// Brief dates come as ISO (history) or dd.mm.yyyy (rows, trend points)
+// Brief dates come as ISO (history) or day-first dd.mm.yyyy / dd/mm/yyyy (rows, trend points; German / English)
 function parseDate(value: string): number | null {
-  const german = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(value.trim());
-  const time = german ? Date.UTC(+german[3], +german[2] - 1, +german[1]) : Date.parse(value);
+  const dayFirst = /^(\d{1,2})[./](\d{1,2})[./](\d{4})$/.exec(value.trim());
+  const time = dayFirst ? Date.UTC(+dayFirst[3], +dayFirst[2] - 1, +dayFirst[1]) : Date.parse(value);
   return Number.isNaN(time) ? null : time;
 }
 
@@ -55,8 +58,11 @@ function entriesOf(fact: Fact): Entry[] {
   const perReading = all.length === history.length;
   history.forEach((h, i) => {
     const u = h.unit ?? unit;
+    // readings are raw document numbers ("1,0"): written in the UI language's format, like Details
+    const n = parseGermanNumber(h.value);
+    const shown = n === null ? h.value : formatNumber(n, (h.value.split(/[.,]/)[1] ?? "").length);
     const sources = perReading ? [all[i]] : i === history.length - 1 && fact.source ? [fact.source] : [];
-    add(h.date, u ? `${h.value} ${u}` : h.value, sources, `h${i}`);
+    add(h.date, u ? `${shown} ${u}` : shown, sources, `h${i}`);
   });
   if (history.length === 0) {
     fact.trend?.points.forEach((p, i) => add(p.date, p.value, all.length === fact.trend!.points.length ? [all[i]] : [], `t${i}`));
@@ -115,7 +121,7 @@ function LogList({ entries, onOpenSources }: { entries: Entry[]; onOpenSources: 
           </span>
           <p className="min-w-0 text-[15px] leading-snug">
             <span className="text-ink-muted">{e.label}: </span>
-            <span className="font-medium text-ink">{e.value}</span>
+            <span className="font-medium text-ink"><KeepDoses text={e.value} /></span>
           </p>
           {e.sources.length > 0 ? (
             <button

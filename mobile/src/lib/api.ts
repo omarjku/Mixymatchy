@@ -7,7 +7,7 @@ import { fetchBriefing, toPatientBrief } from "@/lib/backend";
 
 // The only place the app fetches a patient brief. Real backend by default (src/lib/backend.ts);
 // VITE_MOCK=1 uses the invented mock briefs instead (never for the demo: they are not patient facts).
-const USE_MOCK = import.meta.env.VITE_MOCK === "1";
+export const USE_MOCK = import.meta.env.VITE_MOCK === "1";
 
 // The backend reads one free-text situation; the role chip becomes its English role name.
 const ROLE_EN: Record<RoleId, string> = {

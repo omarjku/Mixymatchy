@@ -12,6 +12,7 @@ import { Icon, type IconGlyph } from "@/components/ui/Icon";
 import { t } from "@/i18n/strings";
 import { cn } from "@/lib/utils";
 import type { Fact, FactRow, FactTrust } from "@/types/fact";
+import { KeepDoses } from "@/components/ui/KeepDoses";
 
 // The facts a task needs as one dense, scannable list (clinical-record style), not a card per fact.
 // Tablet/desktop: label | value | status · Source. Phone: label and status on one line, value and Source below.
@@ -91,7 +92,7 @@ function FactListRow({
     const row = rows[0];
     value = (
       <p className="text-[15px] font-semibold leading-snug text-ink tabular-nums">
-        {row?.text ?? fact.value}
+        <KeepDoses text={row?.text ?? fact.value ?? ""} />
         {row?.date && <span className="ml-2 text-[13px] font-normal text-ink-muted">{row.date}</span>}
       </p>
     );

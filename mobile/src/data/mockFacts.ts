@@ -388,3 +388,69 @@ export const mockBriefs: Partial<Record<RoleId, PatientBrief>> = {
   surgeon: surgeonBrief,
   gp: gpBrief,
 };
+
+// English mode: the invented demo briefs above are written in German. Labels, values and explanations are shown
+// in English; quotes from the letters (excerpt) and letter titles (documentLabel) stay as written, because
+// they are the source a clinician checks against. Decimal commas become points and dates follow the UI
+// language, like the backend's own fields.
+const english: Record<string, string> = {
+  "Fiktive Testperson A, 58 J.": "Fictitious test person A, 58 y",
+  "Fiktive Testperson B, 74 J.": "Fictitious test person B, 74 y",
+  "Fiktive Testperson C, 66 J.": "Fictitious test person C, 66 y",
+  "Fiktive Testperson D, 49 J.": "Fictitious test person D, 49 y",
+  Antikoagulation: "Anticoagulation",
+  Gewicht: "Weight",
+  Allergien: "Allergies",
+  "Penicillin (Exanthem)": "Penicillin (rash)",
+  "Atemweg / Intubation": "Airway / intubation",
+  "Schwierige Intubation möglich": "Difficult intubation possible",
+  Kreatinin: "Creatinine",
+  "Nüchternheit / PONV-Anamnese": "Fasting / PONV history",
+  "−12 kg in 16 Monaten": "−12 kg in 16 months",
+  "Im Ambulanzbrief steht BMI 28,4 kg/m²; aus 70 kg und 169 cm ergeben sich 24,5 kg/m².":
+    "The outpatient letter states BMI 28.4 kg/m²; 70 kg and 169 cm give 24.5 kg/m².",
+  Schlafapnoe: "Sleep apnoea",
+  "Zuletzt erwähnt im Entlassbrief Kardiologie, Juni 2025; im neuesten Brief nicht mehr aufgeführt.":
+    "Last mentioned in the cardiology discharge letter, June 2025; not listed in the latest letter.",
+  "Anzahl Dauermedikamente": "Number of regular medications",
+  "Selbstmedikation (OTC)": "Self-medication (OTC)",
+  Voroperationen: "Previous operations",
+  "Appendektomie 1992, Hysterektomie 2011": "Appendectomy 1992, hysterectomy 2011",
+  Hämoglobin: "Haemoglobin",
+  Metallallergie: "Metal allergy",
+  "Nickel möglich": "Nickel possible",
+  Thromboserisiko: "Thrombosis risk",
+  Entlassdiagnose: "Discharge diagnosis",
+  "NSTEMI, PCI mit DES (RIVA)": "NSTEMI, PCI with DES (LAD)",
+  "Duale Plättchenhemmung: Dauer": "Dual antiplatelet therapy: duration",
+  "12 Monate": "12 months",
+  "LDL-Cholesterin": "LDL cholesterol",
+  "Kardiologische Reha": "Cardiac rehabilitation",
+};
+
+// Keys whose strings are display text (translated); everything else (quotes, ids, ISO dates) is left alone
+const textKeys = new Set(["patientLabel", "label", "value", "text", "change", "formula", "note", "title", "explanation", "factLabel"]);
+const germanDate = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+
+function toEnglish(text: string, formatDate: (iso: string) => string): string {
+  const date = germanDate.exec(text);
+  if (date) return formatDate(`${date[3]}-${date[2]}-${date[1]}`);
+  return (english[text] ?? text).replace(/(\d),(\d)/g, "$1.$2");
+}
+
+export function mockBriefInEnglish(brief: PatientBrief, formatDate: (iso: string) => string): PatientBrief {
+  const walk = (node: unknown, key = ""): unknown => {
+    // history readings stay raw ("1,0"): they are parsed as numbers and formatted where they are shown
+    if (key === "history") return node;
+    if (typeof node === "string") {
+      if (key === "date") return germanDate.test(node) ? toEnglish(node, formatDate) : node;
+      return textKeys.has(key) ? toEnglish(node, formatDate) : node;
+    }
+    if (Array.isArray(node)) return node.map((item) => walk(item));
+    if (node && typeof node === "object") {
+      return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, walk(v, k)]));
+    }
+    return node;
+  };
+  return walk(brief) as PatientBrief;
+}

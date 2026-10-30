@@ -13,14 +13,18 @@ import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { mockBriefInEnglish } from "@/data/mockFacts";
 import { roles } from "@/data/roles";
-import { intlLocale, toggleLocale, useLocale } from "@/i18n/locale";
+import { toggleLocale, useLocale } from "@/i18n/locale";
 import { t } from "@/i18n/strings";
+import { USE_MOCK } from "@/lib/api";
 import { getResults } from "@/lib/session";
+import { formatDate } from "@/lib/stats";
 import { speak, stopSpeaking, useVoiceAvailable } from "@/lib/speech";
 import { cn } from "@/lib/utils";
 import type { Fact, FactRow, GuidelineCitation, PatientBrief, SourceCitation } from "@/types/fact";
 import type { BriefRequest } from "@/types/request";
+import { KeepDoses } from "@/components/ui/KeepDoses";
 
 // Results: patient + how the request was read, banners (not authorised / not applicable / task not
 // recognised), then three levels with different content:
@@ -46,7 +50,11 @@ export function ResultsScreen() {
   const [guideline, setGuideline] = useState<{ guideline: GuidelineCitation; label: string } | null>(null);
   const [view, setView] = useState<View>("overview");
 
-  const brief = state?.brief;
+  // Mock mode in English: the invented German demo data shown in English (letter quotes stay German)
+  const brief = useMemo(
+    () => (state?.brief && USE_MOCK && locale === "en" ? mockBriefInEnglish(state.brief, formatDate) : state?.brief),
+    [state?.brief, locale],
+  );
   const speechText = useMemo(() => (brief ? briefToSpeech(brief) : ""), [brief]);
   const speechEvents = useMemo(() => ({ onStart: () => setSpeaking(true), onEnd: () => setSpeaking(false) }), []);
 
@@ -74,7 +82,7 @@ export function ResultsScreen() {
   // The backend's own label for the role it read; the chip name only in mock mode. Never a "GP" default.
   const roleName =
     brief.roleLabel ?? (roles.find((r) => r.id === brief.role && r.id !== "other") ? t(roles.find((r) => r.id === brief.role)!.nameKey) : brief.role);
-  const generatedAt = new Intl.DateTimeFormat(intlLocale(), { dateStyle: "medium" }).format(new Date(brief.generatedAt));
+  const generatedAt = formatDate(brief.generatedAt) // same numeric format as every date in the brief;
   const mode = brief.screenMode ?? "task";
   const notAuthorised = mode === "not_authorised";
   const stats = brief.stats ?? {};
@@ -369,7 +377,7 @@ function AlsoRelevantList({ facts, onPressSource }: { facts: Fact[]; onPressSour
               <div className="flex items-start gap-2">
                 <p className="min-w-0 flex-1 text-[14px] leading-snug">
                   {label}
-                  <span className="font-semibold text-ink">{r.text}</span>
+                  <span className="font-semibold text-ink"><KeepDoses text={r.text} /></span>
                   {r.date && <span className="text-[13px] text-ink-muted"> · {r.date}</span>}
                 </p>
                 {r.sources.length > 0 && <RowSource row={r} onPress={openRow} />}

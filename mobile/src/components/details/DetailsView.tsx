@@ -6,6 +6,7 @@ import { intlLocale } from "@/i18n/locale";
 import { t } from "@/i18n/strings";
 import { formatDate, formatNumber, formatSigned } from "@/lib/stats";
 import type { Fact, FactRow, PatientBrief, SourceCitation } from "@/types/fact";
+import { KeepDoses } from "@/components/ui/KeepDoses";
 
 // "Details" level of the results: the in-depth view, built only from what the brief already carries
 // (real backend or mock): every value with a history as a chart plus its change, calculated values with
@@ -83,7 +84,7 @@ export default function DetailsView({ brief, onOpenSources }: DetailsViewProps) 
               <li key={row.id} className="flex items-start justify-between gap-3 px-3 py-3">
                 <div className="min-w-0">
                   <p className="text-[13px] text-ink-muted">{fact.label}</p>
-                  <p className="text-[15px] font-semibold text-ink tabular-nums">{row.text}</p>
+                  <p className="text-[15px] font-semibold text-ink tabular-nums"><KeepDoses text={row.text} /></p>
                   {row.note && (
                     <p className="mt-0.5 text-[13px] text-ink-muted">
                       {t("details.formula")}: {row.note}
@@ -270,7 +271,7 @@ function RowGroup({
             <p className="min-w-0 text-[15px] leading-snug">
               {/* no strike-through: an earlier value is replaced, not wrong, and the app never edits records */}
               <span className={muted ? "text-ink-muted" : "font-semibold text-ink"}>
-                {r.text}
+                <KeepDoses text={r.text} />
               </span>
               {r.date && <span className="text-[13px] text-ink-muted"> · {r.date}</span>}
             </p>
