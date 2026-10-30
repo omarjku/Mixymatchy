@@ -2,7 +2,10 @@
 // Copy rule: factual only ("Erforderliche Prüfungen", "Verifiziert", "Nicht dokumentiert"): never advisory.
 
 export const strings = {
-  "app.name": "Mixymatchy",
+  "app.name": "Second Look",
+  "readonly.title": "Nur Lesen: Second Look ändert keine Daten",
+  "readonly.body":
+    "Arztbriefe, Befunde und Notizen bleiben unverändert. Fehler lassen sich nur melden; jede Meldung wird geprüft.",
   "app.disclaimer": "Keine Diagnose- oder Therapieempfehlung. Alle Angaben verweisen auf ihre Quelle.",
 
   // Start screen (role chips + task bar)
@@ -93,6 +96,41 @@ export const strings = {
   "results.view.historyAvailable": "Verlauf für {n} von {m} Angaben verfügbar.",
   "results.view.historyNone": "Für keine Angabe sind Verlaufswerte dokumentiert.",
   "results.view.overviewHint": "Aktuelle Werte. Verlauf zeigt frühere Werte, wo dokumentiert.",
+  "results.view.dashboard": "Dashboard",
+  "results.view.dashboardHint": "Berechnete Änderungen aus dokumentierten Werten. Rechnungen, keine Diagnosen.",
+  "results.sources": "Quellen",
+
+  // Dashboard level (factual, no scores, no predictions, no advice)
+  "dash.title": "Kennzahlen",
+  "dash.recordsThrough": "Unterlagen bis {date}",
+  "dash.loading": "Kennzahlen werden geladen …",
+  "dash.error": "Kennzahlen konnten nicht geladen werden.",
+  "dash.empty": "Für diese Patientin bzw. diesen Patienten sind keine Messwerte oder Dosisänderungen dokumentiert.",
+  "dash.proof.title": "Belegte Angaben",
+  "dash.proof.ring": "mit Quelle",
+  "dash.proof.text": "{n} von {m} Angaben sind mit einer Quellstelle belegt. Entfernt, weil nicht im Brief auffindbar: {r}.",
+  "dash.tiles": "Dokumentierte Änderungen",
+  "dash.tile.weight": "Gewicht",
+  "dash.tile.bmi": "BMI berechnet",
+  "dash.tile.dose": "{drug} verordnet",
+  "dash.tile.bp": "Blutdruck: {label}",
+  "dash.tile.compare": "{from} → {to}",
+  "dash.sourcesFor": "Quellen: {label}",
+  "dash.weight.title": "Gewicht",
+  "dash.weight.unit": "kg",
+  "dash.bmi.title": "BMI: notiert und berechnet",
+  "dash.bmi.recorded": "Notiert im Brief",
+  "dash.bmi.calculated": "Berechnet aus Gewicht und Größe",
+  "dash.bmi.agrees": "Stimmt überein",
+  "dash.bmi.differs": "Abweichung {diff}",
+  "dash.bmi.notRecorded": "Kein BMI notiert",
+  "dash.bmi.note":
+    "Abweichung = notiert minus berechnet, in kg/m². Toleranz {tol} kg/m² zur Datenqualität, kein klinischer Grenzwert. Eine Abweichung zeigt nicht, welcher Eingabewert falsch ist.",
+  "dash.bp.title": "Blutdruck-Vergleiche",
+  "dash.bp.unit": "mmHg",
+  "dash.bp.percent": "Systolisch {sys} · Diastolisch {dia}",
+  "dash.dated.title": "Datierte Befunde ohne Verlauf",
+  "dash.notes.title": "Dokumentierter Kontext",
 
   // Patient card
   "patient.id": "ID",

@@ -114,7 +114,7 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
               aria-modal="true"
               aria-labelledby={titleId}
               style={{ borderRadius: 24 }}
-              className="relative flex w-full max-w-md flex-col overflow-hidden border border-line bg-surface shadow-xl"
+              className="relative flex w-full max-w-md flex-col overflow-hidden border border-line bg-surface shadow-xl md:max-w-2xl"
             >
               <div className="flex items-start gap-2 border-b border-line p-4 pr-2">
                 <div className="min-w-0 flex-1" id={titleId}>

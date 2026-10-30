@@ -43,62 +43,67 @@ export function RoleTaskSelectScreen() {
   if (!role && trimmedTask) caption = t("start.roleMissing");
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pt-[env(safe-area-inset-top)]">
-      <header className="flex h-14 items-center">
+    // Phone: bar pinned to the bottom (thumb reach). Tablet/desktop: one centered composer column.
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pt-[env(safe-area-inset-top)] md:max-w-2xl md:px-8">
+      <header className="flex h-14 items-center md:h-20">
         <span className="text-[15px] font-semibold tracking-tight text-primary-deep">{t("app.name")}</span>
       </header>
 
-      <section className="mt-6">
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight">{t("start.title")}</h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-ink-muted">{t("start.subtitle")}</p>
-      </section>
+      <div className="flex flex-1 flex-col md:justify-center md:pb-[12vh]">
+        <section className="mt-6 md:mt-0 md:text-center">
+          <h1 className="text-[28px] font-semibold leading-tight tracking-tight md:text-4xl">{t("start.title")}</h1>
+          <p className="mt-2 text-[15px] leading-relaxed text-ink-muted md:mx-auto md:max-w-lg">
+            {t("start.subtitle")}
+          </p>
+        </section>
 
-      <section aria-labelledby="role-heading" className="mt-8">
-        <h2 id="role-heading" className="mb-3 text-sm font-medium text-ink-muted">
-          {t("start.roleHeading")}
-        </h2>
-        <div className="grid grid-cols-2 gap-2">
-          {roles.map((r) => (
-            <Chip key={r.id} selected={r.id === roleId} onClick={() => selectRole(r.id)} className="text-center">
-              {t(r.nameKey)}
-            </Chip>
-          ))}
+        <section aria-labelledby="role-heading" className="mt-8">
+          <h2 id="role-heading" className="mb-3 text-sm font-medium text-ink-muted md:text-center">
+            {t("start.roleHeading")}
+          </h2>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            {roles.map((r) => (
+              <Chip key={r.id} selected={r.id === roleId} onClick={() => selectRole(r.id)} className="text-center">
+                {t(r.nameKey)}
+              </Chip>
+            ))}
+          </div>
+        </section>
+
+        <div className="sticky bottom-0 -mx-4 mt-auto bg-canvas px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6 md:static md:mx-0 md:mt-8 md:px-0 md:pb-0">
+          {role && (
+            <section aria-labelledby="suggestions-heading" className="mb-3">
+              <h2 id="suggestions-heading" className="mb-2 px-1 text-xs font-medium text-ink-muted">
+                {t("start.suggestionsHeading")}
+              </h2>
+              <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
+                {role.taskPresetKeys.map((key) => (
+                  <Chip
+                    key={key}
+                    selected={task === t(key)}
+                    onClick={() => setTask(t(key))}
+                    className="shrink-0 whitespace-nowrap"
+                  >
+                    {t(key)}
+                  </Chip>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <TaskBar
+            value={task}
+            onValueChange={setTask}
+            mode={mode}
+            onModeChange={setMode}
+            onSubmit={submit}
+            canSubmit={canSubmit}
+          />
+          <p className="mt-2 px-4 text-xs text-ink-muted" aria-live="polite">
+            {caption}
+          </p>
+          <p className="mt-4 text-center text-xs leading-snug text-ink-muted">{t("app.disclaimer")}</p>
         </div>
-      </section>
-
-      <div className="sticky bottom-0 -mx-4 mt-auto bg-canvas px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6">
-        {role && (
-          <section aria-labelledby="suggestions-heading" className="mb-3">
-            <h2 id="suggestions-heading" className="mb-2 px-1 text-xs font-medium text-ink-muted">
-              {t("start.suggestionsHeading")}
-            </h2>
-            <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-              {role.taskPresetKeys.map((key) => (
-                <Chip
-                  key={key}
-                  selected={task === t(key)}
-                  onClick={() => setTask(t(key))}
-                  className="shrink-0 whitespace-nowrap"
-                >
-                  {t(key)}
-                </Chip>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <TaskBar
-          value={task}
-          onValueChange={setTask}
-          mode={mode}
-          onModeChange={setMode}
-          onSubmit={submit}
-          canSubmit={canSubmit}
-        />
-        <p className="mt-2 px-4 text-xs text-ink-muted" aria-live="polite">
-          {caption}
-        </p>
-        <p className="mt-4 text-center text-xs leading-snug text-ink-muted">{t("app.disclaimer")}</p>
       </div>
     </main>
   );

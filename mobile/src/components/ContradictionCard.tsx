@@ -37,14 +37,15 @@ export function ContradictionCard({ contradiction, onPressSource }: Contradictio
 
       <h3 className="mt-3 text-[17px] font-semibold text-ink">{contradiction.factLabel}</h3>
 
-      <ul className="mt-3 space-y-2">
+      {/* stacked on phones, side by side from tablet width so the passages can be compared directly */}
+      <ul className="mt-3 grid gap-2 md:grid-cols-2">
         {contradiction.conflictingSources.map((source) => (
           <li key={source.documentId + source.excerpt}>
             <button
               type="button"
               onClick={() => onPressSource(source)}
               className={cn(
-                "w-full rounded-xl border border-contradiction-border/50 bg-surface p-3 text-left transition-colors",
+                "h-full w-full rounded-xl border border-contradiction-border/50 bg-surface p-3 text-left transition-colors",
                 "hover:border-contradiction-border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
               )}
             >

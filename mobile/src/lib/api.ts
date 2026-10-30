@@ -1,6 +1,8 @@
 import { mockBriefs } from "@/data/mockFacts";
+import { mockStats } from "@/data/mockStats";
 import type { RoleId } from "@/data/roles";
 import type { PatientBrief } from "@/types/fact";
+import type { PatientStats } from "@/types/stats";
 
 // The only place the app fetches a patient brief. To switch to the real backend, replace the body of
 // fetchPatientBrief with the API call; keep the signature and the PatientBrief return type (the contract).
@@ -24,6 +26,13 @@ export async function fetchPatientBrief(role: RoleId, task: string, signal?: Abo
   if (simulate === "error") throw new Error("Simulated backend error");
   // Mock: one fixed brief per role; echo the requested task so the header shows what was asked
   return { ...mockBriefs[role], task, generatedAt: new Date().toISOString() };
+}
+
+// Dashboard level: documented measurements for one patient, or null when none exist.
+// Fetched only when the Dashboard tab is opened. Replace the body with the API call later.
+export async function fetchPatientStats(patientId: string, signal?: AbortSignal): Promise<PatientStats | null> {
+  await wait(400, signal);
+  return mockStats[patientId] ?? null;
 }
 
 // Runs fetchPatientBrief with the 10 s ceiling. Rejects with BriefTimeoutError when it is exceeded,
