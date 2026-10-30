@@ -219,6 +219,8 @@ Run 7 (gate round 4): 125/234 (policy: no role -> needs_task for h028/h031/h060;
 
 `eval/redteam/` holds 484 adversarial and benign inputs (non-clinician claims, negation, relational and purpose phrasing, titles, other scripts, shorthand). `make redteam` runs them rules-only and reports leaks (should be refused but passed) and false blocks (should pass but refused). The same set runs in the start-up self-test with the LLM guard on. Live numbers with the LLM guard come from Render logs ("EVAL: redteam").
 
+fix6 (LLM-primary gate + answer-first, rules-only): shared 484 set 1 leak / 9 false blocks; 120 new inputs: 9 leaks (sarcastic/quoted role claims, vet nurse, pharma rep, future roles, 'new rule' injection) vs 13 on the previous deploy; live numbers with the LLM in Render logs.
+
 ## 7. Known open items
 
 | Item | Detail | Owner |
