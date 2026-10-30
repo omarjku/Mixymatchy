@@ -349,6 +349,8 @@ class TestLLMPrimary(LLMTestBase):
         self.assertEqual(self.screen(text + " ")["screen_mode"], rules)  # unknown kind -> rules
 
     def test_llm_runs_in_parallel_with_the_rules(self):
+        os.environ["SECOND_LOOK_ANSWERS_LLM"] = "0"  # the answer writer (a second call after routing) is timed apart
+        self.addCleanup(os.environ.pop, "SECOND_LOOK_ANSWERS_LLM", None)
         self.client(A(role="gp", bundles=["B03"]), delay=0.4)
         t0 = time.perf_counter()
         s = self.screen("GP, diabetes review")

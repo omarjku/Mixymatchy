@@ -128,13 +128,58 @@ class KeyFact(BaseModel):
     trust: Optional[str] = None
 
 
+class AnswerLine(BaseModel):
+    """Answer lines (docs/DECISIONS.md 22): the default screen. 'header' = age · sex · allergies; then 3-4 one-sentence
+    answers, one per need the rules picked. The sentence is written by the optional LLM and checked by code against
+    the line's own facts (origin 'llm'), or is the deterministic template (origin 'template')."""
+    kind: Literal["header", "answer", "not_documented"]
+    needs: list[str] = []        # need ids (KB slots) this line answers
+    label: str                   # need label(s), e.g. "Antiplatelets and anticoagulants" (small / accessible name)
+    text: str                    # the one-sentence answer
+    fact_ids: list[str] = []     # engine facts the sentence is about (Source)
+    segment_ids: list[str] = []  # their passages: Source opens the letter with these highlighted
+    origin: Literal["llm", "template"] = "template"
+    verified: bool = True        # an 'llm' sentence passed the code check (numbers, dates, names, not documented)
+    trust: Optional[str] = None  # conflicting (a letter disagrees) | not_documented
+
+
+class AnswerSource(BaseModel):
+    """One numbered Source chip of the v2 answer: an evidence chunk and the passages it was taken from."""
+    n: int                       # the chip number [1], [2] ... as cited in the sentence
+    label: str                   # what the chunk is about (need label), small print
+    segment_ids: list[str] = []  # Source opens the letter with these passages highlighted
+    fact_ids: list[str] = []
+
+
+class AnswerSegment(BaseModel):
+    text: str                    # a piece of the answer sentence
+    sources: list[int] = []      # chip numbers this piece cites (shown right after it)
+
+
+class Answer(BaseModel):
+    """v2 answer (docs/DECISIONS.md 23): ONE sentence (two at most) at the top of the screen, every claim cited.
+    origin: 'llm' (v3, DECISIONS 24: the one cached call's placeholder sentence, every value substituted by code),
+    'template' (deterministic compact answer from the facts' own fields; 'regenerated' is kept for old clients)."""
+    kind: Literal["answer", "nothing", "not_applicable"] = "answer"
+    text: str
+    segments: list[AnswerSegment] = []
+    sources: list[AnswerSource] = []
+    origin: Literal["llm", "regenerated", "template"] = "template"
+    verified: bool = True
+    note: Optional[str] = None   # one-line applicability note (sex/age mismatch), shown above the answer
+    note_segment_ids: list[str] = []
+    flags: list[str] = []        # v3: letters disagree about a cited fact (counted contradictions), one line each
+
+
 class Briefing(BaseModel):
     situation: str
     role: str
     task: str
     as_of: str
     needs: list[NeedResult]      # full cards: the 'Show more / Details' part of an answer-first screen
-    key_facts: list[KeyFact] = []  # answer-first block shown by default (empty: gated / not-applicable screens)
+    answer: Optional[Answer] = None  # v2 router (DECISIONS 23): the 1-2 sentence answer; everything else is 'Show more'
+    answer_lines: list[AnswerLine] = []  # default screen (DECISIONS 22): header + 3-4 answers; key_facts and needs: 'Show more'
+    key_facts: list[KeyFact] = []  # answer-first block (DECISIONS 20); with answer_lines it sits under 'Show more'
     layout: Literal["answer_first", "cards"] = "cards"  # answer_first: everything except key_facts is details
     blind_spot: list[Fact] = []  # task facts missing from the latest letter
     findings: list[Finding] = []

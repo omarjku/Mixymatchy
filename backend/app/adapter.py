@@ -37,6 +37,9 @@ Mapping rules (documented once, applied everywhere)
   key_facts (engine/keyfacts.py) -> Briefing.key_facts (layout "answer_first"): one line per P1 need with the
                           chosen card items as Facts (+ since = first letter), the safety core, the not-documented
                           needs and the first contradiction; every NeedResult stays as the details view
+  answer_lines (engine/answers.py) -> Briefing.answer_lines (DECISIONS 22): header (age · sex · allergies) + 3-4
+                          one-sentence answers (rules pick, optional LLM writes, code verifies; origin, verified,
+                          fact ids, passages); key_facts and the cards become 'Show more'; routing.answer_lines_llm
 
 Routing knowledge base (default rulebook; SECOND_LOOK_RULEBOOK=legacy for roles.json + tasks.json)
   card slot/shape/priority/why/sources/rules/note -> the optional NeedResult fields of the same name
@@ -59,7 +62,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:  # engine/, pipeline/, compare/ are top-level packages of the repo
     sys.path.insert(0, str(ROOT))
 
-from .schema import (Briefing, ChecklistItem, Computed, Document, Fact, Finding, KeyFact,  # noqa: E402
+from .schema import (Answer, AnswerLine, AnswerSegment, AnswerSource, Briefing, ChecklistItem,  # noqa: E402
+                     Computed, Document, Fact, Finding, KeyFact,
                      NeedResult, Segment, SourceRef)
 
 BUILD_DIR = Path(os.environ.get("SECOND_LOOK_BUILD", ROOT / "data" / "build"))
@@ -417,6 +421,9 @@ def _routing(screen: dict) -> dict:
             "role_missing": bool(u.get("role_missing")),
             "clinical_gate": (u.get("clinical_gate") or {}).get("decision"),
             "llm_used": bool(u.get("llm_used")), "llm_reason": u.get("llm_reason") if u.get("llm_used") else None,
+            "answer_lines_llm": u.get("answer_lines_llm"),
+            "router": u.get("router") or "v1", "answer_v2": u.get("answer_v2"),
+            "understand_v2": u.get("understand_v2"),
             "llm_kind": u.get("llm_kind"), "llm_verdict": u.get("llm_verdict"), "llm_ms": u.get("llm_ms"),
             "engine_ms": screen.get("timing_ms"),
             "applicability_note": u.get("applicability_note"), "applicability": u.get("applicability"),
@@ -470,6 +477,24 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
         keyed = {x for ln in b.key_facts if ln.kind in ("need", "safety") for x in ln.needs}
         for n in b.needs:
             n.key = n.need in keyed
+    if not gated and screen.get("answer_lines"):  # DECISIONS 22: header + one-sentence answers by default
+        b.answer_lines = [AnswerLine(kind=ln["kind"], needs=ln.get("needs") or [], label=ln.get("label") or "",
+                                     text=ln["text"], fact_ids=ln.get("fact_ids") or [],
+                                     segment_ids=list(ln.get("passages") or []), origin=ln.get("origin") or "template",
+                                     verified=bool(ln.get("verified")), trust=ln.get("trust"))
+                          for ln in screen["answer_lines"]]
+        b.layout = "answer_first"
+    a = screen.get("answer")
+    if not gated and a:  # v2 (DECISIONS 23): the cited sentence first; answer lines, key facts, cards: 'Show more'
+        b.answer = Answer(kind=a.get("kind") or "answer", text=a["text"],
+                          segments=[AnswerSegment(text=x["text"], sources=x.get("sources") or [])
+                                    for x in a.get("segments") or []],
+                          sources=[AnswerSource(n=x["n"], label=x.get("label") or "", segment_ids=x.get("passages") or [],
+                                                fact_ids=x.get("facts") or []) for x in a.get("sources") or []],
+                          origin=a.get("origin") or "template", verified=bool(a.get("verified")),
+                          note=a.get("note"), note_segment_ids=a.get("note_passages") or [],
+                          flags=a.get("flags") or [])
+        b.layout = "answer_first"
     bs = screen.get("blind_spot") or {}
     if gated:
         b.routing["anchor_date"] = None

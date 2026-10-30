@@ -29,10 +29,17 @@ async def lifespan(_app: FastAPI):
     if store.use_engine():
         store.documents()
         store.segments()
-    if os.environ.get("EVAL_ON_START") == "1":  # opt-in self-test, printed to the logs ("EVAL:" lines)
+        try:  # v3.1 (DECISIONS 24): warm the one-call prompt cache so the first request reads it
+            from . import adapter  # noqa: F401  (puts the repo root on sys.path)
+            from engine import onecall, screen_v2
+            if screen_v2.enabled():
+                onecall.warm()
+        except Exception as e:  # never stop the app over the warm-up
+            print("V3: warm-up not started: %r" % (e,), flush=True)
+    if os.environ.get("EVAL_ON_START") in ("1", "probe"):  # opt-in self-test, printed to the logs ("EVAL:" lines)
         try:
             from eval.selftest import start_background
-            start_background()
+            start_background(mode=os.environ["EVAL_ON_START"])
         except Exception as e:  # never stop the app over the self-test
             print("EVAL: self-test not started: %r" % (e,), flush=True)
     yield

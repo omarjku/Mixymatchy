@@ -18,15 +18,16 @@ const keys = answerKeys();
 
 for (const s of situations()) {
   test.describe(`situation ${s.n}: ${s.title}`, () => {
-    test("expected answers are in the key facts, visible without clicking", async ({ page }) => {
+    test("expected answers are in the answer lines, visible without clicking", async ({ page }) => {
       const errors = trackErrors(page);
       await submitSituation(page, `${s.title}. ${s.description}`);
-      // answer first (docs/DECISIONS.md 20): the details are collapsed, the key facts alone must answer
+      // answer lines (docs/DECISIONS.md 22): header + <= 4 sentences; key facts and details are collapsed
       await expect(page.locator("[data-show-more]")).toHaveAttribute("aria-expanded", "false");
       await expect(page.locator("#details-more")).toHaveCount(0);
-      const lines = await page.locator("[data-key-fact]").count();
-      expect(lines, "key-fact lines").toBeLessThanOrEqual(8);
-      const screen = normalise(await page.locator("[data-key-facts]").innerText());
+      await expect(page.locator("[data-key-facts]")).toHaveCount(0);
+      const lines = await page.locator('[data-answer-line]:not([data-answer-line="header"])').count();
+      expect(lines, "answer lines").toBeLessThanOrEqual(4);
+      const screen = normalise(await page.locator("[data-answer-lines]").innerText());
       const missing: string[] = [];
       for (const [qid, q] of Object.entries(keys).filter(([id]) => id.startsWith(`${s.n}.`))) {
         for (const item of q.items) {
@@ -126,7 +127,7 @@ test.describe("source viewer", () => {
   test("several passages: all highlighted, step between them", async ({ page }) => {
     await submitSituation(page, "Anaesthetist, pre-operative anaesthesia check. Quadrantectomy on 16 May 2016.");
     // the first fact with more than one passage
-    const cards = page.locator("[data-fact]");
+    const cards = page.locator("[data-answer-line], [data-fact]");
     let opened = false;
     for (let i = 0; i < (await cards.count()) && !opened; i++) {
       await cards.nth(i).locator("button[data-source]").first().click();
@@ -161,7 +162,7 @@ test.describe("source viewer", () => {
 test.describe("contradictions", () => {
   test("both passages side by side, each with a source link", async ({ page }) => {
     await submitSituation(page, "Vascular surgeon reviewing the carotid stenosis before surgery");
-    await expect(page.locator('[data-key-fact="conflict"]')).toBeVisible(); // flagged in the key facts
+    await expect(page.locator('[data-answer-line][data-trust="conflicting"]')).toBeVisible(); // flagged in the answers
     await page.locator("[data-show-more]").click();
     const lists = page.locator("ul[data-passages]");
     test.skip((await lists.count()) === 0, "no contradiction on this screen");
@@ -177,12 +178,12 @@ test.describe("contradictions", () => {
 test.describe("language toggle", () => {
   test("English by default, German on toggle, back to English", async ({ page }) => {
     await submitSituation(page, "Anaesthetist, pre-operative anaesthesia check. Quadrantectomy on 16 May 2016.");
-    await expect(page.getByRole("heading", { name: /^Key facts/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Answers/ })).toBeVisible();
     await page.getByRole("button", { name: /Language: English/ }).click();
-    await expect(page.getByRole("heading", { name: /^Das Wichtigste/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Antworten/ })).toBeVisible();
     await expect(page.locator("[data-read-as]")).toContainText("Gelesen als");
     await page.getByRole("button", { name: /Sprache: Deutsch/ }).click();
-    await expect(page.getByRole("heading", { name: /^Key facts/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Answers/ })).toBeVisible();
   });
 });
 

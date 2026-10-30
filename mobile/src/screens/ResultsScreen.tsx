@@ -22,7 +22,7 @@ import { getResults } from "@/lib/session";
 import { formatDate } from "@/lib/stats";
 import { speak, stopSpeaking, useVoiceAvailable } from "@/lib/speech";
 import { cn } from "@/lib/utils";
-import type { Fact, FactRow, GuidelineCitation, KeyFactLine, PatientBrief, SourceCitation } from "@/types/fact";
+import type { AnswerLineView, AnswerView, Fact, FactRow, GuidelineCitation, KeyFactLine, PatientBrief, SourceCitation } from "@/types/fact";
 import type { BriefRequest } from "@/types/request";
 import { KeepDoses } from "@/components/ui/KeepDoses";
 
@@ -114,7 +114,10 @@ export function ResultsScreen() {
   const taskConcepts = stats.task_concepts ?? 0;
   const otherIssues = stats.other_record_issues ?? 0;
   const keyFacts = brief.keyFacts ?? [];
-  const answerFirst = !gated && keyFacts.length > 0;
+  const answerLines = brief.answerLines ?? [];
+  const answer = !gated ? brief.answer ?? null : null;  // DECISIONS 23: the cited sentence; all lists behind "Show more"
+  const answersFirst = !gated && !answer && answerLines.length > 0;  // DECISIONS 22: header + 3-4 sentences, key facts behind "Show more"
+  const answerFirst = !gated && (!!answer || answersFirst || keyFacts.length > 0);
   const overview = !gated && view === "overview";
   const showDetails = overview && (!answerFirst || expanded);
 
@@ -250,7 +253,37 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!gated && brief.routeNote && (
+            {/* v2: one sentence first (numbered Source chips), every list behind "Show more" */}
+            {overview && answer && (
+              <section id="facts-panel" aria-labelledby="answer-heading" data-answer={answer.kind} data-origin={answer.origin}>
+                <h2 id="answer-heading" className="sr-only">{t("results.answer")}</h2>
+                <AnswerSentence answer={answer} onOpenSources={openSources} />
+                <button
+                  type="button"
+                  data-show-more
+                  aria-expanded={expanded}
+                  aria-controls="details-more"
+                  onClick={() => setExpanded((x) => !x)}
+                  className="mt-4 w-full rounded-full border border-line bg-surface px-4 py-2.5 text-[14px] font-medium text-primary-deep hover:bg-primary-soft focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {expanded ? t("results.showLess") : t("results.showMore")}
+                </button>
+                {expanded && answerLines.length > 0 && (
+                  <div className="mt-4" data-answer-lines>
+                    <h2 className="mb-1 text-sm font-semibold text-ink-muted">{t("results.answers")}</h2>
+                    <AnswerList lines={answerLines} onOpenSources={openSources} />
+                  </div>
+                )}
+                {expanded && keyFacts.length > 0 && (
+                  <div className="mt-4" data-key-facts>
+                    <h2 className="mb-1 text-sm font-semibold text-ink-muted">{t("results.keyFacts")}</h2>
+                    <KeyFactList lines={keyFacts} onOpenSources={openSources} />
+                  </div>
+                )}
+              </section>
+            )}
+
+            {!gated && brief.routeNote && (!answer || expanded) && (
               <section data-banner="fallback" className="rounded-lg border border-primary bg-primary/10 p-4">
                 <p className="text-[15px] font-medium text-primary-deep">{brief.routeNote}</p>
                 <Suggestions
@@ -261,7 +294,34 @@ export function ResultsScreen() {
             )}
 
             {/* Answer first: one line per question the task asks, each with its source */}
-            {overview && answerFirst && (
+            {overview && answersFirst && (
+              <section id="facts-panel" aria-labelledby="answers-heading" data-answer-lines>
+                <h2 id="answers-heading" className="mb-1 text-sm font-semibold text-ink-muted">
+                  {t("results.answers")}
+                </h2>
+                <AnswerList lines={answerLines} onOpenSources={openSources} />
+                <button
+                  type="button"
+                  data-show-more
+                  aria-expanded={expanded}
+                  aria-controls="details-more"
+                  onClick={() => setExpanded((x) => !x)}
+                  className="mt-3 w-full rounded-full border border-line bg-surface px-4 py-2.5 text-[14px] font-medium text-primary-deep hover:bg-primary-soft focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {expanded ? t("results.showLess") : t("results.showMore")}
+                </button>
+                {expanded && keyFacts.length > 0 && (
+                  <div className="mt-4" data-key-facts>
+                    <h2 id="key-facts-heading" className="mb-1 text-sm font-semibold text-ink-muted">
+                      {t("results.keyFacts")}
+                    </h2>
+                    <KeyFactList lines={keyFacts} onOpenSources={openSources} />
+                  </div>
+                )}
+              </section>
+            )}
+
+            {overview && !answer && !answersFirst && answerFirst && (
               <section id="facts-panel" aria-labelledby="key-facts-heading" data-key-facts>
                 <h2 id="key-facts-heading" className="mb-1 text-sm font-semibold text-ink-muted">
                   {t("results.keyFacts")}
@@ -392,6 +452,87 @@ export function ResultsScreen() {
   );
 }
 
+// v2 answer: the backend's sentence as written, each piece followed by its numbered chips [1][2]; a chip opens the
+// letter with the cited passages highlighted.  The applicability note (sex / age mismatch) is one line above it.
+function AnswerSentence({ answer, onOpenSources }: {
+  answer: AnswerView;
+  onOpenSources: (citations: SourceCitation[], index: number, title: string) => void;
+}) {
+  const chip = (n: number) => {
+    const c = answer.chips.find((x) => x.n === n);
+    if (!c || c.sources.length === 0) return null;
+    return (
+      <button key={n} type="button" data-source-chip={n}
+        aria-label={t("results.sourceChip", { n, label: c.label })}
+        onClick={() => onOpenSources(c.sources, 0, c.label)}
+        className="mx-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-soft px-1.5 align-[2px] text-[11px] font-semibold text-primary-deep hover:bg-primary/20 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary">
+        {n}
+      </button>
+    );
+  };
+  return (
+    <div className="rounded-lg border border-line bg-surface p-4">
+      {answer.note && (
+        <p data-answer-note className="mb-2 text-[13px] leading-snug text-ink-muted">
+          {answer.note}
+          {answer.noteSources.length > 0 && (
+            <button type="button" data-source className="ml-1 underline underline-offset-2"
+              onClick={() => onOpenSources(answer.noteSources, 0, t("results.notApplicable.title"))}>
+              {t("results.evidence")}
+            </button>
+          )}
+        </p>
+      )}
+      <p data-answer-text className={cn("text-[17px] leading-relaxed",
+        answer.kind === "nothing" ? "text-undocumented" : "text-ink")}>
+        {answer.segments.map((seg, i) => (
+          <span key={i}><KeepDoses text={seg.text} />{seg.chips.map(chip)}</span>
+        ))}
+      </p>
+    </div>
+  );
+}
+
+// Answer lines: the thin header (age · sex · allergies), then one sentence per picked need, each with Source.
+// The sentence is the backend's (rules picked, LLM wrote and code verified, or the template); never edited here.
+function AnswerList({ lines, onOpenSources }: {
+  lines: AnswerLineView[];
+  onOpenSources: (citations: SourceCitation[], index: number, title: string) => void;
+}) {
+  const header = lines.find((l) => l.kind === "header");
+  const answers = lines.filter((l) => l.kind !== "header");
+  const source = (line: AnswerLineView, title: string) => line.sources.length > 0 && (
+    <RowSource row={{ id: line.id, text: line.text, sources: line.sources }}
+      onPress={(r) => onOpenSources(r.sources, 0, title)} />
+  );
+  return (
+    <div>
+      {header && (
+        <p data-answer-line="header" className="flex items-start gap-2 px-2 pb-1.5 text-[13px] leading-snug text-ink-muted">
+          <span className="min-w-0 flex-1"><KeepDoses text={header.text} /></span>
+          {source(header, t("results.keySafety"))}
+        </p>
+      )}
+      <ol className="divide-y divide-line border-y border-line">
+        {answers.map((line) => (
+          <li key={line.id} data-answer-line={line.kind} data-trust={line.trust ?? undefined} data-origin={line.origin}
+            title={line.label} className="flex items-start gap-2 px-2 py-2">
+            <p className={cn("min-w-0 flex-1 text-[15px] leading-snug",
+              line.kind === "not_documented" ? "text-undocumented" : "text-ink")}>
+              <span className="sr-only">{line.label}: </span>
+              <KeepDoses text={line.text} />
+              {line.trust === "conflicting" && (
+                <span className="ml-1 text-[12px] font-medium text-contradiction-deep">· {t("results.keyConflict")}</span>
+              )}
+            </p>
+            {source(line, line.label)}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 // Key facts: one compact row per line: small label, then the answer (value · date · since · Source) as short
 // as the letters allow. Never rewritten here: every row is a backend fact, calculation or flag, with its passages.
 function KeyFactList({ lines, onOpenSources }: {
@@ -517,6 +658,15 @@ function briefToSpeech(brief: PatientBrief): string {
   if (brief.screenMode === "needs_task") return [sentence(t("results.needsTask.title")), sentence(t("results.needsTask.body"))].join(" ");
   const parts = [sentence(brief.patientLabel), sentence(brief.taskLabel ?? brief.task)];
   if (brief.screenMode === "not_authorised") return [...parts, sentence(brief.message ?? "")].join(" ");
+  if (brief.answer) {  // v2: read the sentence the screen shows by default
+    if (brief.answer.note) parts.push(sentence(brief.answer.note));
+    parts.push(sentence(brief.answer.text));
+    return parts.join(" ");
+  }
+  if (brief.answerLines?.length) {  // answer lines: read what the screen shows by default
+    for (const a of brief.answerLines) parts.push(sentence(a.text));
+    return parts.join(" ");
+  }
   if (brief.keyFacts?.length) {  // answer first: read what the screen shows by default
     for (const k of brief.keyFacts) parts.push(sentence(`${k.label}: ${k.rows.map((r) => r.text).join("; ")}`));
     return parts.join(" ");

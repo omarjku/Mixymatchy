@@ -1,5 +1,5 @@
 import { secureFetch } from "@/second-look";
-import type { Contradiction, Fact, FactRow, FactTrust, KeyFactLine, PatientBrief, RecordGap, SourceCitation } from "@/types/fact";
+import type { AnswerLineView, AnswerView, Contradiction, Fact, FactRow, FactTrust, KeyFactLine, PatientBrief, RecordGap, SourceCitation } from "@/types/fact";
 
 // Backend contract (backend/app/schema.py, docs/INTEGRATION.md) and the mapping into the app's PatientBrief.
 // Rule: every clinical string shown comes from the backend; this file only rearranges it.
@@ -75,8 +75,33 @@ interface BackendKeyFact {
   trust?: string | null;
 }
 
+interface BackendAnswerLine {
+  kind: AnswerLineView["kind"];
+  needs: string[];
+  label: string;
+  text: string;
+  fact_ids: string[];
+  segment_ids: string[];
+  origin: "llm" | "template";
+  verified: boolean;
+  trust?: string | null;
+}
+
+interface BackendAnswer {
+  kind: AnswerView["kind"];
+  text: string;
+  segments: { text: string; sources: number[] }[];
+  sources: { n: number; label: string; segment_ids: string[]; fact_ids: string[] }[];
+  origin: AnswerView["origin"];
+  verified: boolean;
+  note?: string | null;
+  note_segment_ids?: string[];
+}
+
 export interface BackendBriefing {
   situation: string;
+  answer?: BackendAnswer | null;
+  answer_lines?: BackendAnswerLine[];
   key_facts?: BackendKeyFact[];
   layout?: "answer_first" | "cards";
   role: string;
@@ -158,6 +183,9 @@ function segmentIdsOf(briefing: BackendBriefing): string[] {
     need.reason_segment_ids.forEach((s) => ids.add(s));
   }
   briefing.blind_spot.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
+  for (const a of briefing.answer_lines ?? []) a.segment_ids.forEach((s) => ids.add(s));
+  for (const c of briefing.answer?.sources ?? []) c.segment_ids.forEach((s) => ids.add(s));
+  briefing.answer?.note_segment_ids?.forEach((s) => ids.add(s));
   for (const k of briefing.key_facts ?? []) {
     k.facts.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
     k.computed.forEach((c) => c.segment_ids.forEach((s) => ids.add(s)));
@@ -364,6 +392,18 @@ export async function toPatientBrief(
     facts: briefing.needs.filter((n) => !isAlso(n)).flatMap((n) => needToFacts(n, cite)),
     alsoRelevant: alsoNeeds.flatMap((n) => needToFacts(n, cite)),
     keyFacts: briefing.layout === "answer_first" ? keyFactLines(briefing, cite) : [],
+    // v2 answer (DECISIONS 23): the backend's cited sentence as it is, chips numbered as the backend cites them
+    answer: briefing.answer ? {
+      kind: briefing.answer.kind, text: briefing.answer.text, origin: briefing.answer.origin,
+      segments: briefing.answer.segments.map((x) => ({ text: x.text, chips: x.sources })),
+      chips: briefing.answer.sources.map((c) => ({ n: c.n, label: c.label, sources: cite(c.segment_ids) })),
+      note: briefing.answer.note ?? null, noteSources: cite(briefing.answer.note_segment_ids ?? []),
+    } : null,
+    // answer lines (DECISIONS 22): the backend's sentences as they are, each with its passages
+    answerLines: (briefing.answer_lines ?? []).map((a, i) => ({
+      id: `answer:${i}:${a.needs.join("+") || a.kind}`, kind: a.kind, label: a.label, text: a.text,
+      sources: cite(a.segment_ids), origin: a.origin, trust: a.trust ?? null,
+    })),
     contradictions,
     gaps,
     stats: briefing.stats,
