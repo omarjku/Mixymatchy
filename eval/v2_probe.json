@@ -20,7 +20,13 @@
     "Chirurgin, OP-Planung Brust",
     "Nurse, wound care after surgery",
     "Strahlentherapeut, intraoperative radiotherapy",
-    "Internist, Blutdruck und Medikamente"
+    "Internist, Blutdruck und Medikamente",
+    "Emergency doctor, I'm about to give IV gentamicin.",
+    "Notärztin, gleich Gentamicin i.v."
   ],
-  "non_task": ["hi", "", "asdf"]
+  "non_task": [
+    "hi",
+    "",
+    "asdf"
+  ]
 }
