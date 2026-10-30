@@ -1,0 +1,427 @@
+<!doctype html>
+<!-- 30 s, 9:16 product walkthrough of Second Eye. Every frame is a pure function of time: render(t).
+     Rendered frame by frame by render.mjs (432x768 CSS px at device scale 2.5 = 1080x1920).
+     Open in a browser with ?play to preview in real time.
+     Patient text: only the scripted facts; the source letter is an invented demo letter built from those same facts.
+     Results numbers: docs/SUBMISSION.md section 1 (measured on the 5 official situations). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Second Eye walkthrough</title>
+<style>
+  @font-face { font-family: "Plex"; font-weight: 400; src: url("../../mobile/node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2"); }
+  @font-face { font-family: "Plex"; font-weight: 500; src: url("../../mobile/node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2"); }
+  @font-face { font-family: "Plex"; font-weight: 600; src: url("../../mobile/node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2"); }
+  @font-face { font-family: "Plex"; font-weight: 700; src: url("../../mobile/node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-700-normal.woff2"); }
+  @font-face { font-family: "PlexSerif"; font-weight: 400; src: url("../../mobile/node_modules/@fontsource/ibm-plex-serif/files/ibm-plex-serif-latin-400-normal.woff2"); }
+  @font-face { font-family: "PlexSerif"; font-weight: 500; src: url("../../mobile/node_modules/@fontsource/ibm-plex-serif/files/ibm-plex-serif-latin-500-normal.woff2"); }
+  :root {
+    --navy: #0f1222; --navy-2: #171b33; --navy-3: #20264a; --line: #2c3361;
+    --white: #ffffff; --muted: #a9b0d6; --indigo: #4f5bea; --logo: #6381fd; --teal: #2dd4bf;
+    --amber: #f5b544; --red: #f26b6b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 432px; height: 768px; overflow: hidden; background: var(--navy); color: var(--white);
+    font-family: "Plex", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .abs { position: absolute; }
+
+  #caption { left: 0; right: 0; top: 30px; height: 64px; display: flex; align-items: center; justify-content: center;
+    text-align: center; white-space: nowrap; font-size: 23px; font-weight: 600; letter-spacing: -0.01em; padding: 0 28px; z-index: 5; }
+  #timer { right: 18px; top: 106px; display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+    background: var(--navy-3); border: 1px solid var(--line); font-size: 14px; font-weight: 500; color: var(--teal);
+    font-variant-numeric: tabular-nums; z-index: 4; }
+  #timer i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); }
+
+  #app { left: 0; top: 96px; width: 432px; height: 672px; overflow: hidden; }
+  .logo { width: 76px; height: 76px; display: block; filter: drop-shadow(0 10px 26px rgba(99, 129, 253, .35)); }
+  .logo.sm { width: 34px; height: 34px; filter: none; }
+
+  /* Scenes 1-2: start screen */
+  #start { left: 24px; right: 24px; top: 66px; display: flex; flex-direction: column; align-items: center; }
+  #start h1 { margin-top: 18px; font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
+  #field { margin-top: 42px; width: 100%; min-height: 112px; border-radius: 16px; background: var(--navy-2);
+    border: 1.5px solid var(--line); padding: 16px 18px; font-size: 18px; line-height: 1.45; }
+  #field .ph { color: #7c84b3; }
+  #caret { display: inline-block; width: 2px; height: 21px; background: var(--teal); vertical-align: -4px; margin-left: 1px; }
+  #go { margin-top: 18px; width: 100%; height: 56px; border-radius: 14px; background: var(--indigo); font-size: 18px;
+    font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  #go .dots { display: none; gap: 5px; }
+  #go .dots b { width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+
+  /* Scenes 3, 5, 6: answer screen with a fixed header and tabs */
+  #answer { inset: 0; }
+  .bar { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 22px; font-size: 16px; font-weight: 600; }
+  #tabs { margin: 0 22px; display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--navy-2); border: 1px solid var(--line); }
+  #tabs div { flex: 1; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--muted); }
+  #tabbg { left: 0; top: 0; height: 36px; border-radius: 9px; background: var(--indigo); }
+  #viewport { left: 0; right: 0; top: 104px; bottom: 0; overflow: hidden; }
+  #scroll { padding: 0 22px; }
+  #card { margin-top: 14px; border-radius: 20px; background: var(--navy-2); border: 1px solid var(--line); padding: 20px 22px 18px; }
+  #card .label { font-size: 14px; font-weight: 500; color: var(--teal); letter-spacing: .02em; }
+  #sentence { margin-top: 8px; font-size: 23px; line-height: 1.42; font-weight: 500; letter-spacing: -0.01em; }
+  .nw { white-space: nowrap; }
+  #nd { border-radius: 6px; padding: 0 3px; margin: 0 -3px; }
+  .chips { margin-top: 14px; display: flex; gap: 10px; }
+  .chip { min-width: 40px; height: 32px; padding: 0 10px; border-radius: 9px; background: var(--navy-3); border: 1px solid var(--line);
+    color: var(--teal); font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  #more { margin-top: 12px; height: 48px; border-radius: 14px; border: 1.5px solid var(--line); display: flex; align-items: center;
+    justify-content: center; gap: 8px; font-size: 16px; font-weight: 600; }
+  #more .chev { display: inline-block; width: 9px; height: 9px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; margin-top: -4px; }
+  #details { overflow: hidden; height: 0; }
+  #details .inner { padding: 12px 0 16px; display: flex; flex-direction: column; gap: 9px; }
+  .row { border-radius: 14px; background: var(--navy-2); border: 1px solid var(--line); padding: 11px 16px; }
+  .row .k { font-size: 14px; color: var(--muted); font-weight: 500; }
+  .row .v { margin-top: 3px; font-size: 18px; font-weight: 500; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tag { font-size: 14px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+  .tag.amber { color: var(--amber); background: rgba(245, 181, 68, .14); }
+  .tag.teal { color: var(--teal); background: rgba(45, 212, 191, .12); }
+  .row.red { border-color: rgba(242, 107, 107, .55); background: rgba(242, 107, 107, .08); }
+  .tag.red { color: #fff; background: var(--red); }
+
+  /* Scene 6: dashboard tab */
+  #dash { left: 22px; right: 22px; top: 118px; display: flex; flex-direction: column; gap: 12px; }
+  .panel { border-radius: 18px; background: var(--navy-2); border: 1px solid var(--line); padding: 16px 18px; }
+  .panel h3 { font-size: 15px; font-weight: 600; }
+  .panel .sub { font-size: 14px; color: var(--muted); margin-top: 3px; }
+  .ringrow { display: flex; align-items: center; gap: 18px; }
+  #ring { width: 104px; height: 104px; flex: none; }
+  .ringtxt .big { font-size: 34px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stack { margin-top: 12px; height: 22px; border-radius: 8px; overflow: hidden; display: flex; background: var(--navy-3); }
+  .stack i { height: 100%; }
+  .legend { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; color: var(--muted); }
+  .legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .tile { border-radius: 16px; background: var(--navy-2); border: 1px solid var(--line); padding: 12px 12px 11px; }
+  .tile .n { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tile .l { font-size: 14px; color: var(--muted); line-height: 1.3; margin-top: 2px; }
+
+  /* Scene 4: the source letter, whole page, cited line marked */
+  #letter { left: 0; top: 0; width: 432px; height: 672px; background: #e9e7e1; color: #1d2030; overflow: hidden; }
+  #letter .bar { position: relative; z-index: 2; background: #ffffff; border-bottom: 1px solid #dcd8cc; color: #1d2030; }
+  #letter .back { width: 12px; height: 12px; border-left: 2.5px solid #1d2030; border-bottom: 2.5px solid #1d2030; transform: rotate(45deg); margin: 0 6px 0 4px; }
+  #letter .src { margin-left: auto; color: var(--indigo); font-size: 15px; }
+  #paper { margin: 16px 16px 0; background: #fff; border-radius: 6px; box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+    padding: 22px 22px 26px; font-family: "PlexSerif", serif; font-size: 15px; line-height: 1.55; }
+  #paper .head { display: flex; justify-content: space-between; font-family: "Plex"; font-size: 14px; color: #6b6f80; }
+  #paper h4 { font-family: "Plex"; font-size: 20px; font-weight: 600; margin: 14px 0 12px; }
+  #paper h5 { font-family: "Plex"; font-size: 15px; font-weight: 600; margin: 14px 0 3px; }
+  #paper p { margin-bottom: 8px; }
+  #paper ul { list-style: none; }
+  #paper li::before { content: "– "; }
+  #hl { font-weight: 500; padding: 1px 3px; margin: 0 -3px; border-radius: 3px;
+    background-image: linear-gradient(rgba(255, 222, 74, .95), rgba(255, 222, 74, .95)); background-repeat: no-repeat; background-size: 0% 100%; }
+  #tr { margin-top: 4px; font-family: "Plex"; font-size: 14px; color: #3a43b8; }
+
+  /* Scene 7: measured results */
+  #stats { left: 0; top: 0; width: 432px; height: 672px; background: var(--navy); padding: 18px 24px 0; }
+  #stats h3 { font-size: 15px; color: var(--muted); font-weight: 500; }
+  .metric { margin-top: 15px; }
+  .metric .top { display: flex; align-items: baseline; justify-content: space-between; }
+  .metric .name { font-size: 17px; font-weight: 500; }
+  .metric .val { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--teal); }
+  .metric .track { position: relative; margin-top: 7px; height: 12px; border-radius: 6px; background: var(--navy-3); }
+  .metric .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--teal); }
+  .metric .goal { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--white); opacity: .7; }
+  .metric .tgt { margin-top: 5px; font-size: 14px; color: var(--muted); }
+
+  #finger { width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, .22); border: 2px solid rgba(255, 255, 255, .85);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .35); margin: -22px 0 0 -22px; left: 0; top: 0; z-index: 6; }
+  #ripple { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--teal); margin: -22px 0 0 -22px; left: 0; top: 0; z-index: 6; }
+
+  #end { inset: 0; background: var(--navy); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; z-index: 7; }
+  #end .logo { width: 104px; height: 104px; }
+  #end h2 { margin-top: 22px; font-size: 36px; font-weight: 600; letter-spacing: -0.02em; }
+  #end p { margin-top: 18px; font-size: 19px; line-height: 1.5; color: var(--muted); text-align: center; }
+  #end p b { color: var(--white); font-weight: 500; }
+</style>
+</head>
+<body>
+<!-- The Second Eye logo (docs/media/logo.svg): a hand presents the letters SE on a platter -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
+    <symbol id="se-logo" viewBox="0 0 512 512">
+      <g clip-path="url(#tile)">
+        <rect width="512" height="512" rx="112" fill="#6381FD"/>
+        <g fill="#fff">
+          <rect x="40" y="313" width="56" height="99" rx="6"/>
+          <path d="M100 332C125 330 150 318 178 318C205 318 220 331 250 335C276 338 296 337 303 343C305 348 300 351 292 352C272 355 250 360 232 367C252 362 285 356 309 353C336 341 365 325 384 318C396 313 403 324 393 329C365 352 305 398 266 412C232 422 200 410 178 400C158 393 128 394 102 395Z"/>
+        </g>
+        <path fill="#fff" fill-rule="evenodd" d="M99 285a181 28 0 1 0 362 0a181 28 0 1 0-362 0ZM117 280a163 17 0 1 0 326 0a163 17 0 1 0-326 0Z"/>
+        <ellipse cx="280" cy="280" rx="148" ry="14" fill="#fff"/>
+        <g fill="#fff">
+          <path d="M253 145C245 130 230 128 210 128C185 128 172 140 172 156C172 174 190 180 210 186C236 194 250 203 250 222C250 240 232 247 210 247C188 247 172 240 165 226" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="285" y="114" width="38" height="143" rx="10"/>
+          <rect x="285" y="114" width="99" height="37" rx="14"/>
+          <rect x="285" y="170" width="89" height="33" rx="12"/>
+          <rect x="285" y="220" width="101" height="37" rx="14"/>
+        </g>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div id="caption" class="abs"></div>
+<div id="timer" class="abs"><i></i><span id="tval">0.0 s</span></div>
+
+<div id="app" class="abs">
+  <div id="start" class="abs">
+    <svg class="logo"><use href="#se-logo"/></svg>
+    <h1>Second Eye</h1>
+    <div id="field"><span class="ph" id="ph">Who are you and what do you need?</span><span id="typed"></span><span id="caret"></span></div>
+    <div id="go"><span id="golabel">Show answer</span><span class="dots"><b></b><b></b><b></b></span></div>
+  </div>
+
+  <div id="answer" class="abs">
+    <div class="bar"><svg class="logo sm"><use href="#se-logo"/></svg>Second Eye</div>
+    <div id="tabs" style="position:relative">
+      <span id="tabbg" class="abs"></span>
+      <div id="tabA" style="position:relative">Answer</div>
+      <div id="tabD" style="position:relative">Dashboard</div>
+    </div>
+    <div id="viewport" class="abs">
+      <div id="scroll">
+        <div id="card">
+          <div class="label">Answer</div>
+          <p id="sentence">Kidney function (creatinine, eGFR) is <span id="nd">not documented</span> in the 8 letters; she has type 2 diabetes and takes metformin <span class="nw">1000 mg 1-1-1</span>.</p>
+          <div class="chips"><div class="chip" id="chip1">[1]</div><div class="chip">[2]</div></div>
+        </div>
+        <div id="more"><span>Show more</span><span class="chev"></span></div>
+        <div id="details"><div class="inner">
+          <div class="row"><div class="k">Medications</div><div class="v">Metformin 1000 mg 1-1-1 <span class="tag teal">Verified</span></div></div>
+          <div class="row"><div class="k">Diagnoses</div><div class="v">Type 2 diabetes <span class="tag teal">Verified</span></div></div>
+          <div class="row"><div class="k">Allergies</div><div class="v">Contrast media allergy <span class="tag teal">Verified</span></div></div>
+          <div class="row"><div class="k">Kidney function (creatinine, eGFR)</div><div class="v"><span class="tag amber">Not documented</span></div></div>
+          <div class="row red"><div class="v"><span class="tag red">Letters disagree</span></div><div class="v">Carotid stenosis: left vs right</div></div>
+        </div></div>
+      </div>
+    </div>
+    <!-- Dashboard: every number is counted from the five rows above -->
+    <div id="dash" class="abs">
+      <div class="panel ringrow">
+        <svg id="ring" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#20264a" stroke-width="14"/>
+          <circle id="arc" cx="60" cy="60" r="50" fill="none" stroke="#2dd4bf" stroke-width="14" stroke-linecap="round"
+            transform="rotate(-90 60 60)" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+        </svg>
+        <div class="ringtxt"><div class="big" id="ringval">0%</div><h3>Facts linked to their source</h3><div class="sub" id="ringsub">4 of 4 documented facts</div></div>
+      </div>
+      <div class="panel">
+        <h3>Reliability of the 5 facts</h3>
+        <div class="stack"><i id="s1" style="background:var(--teal)"></i><i id="s2" style="background:var(--red)"></i><i id="s3" style="background:var(--amber)"></i></div>
+        <div class="legend"><span><b style="background:var(--teal)"></b>3 verified</span><span><b style="background:var(--red)"></b>1 letters disagree</span><span><b style="background:var(--amber)"></b>1 not documented</span></div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><div class="n" id="k1">0</div><div class="l">letters read</div></div>
+        <div class="tile"><div class="n" id="k2">0</div><div class="l">sources cited</div></div>
+        <div class="tile"><div class="n" id="k3">0.0 s</div><div class="l">to answer</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="letter" class="abs">
+    <div class="bar"><span class="back" id="back"></span>Entlassbrief<span class="src">Source [1]</span></div>
+    <div id="paper">
+      <div class="head"><span>Entlassbrief</span><span>Seite 1</span></div>
+      <h4>Entlassbrief</h4>
+      <p>Sehr geehrte Frau Kollegin, sehr geehrter Herr Kollege,</p>
+      <p>wir berichten über unsere gemeinsame Patientin, eine fiktive Testperson, nach ihrer stationären Behandlung.</p>
+      <h5>Diagnosen</h5>
+      <ul><li>Diabetes mellitus Typ 2</li><li>Karotisstenose links</li></ul>
+      <h5>Allergien</h5>
+      <ul><li>Kontrastmittelallergie</li></ul>
+      <h5>Medikation bei Entlassung</h5>
+      <ul><li><span id="hl">Glucophage 1000 mg 1-1-1</span></li></ul>
+      <div id="tr">English: metformin 1000 mg, morning, noon and evening</div>
+      <h5>Procedere</h5>
+      <p>Weiterbehandlung durch die Hausärztin bzw. den Hausarzt. Wir bitten um regelmäßige Kontrollen.</p>
+      <p>Mit freundlichen kollegialen Grüßen</p>
+    </div>
+  </div>
+
+  <!-- Results: docs/SUBMISSION.md section 1, measured on the 5 official situations -->
+  <div id="stats" class="abs">
+    <div class="bar" style="padding:0"><svg class="logo sm"><use href="#se-logo"/></svg>Results</div>
+    <h3>5 official test situations, 15 questions</h3>
+    <div class="metric" data-v="15" data-max="15" data-fmt="n/15"><div class="top"><span class="name">Correct answers</span><span class="val">0/15</span></div><div class="track"><i class="fill"></i></div><div class="tgt">Target 15/15</div></div>
+    <div class="metric" data-v="100" data-max="100" data-fmt="n%"><div class="top"><span class="name">Facts linked to their source</span><span class="val">0%</span></div><div class="track"><i class="fill"></i></div><div class="tgt">Target 100%</div></div>
+    <div class="metric" data-v="0" data-max="1" data-fmt="n"><div class="top"><span class="name">Invented facts</span><span class="val">0</span></div><div class="track"><i class="fill"></i></div><div class="tgt">Target 0</div></div>
+    <div class="metric" data-v="5" data-max="7" data-goal="5" data-fmt="n"><div class="top"><span class="name">Contradictions found</span><span class="val">0</span></div><div class="track"><i class="fill"></i><i class="goal"></i></div><div class="tgt">Target 5 or more · 0 false alarms</div></div>
+    <div class="metric" data-v="144" data-max="10000" data-goal="10000" data-fmt="n ms"><div class="top"><span class="name">Slowest screen</span><span class="val">0 ms</span></div><div class="track"><i class="fill" style="min-width:6px"></i></div><div class="tgt">Target under 10 s</div></div>
+  </div>
+</div>
+
+<div id="ripple" class="abs"></div>
+<div id="finger" class="abs"></div>
+
+<div id="end" class="abs">
+  <svg class="logo"><use href="#se-logo"/></svg>
+  <h2>Second Eye</h2>
+  <p><b>Other tools summarise the record.</b><br>Second Eye checks it.</p>
+</div>
+
+<script>
+const DURATION = 30;
+const QUERY = "Emergency doctor, I'm about to give IV gentamicin.";
+const CAPTIONS = [
+  [0.3, 3, "One question. Any wording."],
+  [3, 7.5, "Reads all 8 letters."],
+  [7.5, 11.6, "One sentence. Only what matters."],
+  [11.6, 16.6, "Every fact proven in the source."],
+  [16.6, 20.6, "Details and contradictions, one tap away."],
+  [20.6, 24.4, "Statistics and charts at a glance."],
+  [24.4, 27.9, "Measured on the 5 test situations."],
+];
+// Taps (also the click sounds in audio.py): time, target element id
+const TAPS = [[3.3, "field"], [5.3, "go"], [12.0, "chip1"], [16.75, "back"], [17.5, "more"], [20.95, "tabD"]];
+// Finger visibility windows: [in, out]
+const FINGER = [[2.8, 5.7], [11.5, 12.4], [16.25, 17.9], [20.4, 21.35]];
+const T_GO = 5.3, T_STOP = T_GO + 2.1;
+
+const $ = (id) => document.getElementById(id);
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const ease = (x) => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const prog = (t, a, b) => ease((t - a) / (b - a));         // 0 before a, eased 0..1 over [a, b], 1 after b
+const lerp = (a, b, k) => a + (b - a) * k;
+const center = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+const show = (el, k) => { el.style.opacity = k; el.style.visibility = k > 0 ? "visible" : "hidden"; };
+
+function render(t) {
+  // Caption: fade in/out, one line
+  const cap = CAPTIONS.find(([a, b]) => t >= a && t < b);
+  const capEl = $("caption");
+  if (cap) {
+    if (capEl.textContent !== cap[2]) {
+      capEl.textContent = cap[2];
+      capEl.style.fontSize = "23px";
+      for (let fs = 23; fs > 16 && capEl.scrollWidth > capEl.clientWidth - 16; fs--) capEl.style.fontSize = fs + "px";
+    }
+    const k = Math.min(prog(t, cap[0], cap[0] + .3), 1 - prog(t, cap[1] - .25, cap[1]));
+    capEl.style.opacity = k; capEl.style.transform = `translateY(${(1 - k) * 8}px)`;
+  } else capEl.style.opacity = 0;
+
+  // Scenes 1-2: start screen, typing, loading
+  const n = Math.round(lerp(0, QUERY.length, clamp((t - 3.6) / 1.4)));
+  $("typed").textContent = QUERY.slice(0, n);
+  $("ph").style.display = n > 0 ? "none" : "inline";
+  const focused = t >= 3.3 && t < T_GO;
+  $("caret").style.opacity = focused && (n < QUERY.length || Math.floor(t * 2.2) % 2 === 0) ? 1 : 0;
+  $("field").style.borderColor = t >= 3.3 && t < 7.5 ? "var(--indigo)" : "var(--line)";
+  const loading = t >= T_GO && t < 7.55;
+  $("golabel").style.display = loading ? "none" : "inline";
+  document.querySelector("#go .dots").style.display = loading ? "flex" : "none";
+  document.querySelectorAll("#go .dots b").forEach((b, i) => { b.style.opacity = .35 + .65 * (0.5 + 0.5 * Math.sin((t - T_GO) * 7 - i * 0.9)); });
+  $("go").style.transform = `scale(${1 - .03 * (prog(t, T_GO - .05, T_GO + .05) - prog(t, T_GO + .1, T_GO + .3))})`;
+  const out = prog(t, 7.5, 7.85);
+  show($("start"), 1 - out);
+  $("start").style.transform = `translateY(${-40 * out}px)`;
+
+  // Timer: counts in real time from the tap and stops at 2.1 s
+  $("tval").textContent = (clamp((t - T_GO) / 2.1) * 2.1).toFixed(1) + " s";
+  $("timer").style.opacity = Math.min(prog(t, T_GO, T_GO + .3), 1 - prog(t, 11.2, 11.5));
+  $("timer").style.transform = `scale(${1 + .08 * (prog(t, T_STOP, T_STOP + .12) - prog(t, T_STOP + .12, T_STOP + .35))})`;
+
+  // Scene 3: answer slides up; "not documented" pulses amber once
+  const up = prog(t, 7.6, 8.0);
+  const ans = $("answer");
+  show(ans, up);
+  ans.style.transform = `translateY(${(1 - up) * 60}px)`;
+  const pulse = Math.sin(Math.PI * clamp((t - 8.6) / 1.1));
+  const nd = $("nd");
+  nd.style.background = `rgba(245, 181, 68, ${0.28 * pulse})`;
+  nd.style.color = pulse > 0.02 ? `rgb(255, ${Math.round(255 - 55 * pulse)}, ${Math.round(255 - 160 * pulse)})` : "#fff";
+
+  // Scene 5: "Show more" expands the details; the list scrolls so the contradiction is in view
+  const exp = prog(t, 17.6, 18.0);
+  const details = $("details");
+  const full = details.firstElementChild.offsetHeight;
+  details.style.height = full * exp + "px";
+  details.style.opacity = exp;
+  document.querySelector("#more .chev").style.transform = `rotate(${45 + 180 * exp}deg)`;
+  const vp = $("viewport"), sc = $("scroll");
+  const shift = Math.max(0, sc.offsetHeight - details.offsetHeight + full - vp.offsetHeight);
+  sc.style.transform = `translateY(${-shift * prog(t, 18.1, 18.8)}px)`;
+
+  // Scene 6: Dashboard tab, ring, stacked bar and tiles count up
+  const tab = prog(t, 21.0, 21.3);
+  const a = $("tabA"), d = $("tabD"), bg = $("tabbg");
+  bg.style.left = lerp(a.offsetLeft, d.offsetLeft, tab) + "px";
+  bg.style.width = a.offsetWidth + "px";
+  a.style.color = tab < .5 ? "#fff" : "var(--muted)";
+  d.style.color = tab >= .5 ? "#fff" : "var(--muted)";
+  show(vp, 1 - tab);
+  show($("dash"), prog(t, 21.15, 21.5));
+  $("dash").style.transform = `translateY(${(1 - prog(t, 21.15, 21.5)) * 16}px)`;
+  const r = prog(t, 21.4, 22.6);
+  $("arc").setAttribute("stroke-dashoffset", (314.16 * (1 - r)).toFixed(2));
+  $("ringval").textContent = Math.round(100 * r) + "%";
+  const sb = prog(t, 21.7, 22.7);
+  $("s1").style.width = 60 * sb + "%"; $("s2").style.width = 20 * sb + "%"; $("s3").style.width = 20 * sb + "%";
+  const kt = prog(t, 22.0, 23.0);
+  $("k1").textContent = Math.round(8 * kt); $("k2").textContent = Math.round(2 * kt); $("k3").textContent = (2.1 * kt).toFixed(1) + " s";
+
+  // Scene 4: letter slides in from the right, page scrolls, marker sweeps the cited line
+  const lin = prog(t, 12.2, 12.55), lout = prog(t, 16.8, 17.15);
+  $("letter").style.transform = `translateX(${(1 - lin + lout) * 100}%)`;
+  $("letter").style.visibility = lin > 0 && lout < 1 ? "visible" : "hidden";
+  const hl = $("hl");
+  const hlTop = hl.offsetTop;
+  const paper = $("paper");
+  const maxScroll = Math.max(0, paper.offsetTop + paper.offsetHeight + 16 - 672);
+  const target = Math.min(maxScroll, Math.max(0, hlTop - 330));
+  paper.style.transform = `translateY(${-target * prog(t, 13.0, 13.9)}px)`;
+  hl.style.backgroundSize = `${100 * prog(t, 14.1, 14.9)}% 100%`;
+  $("tr").style.opacity = prog(t, 14.9, 15.3);
+
+  // Scene 7: measured results, bars grow and numbers count up
+  const st = prog(t, 24.4, 24.8);
+  show($("stats"), st);
+  $("stats").style.transform = `translateY(${(1 - st) * 30}px)`;
+  document.querySelectorAll(".metric").forEach((m, i) => {
+    const k = prog(t, 24.8 + i * 0.25, 25.9 + i * 0.25);
+    const v = +m.dataset.v, max = +m.dataset.max;
+    m.style.opacity = prog(t, 24.6 + i * 0.25, 24.9 + i * 0.25);
+    m.querySelector(".val").textContent = m.dataset.fmt.replace("n", Math.round(v * k));
+    m.querySelector(".fill").style.width = (100 * v / max) * k + "%";
+    m.querySelector(".fill").style.display = v === 0 ? "none" : "block";
+    const g = m.querySelector(".goal");
+    if (g) g.style.left = `calc(${100 * m.dataset.goal / max}% - 1px)`;
+  });
+
+  // Finger: glides between tap targets, presses on each tap
+  let fx = 216, fy = 600, vis = 0;
+  for (const [a0, b0] of FINGER) vis = Math.max(vis, Math.min(prog(t, a0, a0 + .3), 1 - prog(t, b0 - .3, b0)));
+  const next = TAPS.find(([tt]) => tt + .25 >= t), prev = [...TAPS].reverse().find(([tt]) => tt + .25 < t);
+  if (next) {
+    const [nx, ny] = center($(next[1]));
+    const [px, py] = prev ? center($(prev[1])) : [nx + 60, ny + 140];
+    const k = prog(t, next[0] - .6, next[0] - .1);
+    fx = lerp(px, nx, k); fy = lerp(py, ny, k);
+  } else if (prev) [fx, fy] = center($(prev[1]));
+  const press = TAPS.reduce((m, [tt]) => Math.max(m, Math.sin(Math.PI * clamp((t - tt + .08) / .22))), 0);
+  const f = $("finger");
+  f.style.opacity = vis; f.style.transform = `translate(${fx}px, ${fy}px) scale(${1 - .18 * press})`;
+  const rip = TAPS.map(([tt]) => (t - tt) / .45).find((x) => x >= 0 && x <= 1);
+  const rp = $("ripple");
+  rp.style.opacity = rip === undefined ? 0 : (1 - rip) * vis;
+  rp.style.transform = `translate(${fx}px, ${fy}px) scale(${1 + 1.1 * (rip ?? 0)})`;
+
+  // Scene 8: end card, held for the last second
+  const e = prog(t, 27.9, 28.3);
+  show($("end"), e);
+  document.querySelector("#end .logo").style.transform = `translateY(${(1 - prog(t, 28.0, 28.4)) * 14}px)`;
+  document.querySelector("#end p").style.opacity = prog(t, 28.3, 28.7);
+}
+
+window.render = render;
+window.DURATION = DURATION;
+window.TAPS = TAPS;
+render(0);
+if (location.search.includes("play")) {
+  const t0 = performance.now();
+  const loop = () => { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); };
+  document.fonts.ready.then(loop);
+}
+</script>
+</body>
+</html>
