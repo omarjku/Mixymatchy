@@ -644,7 +644,19 @@
     "exames",
     "avaliacao",
     "revisao",
-    "med"
+    "med",
+    "антикоагулянт",
+    "антикоагулянты",
+    "антиагрегант",
+    "антиагреганты",
+    "антикоагулянти",
+    "抗凝",
+    "抗凝药",
+    "抗血小板",
+    "抗凝薬",
+    "przeciwzakrzepowe",
+    "antykoagulant",
+    "antykoagulanty"
   ],
   "never": [
     "hi",

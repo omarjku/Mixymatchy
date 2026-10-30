@@ -319,8 +319,12 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     if not intent["actionable"]:  # a question about a known subject is a task ('does she hav a pacemakr?', engine/ask.py)
         from . import ask as Q
         known = [s for s in Q.subjects(u.get("task_text")) if Q.slot_for(s, k) or Q.search_words(s)[1]]
-        if Q.is_question(u.get("task_text") or "") and known:
-            intent = dict(intent, actionable=True, reason="question about a known subject", words=known)
+        # a clinical requester's question about a medical subject ('does she have sarcoidosis?') is answered, if
+        # only with 'Nothing found'; greetings, filler, keyboard mash and small talk are not ('GP: asdfgh?')
+        asked = Q.clinical_subject(st, u.get("task_text"), I.lexicon()["never"])
+        if Q.is_question(u.get("task_text") or "") and (known or asked):
+            intent = dict(intent, actionable=True, words=known or [asked],
+                          reason="question about a known subject" if known else "question from a clinical requester")
     u["task_check"] = {"actionable": intent["actionable"], "reason": intent["reason"], "words": intent["words"][:8]}
     if not intent["actionable"] and not llm_ok:  # with the LLM's clinical_task verdict, its reading of the task holds
         return needs_task_screen(u, intent["reason"], detail, t0)

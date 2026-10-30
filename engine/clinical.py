@@ -271,6 +271,10 @@ def classify(text, kb_alias=None, task_evidence=False, kb_role=False):
         if not any(x in lex["title_exceptions"] for x in inside):
             non.append((s, e, term, "not_clinical"))
             clin = [h for h in clin if not (h[0] <= s and e <= h[1])]
+    # a possessor of a clinical role is not the speaker: 'the husband's cardiologist', "wife's GP calling" is
+    # that clinician (the mirror of 'doctor's wife' below)
+    starts = {cs for cs, _ce, _t, _k in clin}
+    non = [h for h in non if not ((m := re.match(r"(?:'s|s'|’s)\s+", t[h[1]:])) and h[1] + m.end() in starts)]
     # typos of non-clinical words in the leading phrase ('Cleanr') are checked before any fuzzy clinical match
     lead0 = re.search(r"[,;:.!?()]|\s[-–]\s", t)
     lead0 = lead0.start() if lead0 else len(t)
