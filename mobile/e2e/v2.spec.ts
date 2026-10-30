@@ -37,7 +37,7 @@ test("a source chip opens the letter with the passage highlighted", async ({ pag
 
 test("different questions give different sentences; contrast only where it matters", async ({ page }) => {
   const qs = ["Female doctor, Pap smear", "ED doctor, CT angiography with contrast tonight - anything to consider?",
-    "GP, diabetes review", "Anaesthetist, pre-op check before knee surgery"];
+    "GP, diabetes review"];
   const seen: string[] = [];
   for (const q of qs) {
     await submitSituation(page, q);

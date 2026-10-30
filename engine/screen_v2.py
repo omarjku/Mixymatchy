@@ -6,8 +6,11 @@
                 clinical-requester gate); a sex/age mismatch is a one-line note beside the relevant facts.
   3 RETRIEVE    engine/screen.build_screen_kb(v2=...) fills AI slots + rules P1 + safety core (kbfill.build_card)
                 for the details ('Show more'); engine/evidence.py turns what THIS question needs into chunks
-  4 ANSWER      engine/cited.py: 1-2 sentences written with the Citations API over the chunks
-  5 VERIFY      binding check + independent claim judge; one regeneration; else the compact template answer
+  4 ANSWER      engine/cited.py: one structured Haiku call writes a 1-2 sentence TEMPLATE whose values are fact
+                placeholders; code substitutes every value from the facts
+  5 VERIFY      code: placeholders resolve, fields stay with their fact, connector words allowlisted, required
+                facts placed, <= 2 sentences; else the compact template.  Hard deadline 5 s from the request start
+                (understand <= 2 s, writer <= 2.5 s); no second model call
 The screen keeps every field of the old screen (key facts, cards, history behind 'Show more') and adds `answer`.
 """
 from __future__ import annotations
@@ -77,9 +80,8 @@ def build_screen_v2(text, as_of=None, use_llm=True, detail="short"):
         u["task_labels"] = [reading["task_label"]]
     if screen.get("screen_mode") in ("not_authorised", "needs_task"):  # (other patient handled above)
         return screen
-    t_ans = time.perf_counter()
     chunks, ranked, note = E.build(st, k, screen, req.get("task") or text, opts["slots"])
-    ans, stats = W.answer(st, k, req.get("task") or text, chunks, ranked, use_llm=use_llm, t0=t_ans)
+    ans, stats = W.answer(st, k, req.get("task") or text, chunks, ranked, use_llm=use_llm, t0=t0)  # 5 s from start
     by_id = {c["id"]: c for c in chunks}
     kind = "answer"
     na = next((c for c in chunks if c["kind"] == "not_applicable"), None)
@@ -88,9 +90,15 @@ def build_screen_v2(text, as_of=None, use_llm=True, detail="short"):
                "verified": True}
         kind = "not_applicable"
     elif not ans["blocks"]:
-        ans = {"blocks": [{"text": NOTHING_TEXT, "chunks": []}], "text": NOTHING_TEXT, "origin": "template",
-               "verified": True}
-        kind = "nothing"
+        topic = (reading or {}).get("task_label") or ""
+        if topic:  # the AI named the topic and no fact answers it: say so, nothing else
+            txt = "Not documented in the letters: %s." % topic[:80]
+            ans = {"blocks": [{"text": txt, "chunks": []}], "text": txt, "origin": "template", "verified": True}
+            kind = "nothing"
+        else:
+            ans = {"blocks": [{"text": NOTHING_TEXT, "chunks": []}], "text": NOTHING_TEXT, "origin": "template",
+                   "verified": True}
+            kind = "nothing"
     srcs = W.sources(ans["blocks"], by_id)
     num = {s["chunk"]: i + 1 for i, s in enumerate(srcs)}
     screen["answer"] = {

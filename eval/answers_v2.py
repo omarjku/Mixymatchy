@@ -1,8 +1,8 @@
 """v2 answer measurement (docs/DECISIONS.md 23): are the expected answers inside the 1-2 sentence answer?
 
-    python3 -m eval.answers_v2           # no key: a fake writer returns the compact template (cited), the fake
-                                         # judge says yes -> measures the template answer + the binding check
-    python3 -m eval.answers_v2 --llm     # live: understand + Citations writer + binding check + claim judge
+    python3 -m eval.answers_v2           # no key: a fake writer places the required facts by reference
+                                         # (placeholders) -> measures substitution + checks + coverage
+    python3 -m eval.answers_v2 --llm     # live: understand + placeholder writer + code checks
 
 Official: every item of every question must be in the answer sentence(s) (token groups and normalisation of
 eval/core.py, as eval/answers.py) and the answer's sources must include an expected document; 'forbid' patterns
@@ -35,13 +35,10 @@ def _docs(seg_ids):
     return {s.split(":")[0] for s in seg_ids or []}
 
 
-def _fake_writer(question, chunks, feedback, compact):
-    return compact
-
-
-def _fake_judge(used, chunks):
-    claims = [{"claim": u["sentence"], "evidence_ids": u["cited"], "entailed": True} for u in used]
-    return True, claims, None
+def _fake_writer(question, chunks, required, compact):
+    """A model that places every required fact (else the first few) by reference, in order, in one sentence."""
+    ids = list(required) or [c["id"] for c in chunks if c["kind"] in ("fact", "computed", "status")][:3]
+    return {"sentence": "; ".join("{%s}" % i for i in ids) + ".", "facts": ids}
 
 
 def _forbidden(key, text):
@@ -64,19 +61,18 @@ def _forbidden(key, text):
 
 
 def official(use_llm=False, out=print, fake=True):
-    """fake: without the LLM, install the fake writer (compact template, cited) and the fake judge (eval only)."""
+    """fake: without the LLM, install the fake placeholder writer (eval only)."""
     saved = os.environ.get("SECOND_LOOK_ROUTER")
     os.environ["SECOND_LOOK_ROUTER"] = "v2"
     from engine import cited
     if not use_llm and fake:
         cited.set_writer(_fake_writer)
-        cited.set_judge(_fake_judge)
     keys = core.load_json(str(ROOT / "eval" / "answer_keys.json"))
     expected = json.loads((ROOT / "cases" / "expected.json").read_text(encoding="utf-8"))
-    res = {"ok": 0, "tot": 0, "chars": [], "ms": [], "origins": [], "judge_rejects": 0, "binding_rejects": 0,
+    res = {"ok": 0, "tot": 0, "chars": [], "ms": [], "origins": [], "rejects": 0,
            "fallback": 0}
-    out("official situations, v2 answer (%s):" % ("live writer + judge" if use_llm else
-                                                 "fake writer = compact template, fake judge = yes"))
+    out("official situations, v2 answer (%s):" % ("live understand + placeholder writer" if use_llm else
+                                                 "fake writer places the required facts by reference"))
     try:
         for n, text in official_situations():
             t = time.perf_counter()
@@ -86,8 +82,7 @@ def official(use_llm=False, out=print, fake=True):
             txt = a.text if a else ""
             segs = [s for x in (a.sources if a else []) for s in x.segment_ids]
             st = (b.routing or {}).get("answer_v2") or {}
-            for r in st.get("rejected") or []:
-                res["judge_rejects" if r["layer"] == "judge" else "binding_rejects"] += 1
+            res["rejects"] += len(st.get("rejected") or [])
             res["fallback"] += bool(a and a.origin == "template")
             res["origins"].append(a.origin if a else "-")
             res["chars"].append(len(txt))
@@ -114,7 +109,6 @@ def official(use_llm=False, out=print, fake=True):
                                                    for r in st["rejected"]))
     finally:
         cited.set_writer(None)
-        cited.set_judge(None)
         if saved is None:
             os.environ.pop("SECOND_LOOK_ROUTER", None)
         else:
@@ -124,15 +118,15 @@ def official(use_llm=False, out=print, fake=True):
     res["avg_chars"] = sum(res["chars"]) / max(len(res["chars"]), 1)
     exp_avg = sum(len(e["answer"]) for e in expected) / 5.0
     out("  answers in the sentence(s): %d/%d; chars per case %s, avg %.0f (expected answers avg %.0f); origins %s; "
-        "binding rejects %d, judge rejects %d, template fallback %d; p95 %.0f ms"
-        % (res["ok"], res["tot"], res["chars"], res["avg_chars"], exp_avg, res["origins"], res["binding_rejects"],
-           res["judge_rejects"], res["fallback"], res["p95_ms"]))
+        "check rejects %d, template fallback %d; p95 %.0f ms"
+        % (res["ok"], res["tot"], res["chars"], res["avg_chars"], exp_avg, res["origins"], res["rejects"],
+           res["fallback"], res["p95_ms"]))
     return res
 
 
 def selftest_line(res, mode="llm"):
-    return ("v2 answers (%s): official in-sentence %d/%d, avg chars %.0f, judge rejects %d, fallback %d, "
-            "p95 %.0f ms" % (mode, res["ok"], res["tot"], res["avg_chars"], res["judge_rejects"], res["fallback"],
+    return ("v2 answers (%s): official in-sentence %d/%d, avg chars %.0f, rejects %d, fallback %d, "
+            "p95 %.0f ms" % (mode, res["ok"], res["tot"], res["avg_chars"], res["rejects"], res["fallback"],
                              res["p95_ms"]))
 
 
