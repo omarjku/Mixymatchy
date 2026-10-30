@@ -274,7 +274,9 @@ def route(text, kb, store, as_of, detail="long", use_llm=True):
     chosen = choose_bundles(matched, role)
     how = "kb_alias_tags"
     llm_note = None
-    if use_llm:
+    # Ask the LLM only when the rules miss the role or the task: no extra latency or quota otherwise,
+    # and a tag/alias match always wins anyway.
+    if use_llm and (not chosen or not role):
         prop = llm.understand(
             text, [r["id"] for r in kb.roles], [b["id"] for b in kb.bundles],
             role_info={r["id"]: "%s (%s)" % (r["name"], ", ".join(r.get("aliases_en", [])[:4])) for r in kb.roles},

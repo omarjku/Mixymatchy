@@ -11,6 +11,7 @@ Enabled only when SECOND_LOOK_LLM=1 and the chosen provider is configured:
       LLM_BASE_URL   e.g. https://api.groq.com/openai/v1  or  https://api.x.ai/v1
       LLM_API_KEY    the provider's key
       SECOND_LOOK_LLM_MODEL   the model name on that provider
+      LLM_REASONING_EFFORT    optional, for reasoning models that accept it (e.g. "low" for gpt-oss on Groq)
   SECOND_LOOK_LLM_PROVIDER=anthropic (default, for backwards compatibility)
       ANTHROPIC_API_KEY, `anthropic` package, SECOND_LOOK_LLM_MODEL (default claude-haiku-4-5)
 
@@ -19,6 +20,7 @@ and an in-process cache keyed by provider, model and text.
 """
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 
@@ -37,6 +39,7 @@ def base_url():
 
 _cache = {}
 last_error = None  # last failure reason, for logs and the parser evaluation
+calls = 0          # API calls made (cache hits excluded)
 
 
 def available():
@@ -81,10 +84,14 @@ def _parse(raw):
 
 
 def _openai_chat(prompt, timeout):
-    body = {"model": model(), "temperature": 0, "max_tokens": 300,
+    # 1024 tokens: reasoning models spend part of the budget before the JSON answer
+    body = {"model": model(), "temperature": 0, "max_tokens": 1024,
             "messages": [{"role": "user", "content": prompt}],
             "response_format": {"type": "json_object"}}
-    for attempt in (0, 1):
+    if os.environ.get("LLM_REASONING_EFFORT"):
+        body["reasoning_effort"] = os.environ["LLM_REASONING_EFFORT"]
+    rate_limited = False
+    for attempt in (0, 1, 2):
         req = urllib.request.Request(
             base_url() + "/chat/completions", data=json.dumps(body).encode(),
             headers={"Content-Type": "application/json", "Authorization": "Bearer " + os.environ["LLM_API_KEY"],
@@ -95,10 +102,16 @@ def _openai_chat(prompt, timeout):
             return data["choices"][0]["message"]["content"] or ""
         except urllib.error.HTTPError as e:
             # Some providers or models do not support JSON mode: retry once without it.
-            if e.code == 400 and attempt == 0 and "response_format" in body:
+            if e.code == 400 and "response_format" in body:
                 body.pop("response_format")
                 continue
+            # Rate limit: wait once (at most 1.5 s, the caller's timeout still applies), then give up.
+            if e.code == 429 and not rate_limited:
+                rate_limited = True
+                time.sleep(min(float(e.headers.get("retry-after") or 1), 1.5))
+                continue
             raise
+    raise RuntimeError("no reply after retries")
 
 
 def _anthropic_chat(prompt, timeout):
@@ -123,6 +136,8 @@ def understand(text, role_ids, task_ids, timeout=4.0, role_info=None, task_info=
         return _cache[key]
     try:
         prompt = build_prompt(text, role_ids, task_ids, role_info, task_info)
+        global calls
+        calls += 1
         raw = _openai_chat(prompt, timeout) if provider() == "openai" else _anthropic_chat(prompt, timeout)
         out = _parse(raw)
         last_error = None if out else "no JSON object in the reply"

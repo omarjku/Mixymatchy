@@ -102,6 +102,7 @@ class LlmParserTest(unittest.TestCase):
         u = self.route("Anaesthetist, pre-operative check before surgery")
         self.assertIn("B01", u["bundles_chosen"])
         self.assertNotIn("B10", u["bundles_chosen"])
+        self.assertEqual(FakeChat.seen, [], "no API call when the rules already match role and task")
 
     def test_cache_avoids_second_call(self):
         self.route("Dietitian reviewing her weight.")

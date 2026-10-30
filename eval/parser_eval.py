@@ -49,13 +49,17 @@ def unseen_cases():
     return [("unseen", r["situation"], None) for r in rows]
 
 
-def run(cases, kb, st, use_llm):
+def run(cases, kb, st, use_llm, pace=0.0):
     rows = []
     for kind, text, expected in cases:
         llm._cache.clear()
+        llm.last_error = None
+        calls_before = llm.calls
         t0 = time.perf_counter()
         u = route(text, kb, st, st.anchor_date(), detail="short", use_llm=use_llm)
         ms = (time.perf_counter() - t0) * 1000
+        if use_llm and pace and llm.calls > calls_before:
+            time.sleep(pace)  # pause only after real API calls; excluded from the timing above
         got = set(u["bundle_ids"])
         ok = None if not expected else expected <= got
         rows.append({"kind": kind, "text": text, "expected": sorted(expected or []), "got": sorted(got),
@@ -80,6 +84,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--llm", action="store_true", help="rules + LLM (needs SECOND_LOOK_LLM=1 and provider settings)")
     ap.add_argument("--show", action="store_true", help="print every situation")
+    ap.add_argument("--pace", type=float, default=2.0, help="seconds between LLM calls (free tiers limit requests/min)")
     a = ap.parse_args()
     if a.llm and not llm.available():
         raise SystemExit("LLM not configured: set SECOND_LOOK_LLM=1 and the provider variables (see engine/llm.py)")
@@ -88,7 +93,7 @@ def main():
     cases = demo_cases(kb_json) + holdout_cases(kb_json) + unseen_cases()
     modes = [("rules only", False)] + ([("rules + LLM (%s, %s)" % (llm.provider(), llm.model()), True)] if a.llm else [])
     for name, use_llm in modes:
-        rows = run(cases, kb, st, use_llm)
+        rows = run(cases, kb, st, use_llm, a.pace)
         lines, med, worst = summary(rows)
         print("\n### %s\n\n| set | expected bundles routed | general fallback | tasks from LLM |\n|---|---|---|---|"
               % name)
