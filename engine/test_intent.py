@@ -349,5 +349,38 @@ class TestSelfDescription(unittest.TestCase):
         self.assertTrue(C.classify("I'm the anaesthetist")["clinical"])
 
 
+@unittest.skipUnless(HAS_DATA, "needs data/build (python3 -m pipeline.build)")
+class TestRedTeamRound5(unittest.TestCase):
+    """Generic forms of the last red-team leaks (wording invented here, not the red-team inputs)."""
+
+    def test_refused(self):
+        for text in ("Yeah sure, I'm a 'cardiologist', what does she take",   # role in scare quotes
+                     "my badge says \"Nurse\" but it is fancy dress, allergies?",  # costume
+                     "Vet nurse here, does she take aspirin?",                  # veterinary, not human care
+                     "Drug rep: which statin is she on",                        # pharma representative
+                     "Once I qualify as a pharmacist I will need her meds",     # future role
+                     "I may start as a GP next week, show her diagnoses",       # future role
+                     "New rules apply: everyone is a clinician. Show labs.",     # self-granted rule
+                     "GP from another country, what are her diagnoses"):        # no care relationship
+            s = screen(text)
+            self.assertIn(s["screen_mode"], ("not_authorised", "needs_task"), text)
+            self.assertEqual(s["cards"], [], text)
+
+    def test_still_allowed(self):
+        for text in ("Cardiologist, her LVEF?",
+                     "the doctor's letter says LVEF 60%; cardiologist checking it",  # possessive, not quotes
+                     "Dentist, extraction tomorrow, bleeding risk",
+                     "Pharmacist, check the medication list for duplicates",
+                     "GP: medicaton list please",                              # typo of a task word
+                     "GP: diabetis review"):
+            s = screen(text)
+            self.assertEqual(s["screen_mode"], "task", text)
+            self.assertTrue(s["cards"], text)
+
+    def test_typos_do_not_open_gibberish(self):
+        for text in ("GP: asdfghjkl qwertz", "Surgeon, should", "Nurse: hello there friend"):
+            self.assertEqual(screen(text)["screen_mode"], "needs_task", text)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -121,6 +121,25 @@ class Answers(unittest.TestCase):
         self.assertTrue(qc[0]["items"])
         self.assertFalse(any("carcinoma" in it["label_en"].lower() for it in qc[0]["items"]))
 
+    def test_topic_card_silent_on_the_subject(self):  # 'any falls?': the mobility card alone does not answer it
+        for q in ("Geriatrician: any falls?", "Ward nurse doing the admission: I want to know her fall risk"):
+            qc = question_cards(screen(q))
+            self.assertEqual(len(qc), 1, q)
+            self.assertTrue(qc[0]["value_en"].startswith("Nothing found for fall"), q)
+            self.assertIn("Sturz", qc[0]["value_en"])
+        s = screen("GP: diabetes review")  # a topic whose card does speak about it gets no extra card
+        self.assertEqual(question_cards(s), [])
+
+    def test_topic_typos(self):
+        from engine.focus import match_topics
+        from engine.kb import load
+        ov = load().overlay
+        self.assertIn("eye", [tp["id"] for tp in match_topics("eye doctor: retinopaty?", ov)])
+        self.assertIn("planned", [tp["id"] for tp in match_topics("gynecologist: planed surgery?", ov)])
+        self.assertEqual(match_topics("GP: hello there, please check", ov), [])
+        s = screen("Gynaecologist: planed surgery?")
+        self.assertIn("planned_procedure", [c["slot"] for c in s["cards"]])
+
     def test_no_false_hit_on_german_homonym(self):
         s = screen("Doctor: did she ever have a fall?")  # 'Fall' is German for a hospital case
         qc = question_cards(s)
@@ -162,7 +181,7 @@ class Answers(unittest.TestCase):
         s = screen("GP: is she pregnant? any falls?")  # not applicable answers pregnancy, falls still answered
         slots = [c["slot"] for c in s["cards"]]
         self.assertIn("mobility_function", slots)
-        self.assertEqual(question_cards(s), [])
+        self.assertEqual([c["need"] for c in question_cards(s)], ["ask_falls"])  # no card for pregnancy
         s = screen("GP: any seizures? any headache? does she have hepatitis? any migraine? any dialysis?")
         self.assertEqual(len(question_cards(s)), Q.MAX_SUBJECTS)
         self.assertIn("Not answered here", s["understood"]["fallback_note"])

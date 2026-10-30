@@ -383,9 +383,10 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short", v2=None):
     defaults = [b for b in cand if b in k.bundle_by_id]
     # the request names its own topics ('Endocrinologist, thyroid'): the core summary plus those topics, not the
     # role's typical task (which may be about something else, e.g. diabetes)
-    # ... unless every named topic is part of the role's own task ('oncologist: receptor status' stays oncology)
+    # ... unless a named topic is part of the role's own task ('oncologist: receptor status and sentinel node' stays
+    # oncology; the other named topics still add their own cards)
     own = {x for b in defaults for p_ in ("P1", "P2") for x in (k.bundle_by_id[b].get("slots") or {}).get(p_) or []}
-    in_own = all(tp.get("slots") and set(tp["slots"]) <= own for tp in named_pre)
+    in_own = any(tp.get("slots") and set(tp["slots"]) <= own for tp in named_pre)
     if named_pre and defaults and k.fallback_bundle in k.bundle_by_id and not in_own:
         defaults = [k.fallback_bundle]
     if (u["tasks_from"] == "fallback" and defaults and not app["items"]
@@ -477,15 +478,23 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short", v2=None):
     asked =mode in ("task", "fallback", "not_applicable") and Q.is_question(u.get("task_text") or "")
     tags = [t for v in (u.get("bundles_matched") or {}).values() for t in v.get("tags") or []]
     ex_text = fold(norm_text(req["excluded_text"] or ""))
-    ask_subs = [s for s in Q.subjects(u.get("task_text")) if not Q.covered(s, k, (), tags)
-                and not (ex_text and fold(s) in ex_text)  # 'not interested in X' wins
+    all_subs = [s for s in Q.subjects(u.get("task_text"))
+                if not (ex_text and fold(s) in ex_text)  # 'not interested in X' wins
                 and not any(r.get("term") and fold(norm_text(r["term"]))[:6] in fold(s)  # applicability answers it
                             for r in app["items"])] if asked else []
+    ask_subs = [s for s in all_subs if not Q.covered(s, k, (), tags)]
+    # a subject a named topic covers, with its own lexicon entry ('any falls?' -> mobility topic): if the topic's
+    # card says nothing about it ('good general condition'), the subject still gets its own answer (below)
+    topic_subs = [s for s in all_subs if s not in ask_subs and F.match_topics(fold(s), getattr(k, "overlay", None) or {})
+                  and Q.search_words(s)[1] and not Q.slot_for(s, k)]
     if ask_subs and _asks_judgement(u.get("task_text") or ""):  # 'Sportfreigabe ja oder nein?': the role's view
         ask_subs = [s for s in ask_subs if Q.slot_for(s, k)]      # answers it, not a word search
     if tags:  # a matched task already answers its own words; an unknown word beside it is likely a typo of one
         ask_subs = [s for s in ask_subs if Q.slot_for(s, k) or Q.search_words(s)[1]]
-    ask_slots = [x for x in dict.fromkeys(Q.slot_for(s, k) for s in ask_subs) if x]  # a KB slot answers these
+    # a KB slot answers these; also a subject a topic covers ("does she smoke?" -> smoking topic and slot), so the
+    # answer lines still put the question first
+    ask_slots = [x for x in dict.fromkeys(Q.slot_for(s, k) for s in ask_subs + [
+        t for t in all_subs if t not in ask_subs and F.match_topics(fold(t), getattr(k, "overlay", None) or {})]) if x]
     ask_subs = [s for s in ask_subs if not Q.slot_for(s, k)]
     # the optional LLM's reading of the question (engine/llm.py answer_slots / question_terms), after the gate:
     # it adds KB slots that answer the question however it is worded, and German search words for a topic no
@@ -599,6 +608,11 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short", v2=None):
                                       tsettings)
         focus = focus + tcards
         u["topic_cards"] = tinfo
+    shown_facts = {x for c in cards + focus for x in (c.get("facts") or [])
+                   + [y for it in c.get("items") or [] for y in it.get("facts") or []]}
+    silent = [s for s in topic_subs if s not in ask_subs and not Q.mentioned(st, s, shown_facts)]
+    ask_subs = ask_subs + silent[:max(0, Q.MAX_SUBJECTS - len(ask_subs))]
+    u["asked_subjects"] = ask_subs
     focus = [Q.answer_card(st, s, as_of, ai_terms.get(s, ())) for s in ask_subs] + focus  # also beside a not-applicable item
     also = []
     if detail == "short" and mode == "task" and not question_only:  # P2 'also relevant' group, shown without a second request

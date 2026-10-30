@@ -253,13 +253,81 @@ def topic_list(overlay):
     return _TOPICS[key]
 
 
+TOPIC_FUZZY_CUTOFF = 0.85   # a typo inside a topic phrase ('retinopaty', 'planed surgery') still names the topic
+TOPIC_FUZZY_MIN = 5         # ... only for words of 5+ letters; shorter words must match exactly
+_TOPIC_WORD = re.compile(r"[^\W\d_][\w'-]*")
+_FUZZY_STOP = {"about", "after", "again", "before", "could", "doing", "every", "first", "other", "since", "their",
+               "there", "these", "those", "under", "where", "which", "while", "would", "should", "please"}
+
+
+_VOCAB = {}
+
+
+def _topic_vocab(overlay):
+    """-> (folded word lists per topic term, keyed by topic id; every term word of 5+ letters), cached."""
+    key = id(overlay)
+    if key not in _VOCAB:
+        from .understand import fold, norm_text
+        terms, vocab = {}, set()
+        for tp in topic_list(overlay):
+            tws = [_TOPIC_WORD.findall(fold(norm_text(x).strip())) for xs in (tp.get("terms") or {}).values()
+                   for x in xs]
+            terms[tp["id"]] = [tw for tw in tws if tw]
+            vocab |= {w for tw in tws for w in tw if len(w) >= TOPIC_FUZZY_MIN}
+        _VOCAB[key] = (terms, sorted(vocab))
+    return _VOCAB[key]
+
+
+def _near_words(text, overlay):
+    """Text words of 5+ letters that nearly spell a topic term word (not exactly): {text word: {term words}}."""
+    import difflib
+    _terms, vocab = _topic_vocab(overlay)
+    exact = set(vocab)
+    near = {}
+    for w in set(_TOPIC_WORD.findall(text)):
+        if len(w) < TOPIC_FUZZY_MIN or w in exact or w in _FUZZY_STOP:
+            continue
+        hits = difflib.get_close_matches(w, vocab, n=3, cutoff=TOPIC_FUZZY_CUTOFF)
+        if hits:
+            near[w] = set(hits)
+    return near
+
+
+def _fuzzy_topic_pos(text, tp, overlay, near):
+    """Start of a near-spelling of one of the topic's terms in the text (each term word in order, exact or near;
+    at least one near, since exact ones are found by the patterns), else None."""
+    targets = {x for xs in near.values() for x in xs}
+    words = [(m.start(), m.group(0)) for m in _TOPIC_WORD.finditer(text)]
+    for tw in _topic_vocab(overlay)[0].get(tp["id"]) or []:
+        if not targets & set(tw):
+            continue
+        for i in range(len(words) - len(tw) + 1):
+            n = 0
+            for j, w in enumerate(tw):
+                cand = words[i + j][1]
+                if cand == w:
+                    continue
+                if w in near.get(cand, ()):
+                    n += 1
+                    continue
+                break
+            else:
+                if n:
+                    return words[i][0]
+    return None
+
+
 def match_topics(text, overlay):
-    """Topics named in the (normalised) text, in the order they appear."""
+    """Topics named in the (normalised) text, in the order they appear; a near-spelling of a topic term counts."""
     from .understand import fold
     text = fold(text or "")
     hits = []
+    near = _near_words(text, overlay)
     for tp in topic_list(overlay):
         pos = [m.start() for r in tp["_rx"] for m in r.finditer(text)]
+        if not pos and near:
+            p = _fuzzy_topic_pos(text, tp, overlay, near)
+            pos = [p] if p is not None else []
         if pos:
             hits.append((min(pos), tp))
     hits.sort(key=lambda h: h[0])

@@ -9,6 +9,8 @@
 A clinician types one sentence: who they are and what they need.<br>
 Second Eye answers first, in a sentence or two. Every value comes from the letters and opens the exact passage it came from.
 
+**[Open the live app](https://second-look-1433.onrender.com)** · <sub>No sign-in needed. Runs on a synthetic patient record.</sub>
+
 [![AIM Austria hackathon](https://img.shields.io/badge/AIM%20Austria%20hackathon-Track%201%20·%20Clinical%20documentation-4a5bef?style=flat-square)](docs/CHALLENGE.md)
 ![15/15 correct](https://img.shields.io/badge/official%20questions-15%2F15-0f766e?style=flat-square)
 ![0 invented facts](https://img.shields.io/badge/invented%20facts-0-0f766e?style=flat-square)
@@ -23,6 +25,12 @@ Second Eye answers first, in a sentence or two. Every value comes from the lette
 </div>
 
 ---
+
+## About
+
+Second Eye is a task-based reader for clinical records, built at the AIM Austria hackathon (Track 1, clinical documentation). It reads a patient's German letters once, keeps only facts it can quote word for word, and then answers each clinician's task from that verified store. It never writes to the record, and code, not a model, decides what is missing and where the letters disagree.
+
+**Live app:** <https://second-look-1433.onrender.com>
 
 ## The problem
 

@@ -116,6 +116,8 @@ def build_card(store, kb, slot_id, ctx, contradictions=()):
         if not card.get("searched"):
             not_documented(store, kb, slot_id, spec, card, extra="")
     F.finish(store, card, contradictions, primary_ids=primary_ids)
+    from .stats import add_statistics  # dose change, BMI check, BP day/night (DECISIONS 25)
+    add_statistics(store, card, primary, spec, ctx["as_of"])
     if (ctx.get("detail") or "short") == "short" and card.get("priority") == "P1" and comp in P1_COLLAPSIBLE:
         # the answer values themselves (latest_value: the newest value per key) always stay open
         answer = set(primary_ids) if primary_ids is not None and comp == "latest_value" else set()
