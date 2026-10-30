@@ -37,6 +37,8 @@ SUBJECT_PATTERNS = [re.compile(p) for p in (
     r"undergo(?:ne)?|suffer(?:ed|s)? from|experience[ds]?|carry|carries|need|needs|wear|wears)?\s*(.+)" % _WHO,
     r"\b(?:what|which|how)\s+(?:is|was|are|were|'s)\s+(?:her|his|their|the patient'?s?|the)\s+(.+)",
     r"\bwhat'?s\s+(?:her|his|their|the patient'?s?|the)\s+(.+)",
+    r"\bhow\s+(\w+)\s+(?:is|was|are)\s+%s\b" % _WHO,  # 'how tall is she?', 'how heavy is she?'
+    r"\bhow\s+(?:much|many|often)\s+(?:does|did|do)\s+%s\s+(\w+)" % _WHO,  # 'how much does she weigh / drink?'
     r"\bwhen\s+(?:was|were|did)\s+(?:her|his|their|the|she|he)\s+(?:last\s+)?(.+)",
     r"\b(?:any|history of|hx of|known|evidence of|signs? of|record of|mention of|documented)\s+(.+)",
     r"\b(?:hat|hatte)\s+(?:sie|er|die patientin|der patient)\s+(?:je|jemals|schon|bereits|aktuell)?\s*(.+)",
@@ -45,11 +47,12 @@ SUBJECT_PATTERNS = [re.compile(p) for p in (
 )]
 
 _CUT = re.compile(r"[?!.;:()\[\]]")
-_SPLIT = re.compile(r",|/|\s+(?:and|or|und|oder|plus)\s+")
+_SPLIT = re.compile(r",|/|\s*[+&]\s*|\s+(?:and|or|und|oder|plus)\s+")
 _LEAD = re.compile(r"^(?:a|an|any|the|some|known|her|his|their|its|ever|eine?[nmrs]?|ein|kein[e]?|ihre?|seine?|der|die|das|"
                    r"of|for|on|about|to|with|history of|signs of|evidence of|been)\s+")
 _TRAIL = re.compile(r"\s+(?:ever|a lot|lots|often|much|anymore|lately|before|already|currently|now|at all|in the past|documented|recorded|noted|mentioned|"
-                    r"known|so far|last|recently|today|previously|in the record|in the letters|"
+                    r"known|so far|last|recently|today|previously|in the record|in the letters|dose|doses|dosage|"
+                    r"status|values?|levels?|results?|findings?|score|list|history|hx|"
                     r"je|jemals|bisher|schon|bekannt|dokumentiert|vor|gehabt|bekommen|genommen)$")
 STOP = set("""a an the and or of for to in on at with about from by is are was were be been being do does did
 has had have she he her his they their it its patient pt any some there this that these those what which when
@@ -59,7 +62,7 @@ before after still yet also only just all much many more most other such same so
 check checking review show tell list give find look need needs want wants
 summary overview everything anything something info information details detail relevant important
 problem problems issue issues finding findings result results note notes record records letter letters data
-done missing new changed change changes happened going wrong ok okay fine normal
+done missing new changed change changes happened going wrong ok okay fine normal old dose doses dosage
 sie er ihr ihre sein seine der die das ein eine einen kein keine und oder ist war hat hatte gibt es gab
 je jemals bisher schon bekannt dokumentiert patientin patient bitte wie was wann welche welcher welches wo""".split())
 
