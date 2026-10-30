@@ -37,6 +37,8 @@ SUBJECT_PATTERNS = [re.compile(p) for p in (
     r"undergo(?:ne)?|suffer(?:ed|s)? from|experience[ds]?|carry|carries|need|needs|wear|wears)?\s*(.+)" % _WHO,
     r"\b(?:what|which|how)\s+(?:is|was|are|were|'s)\s+(?:her|his|their|the patient'?s?|the)\s+(.+)",
     r"\bwhat'?s\s+(?:her|his|their|the patient'?s?|the)\s+(.+)",
+    r"\bhow\s+(\w+)\s+(?:is|was|are)\s+%s\b" % _WHO,  # 'how tall is she?', 'how heavy is she?'
+    r"\bhow\s+(?:much|many|often)\s+(?:does|did|do)\s+%s\s+(\w+)" % _WHO,  # 'how much does she weigh / drink?'
     r"\bwhen\s+(?:was|were|did)\s+(?:her|his|their|the|she|he)\s+(?:last\s+)?(.+)",
     r"\b(?:any|history of|hx of|known|evidence of|signs? of|record of|mention of|documented)\s+(.+)",
     r"\b(?:hat|hatte)\s+(?:sie|er|die patientin|der patient)\s+(?:je|jemals|schon|bereits|aktuell)?\s*(.+)",
@@ -45,11 +47,12 @@ SUBJECT_PATTERNS = [re.compile(p) for p in (
 )]
 
 _CUT = re.compile(r"[?!.;:()\[\]]")
-_SPLIT = re.compile(r",|/|\s+(?:and|or|und|oder|plus)\s+")
+_SPLIT = re.compile(r",|/|\s*[+&]\s*|\s+(?:and|or|und|oder|plus)\s+")
 _LEAD = re.compile(r"^(?:a|an|any|the|some|known|her|his|their|its|ever|eine?[nmrs]?|ein|kein[e]?|ihre?|seine?|der|die|das|"
                    r"of|for|on|about|to|with|history of|signs of|evidence of|been)\s+")
 _TRAIL = re.compile(r"\s+(?:ever|a lot|lots|often|much|anymore|lately|before|already|currently|now|at all|in the past|documented|recorded|noted|mentioned|"
-                    r"known|so far|last|recently|today|previously|in the record|in the letters|"
+                    r"known|so far|last|recently|today|previously|in the record|in the letters|dose|doses|dosage|"
+                    r"status|values?|levels?|results?|findings?|score|list|history|hx|"
                     r"je|jemals|bisher|schon|bekannt|dokumentiert|vor|gehabt|bekommen|genommen)$")
 STOP = set("""a an the and or of for to in on at with about from by is are was were be been being do does did
 has had have she he her his they their it its patient pt any some there this that these those what which when
@@ -59,7 +62,7 @@ before after still yet also only just all much many more most other such same so
 check checking review show tell list give find look need needs want wants
 summary overview everything anything something info information details detail relevant important
 problem problems issue issues finding findings result results note notes record records letter letters data
-done missing new changed change changes happened going wrong ok okay fine normal
+done missing new changed change changes happened going wrong ok okay fine normal old dose doses dosage
 sie er ihr ihre sein seine der die das ein eine einen kein keine und oder ist war hat hatte gibt es gab
 je jemals bisher schon bekannt dokumentiert patientin patient bitte wie was wann welche welcher welches wo""".split())
 
@@ -226,10 +229,14 @@ def covered(subject, kb, named_topics, bundle_tags):
     return any(fold(norm_text(t)) in s for t in bundle_tags if len(t) > 3)
 
 
-def answer_card(store, subject, as_of=None):
+def answer_card(store, subject, as_of=None, ai_words=()):
     """One card for one asked subject: matching facts (translated, with sources), else the passages that
-    mention it word for word, else 'Nothing found' naming what was searched."""
+    mention it word for word, else 'Nothing found' naming what was searched.  ai_words: German search words
+    the optional LLM reading suggested (engine/llm.py question_terms); only search keys, never facts."""
     words, from_lexicon = search_words(subject)
+    ai_words = [w for w in ai_words or () if fold(w.lower()) not in {fold(x.lower()) for x in words}]
+    if ai_words:
+        words = (words if from_lexicon else []) + list(ai_words)
     rxs = [_word_rx(w) for w in words]
     # only letters written by the as-of date
     docs = [d for d in store.docs if as_of is None or str(store.doc_date(d) or "")[:10] <= str(as_of)[:10]]
@@ -251,13 +258,13 @@ def answer_card(store, subject, as_of=None):
              and (as_of is None or str(f.get("date") or "") <= str(as_of) or not f.get("date"))
              and (any(r.search(fold(str(f.get("quote") or "").lower())) for r in rxs)
                   or any(rx.search(english(f)) for rx in labels)
-                  or (not from_lexicon and _phrase_in(fold(subject), english(f))))]
+                  or (not from_lexicon and not ai_words and _phrase_in(fold(subject), english(f))))]
     label = "Your question: %s" % subject
     why = "You asked about %s; every passage of the %d documents was searched for it." % (subject, len(docs))
     searched = {"documents": len(docs), "passages_scanned": len(store.passages), "terms": words,
-                "from_lexicon": from_lexicon}
+                "from_lexicon": from_lexicon, "ai_terms": list(ai_words)}
     base = {"need": "ask_%s" % re.sub(r"\W+", "_", subject).strip("_"), "slot": None, "label_en": label,
-            "priority": "P1", "why": why, "sources": [], "rules": [], "origins": ["your question"],
+            "priority": "P1", "why": why, "sources": [], "rules": [], "origins": ["your question"] + (["AI search words"] if ai_words else []),
             "group": "question", "searched": searched, "collapsed": 0}
     if facts:
         items = group_items(store, facts)
@@ -281,9 +288,10 @@ def answer_card(store, subject, as_of=None):
                     note=("%d more passage(s) mention it." % more) if more else None,
                     value_en="Mentioned in %d passage(s), quoted word for word below; read them in context."
                              % len(hit_passages))
-    if from_lexicon:
-        value = ("Nothing found for %s: none of the %d documents contains any of these words: %s."
-                 % (subject, len(docs), ", ".join(words)))
+    if from_lexicon or ai_words:
+        value = ("Nothing found for %s: none of the %d documents contains any of these words: %s.%s"
+                 % (subject, len(docs), ", ".join(words),
+                    " (German search words suggested by the AI reading.)" if ai_words else ""))
     else:
         value = ("Nothing found for '%s': none of the %d documents contains %s. The letters are in German and no "
                  "German search word is stored for this term, so check the letters if it matters."

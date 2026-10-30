@@ -79,7 +79,8 @@ class TestRequestAndValidation(LLMTestBase):
         fake = self.client({"role_id": "gp", "bundle_ids": ["B03"], "reason": "GP reviewing diabetes"})
         prop, info = llm.propose("GP here, sugar check", self.kb)
         self.assertEqual(prop, {"kind": "clinical_task", "role_id": "gp", "bundle_ids": ["B03"],
-                                "reason": "GP reviewing diabetes", "focus_concepts": []})
+                                "reason": "GP reviewing diabetes", "focus_concepts": [],
+                                "answer_slots": [], "question_terms": []})
         self.assertTrue(info["called"])
         kw = fake.calls[0]
         self.assertEqual(kw["model"], "claude-haiku-5-5")
