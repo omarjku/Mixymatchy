@@ -218,8 +218,7 @@ class TestLLMPrimary(LLMTestBase):
         s = self.screen("hier die Stationsapotheke: darf sie Ibuprofen nehmen?")  # the rules see no role here
         u = s["understood"]
         self.assertEqual(s["screen_mode"], "task")
-        self.assertEqual(u["role_id"], "pharmacist")
-        self.assertIn("B07", u["bundle_ids"])
+        self.assertEqual(u["role_id"], "pharmacist")  # the rules found no role: the model's role holds
         self.assertTrue(u["llm_used"])
         self.assertEqual(u["llm_kind"], "clinical_task")
         self.assertEqual(u["llm_verdict"]["verdict"], "data")
@@ -263,6 +262,54 @@ class TestLLMPrimary(LLMTestBase):
                 self.assertIn(s["screen_mode"], (mode, "not_authorised", "needs_task"))
                 self.assertEqual(s["understood"].get("llm_verdict", {}).get("verdict", "veto"), "veto")
 
+    def test_rules_task_keeps_rules_bundles_no_dump(self):
+        from engine.screen import MAX_SHORT_TOTAL
+        for text in ("Anaesthetist. She is scheduled for quadrantectomy next week, pre-op assessment",
+                     "Neurologist, TIA clinic referral", "Emergency physician, dizziness and blurred vision at night"):
+            rules = build_screen(text, use_llm=False, rulebook="kb")
+            self.client(A(role="gp", bundles=["B12", "B14", "B17"], reason="many ideas"))
+            s = self.screen(text)
+            u = s["understood"]
+            with self.subTest(text=text):
+                self.assertEqual(u["role_id"], rules["understood"]["role_id"])  # the rules' role stays
+                added = set(u["bundles_chosen"]) - set(rules["understood"]["bundles_chosen"])
+                self.assertLessEqual(len(added), 1)
+                self.assertTrue(set(rules["understood"]["bundles_chosen"]) <= set(u["bundles_chosen"]))
+                n = len(s["cards"]) + len(s.get("focus") or []) + len(s.get("also_relevant") or [])
+                self.assertLessEqual(n, MAX_SHORT_TOTAL)
+
+    def test_extra_bundle_only_when_the_request_names_it(self):
+        text = "Anaesthetist, pre-op check before breast surgery, she is on many tablets: medication review"
+        self.client(A(role="anaesthetist", bundles=["B01", "B07", "B12"]))
+        u = self.screen(text)["understood"]
+        self.assertNotIn("B12", u["bundles_chosen"])  # radiotherapy is not named in the request
+
+    def test_no_task_cannot_override_a_rules_role_and_task(self):
+        self.client(A(kind="no_task", role="none", reason="unclear"))
+        for text in ("clinical pharmacist checking drug interactions", "Night nurse, shift handover"):
+            s = self.screen(text)
+            with self.subTest(text=text):
+                self.assertNotIn(s["screen_mode"], ("needs_task", "not_authorised"))
+                self.assertGreater(s["proof_bar"]["facts_shown"], 0)
+        # but it restricts: non-clinical / spam / other patient still refuse a rules role + task
+        self.client(A(kind="non_clinical_requester"))  # (new wordings: answers are cached by normalised text)
+        self.assertNoData(self.screen("Night nurse - shift handover please"), "not_authorised")
+        self.client(A(kind="spam_or_abuse"))
+        self.assertNoData(self.screen("Night nurse: the shift handover"), "needs_task")
+
+    def test_sex_specific_item_is_not_another_patient(self):
+        rules = build_screen("Urologe, PSA Kontrolle", use_llm=False, rulebook="kb")["screen_mode"]
+        self.client(A(kind="other_patient", role="urologist", reason="PSA implies a male patient"))
+        s = self.screen("Urologe, PSA Kontrolle")
+        self.assertEqual(s["screen_mode"], rules)
+        self.assertEqual(rules, "not_applicable")
+
+    def test_llm_task_without_rules_task_is_capped(self):
+        self.client(A(role="gp", bundles=["B03", "B07", "B09"]))
+        u = self.screen("Hausärztin, was ist bei ihr gerade wichtig?")["understood"]
+        if u["tasks_from"] == "kb_llm":
+            self.assertLessEqual(len(u["bundles_chosen"]), 2)
+
     def test_timeout_falls_back_to_the_rules_within_the_deadline(self):
         os.environ["SECOND_LOOK_LLM_TIMEOUT"] = "0.3"
         text = "Anaesthetist, pre-op check before breast surgery"
@@ -304,7 +351,9 @@ class TestLLMPrimary(LLMTestBase):
         self.client(A(role="gp", bundles=["B09"], reason="Blood pressure follow-up"))
         b = adapter.build_briefing("GP, how is her blood pressure doing", use_llm=True)
         self.assertEqual(b.routing["llm_kind"], "clinical_task")
-        self.assertEqual(b.routing["llm_reason"], "Blood pressure follow-up")
+        self.assertEqual(b.routing["llm_verdict"], None)  # rules found role + task: the rules route it
+        b3 = adapter.build_briefing("I'm his neighbour, how is her blood pressure", use_llm=True)
+        self.assertEqual(b3.routing["screen_mode"], "not_authorised")
         self.assertIsNotNone(b.routing["llm_ms"])
         self.assertIsNotNone(b.routing["engine_ms"])
         b2 = adapter.build_briefing("GP, how is her blood pressure doing", use_llm=False)

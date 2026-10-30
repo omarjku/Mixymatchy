@@ -21,6 +21,7 @@ from .understand import _phrase_rx, _you_are_spans, extract_modifiers, fold, nor
 FUZZY_THRESHOLD = 0.85        # fixed, per the guide; only aliases of 5+ characters are fuzzy-matched
 SAFETY_RULES = {"R01", "R02", "R03", "R10", "R17"}   # allergies, blood thinners, contrast reaction/metformin: add at P1
 PRIO_RANK = {"P1": 1, "P2": 2, "P3": 3}
+LLM_MAX_WITHOUT_RULES = 2    # bundles the LLM may choose when the rules matched no task
 LLM_EXTRA_WITH_RULES = 1     # bundles the LLM may add when the rules matched a task (up to 3 when they did not)
 
 
@@ -364,6 +365,18 @@ def current_meds(store, as_of):
 
 # ----------------------------------------------------------------- entry point
 
+_BWORDS = {}
+
+
+def _bundle_words(kb, bid):
+    """Content words (5+ letters) of a bundle's tags and title, folded."""
+    if (id(kb), bid) not in _BWORDS:
+        b = kb.bundle_by_id[bid]
+        txt = " ".join(list(bundle_tags(b)) + [b.get("title") or ""])
+        _BWORDS[(id(kb), bid)] = set(re.findall(r"[^\W\d_][\w-]{4,}", fold(norm_text(txt)))) - FUZZY_STOP
+    return _BWORDS[(id(kb), bid)]
+
+
 def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=None, force_role=None, llm_pending=None):
     """Rules routing; with the LLM on, its reading (started in parallel: engine/llm.start, or here) is primary:
     for request_kind 'clinical_task' with a valid role its role and bundles replace the rules' routing.  The
@@ -390,18 +403,30 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
             if prop.get("focus_concepts"):  # promoted by engine/focus.py after the clinical gate
                 llm_focus = {"concepts": list(prop["focus_concepts"]), "reason": llm_reason}
             rid = prop.get("role_id")
-            if llm_kind == "clinical_task" and rid in kb.role_by_id:
-                if rid != role_id:
+            llm_b = [x for x in prop.get("bundle_ids") or [] if x in kb.bundle_by_id and x != kb.fallback_bundle]
+            if llm_kind == "clinical_task":
+                if rid in kb.role_by_id and rid != role_id and method in ("none", "fuzzy"):
+                    # the model's role only where the rules found none (or only a fuzzy one)
                     role_id, role, alias, method = rid, kb.role_by_id[rid], None, "llm"
                     t_task = t
                     matched = match_bundles(t_task, kb)
                     chosen = choose_bundles(matched, role)
-                llm_b = [x for x in prop.get("bundle_ids") or [] if x in kb.bundle_by_id and x != kb.fallback_bundle]
-                if llm_b and llm_b != chosen:
-                    chosen = sorted(llm_b, key=lambda x: int(x[1:]))
+                    llm_used = True
+                if chosen:
+                    # the rules found the task: their bundles stay; the model adds at most one more, and only
+                    # one whose own tag words appear in the request (no dumps)
+                    words = set(re.findall(r"[^\W\d_][\w-]{4,}", fold(t_task)))
+                    extra = [x for x in llm_b if x not in chosen and words & _bundle_words(kb, x)][:LLM_EXTRA_WITH_RULES]
+                    if extra:
+                        chosen = sorted(set(chosen) | set(extra), key=lambda x: int(x[1:]))
+                        how = "kb_alias_tags+llm"
+                        llm_note = "AI reading added %s" % ", ".join(extra)
+                        llm_used = True
+                elif llm_b:  # the rules found no task: the model's reading of the task (at most two bundles)
+                    chosen = sorted(llm_b[:LLM_MAX_WITHOUT_RULES], key=lambda x: int(x[1:]))
                     how = "kb_llm"
                     llm_note = "AI reading: %s" % ", ".join(chosen)
-                llm_used = True
+                    llm_used = True
     note = None
     if force_bundles:  # screen.py: a recognised role's own task when the wording is not recognised
         chosen, how = list(force_bundles), "role_default"

@@ -268,7 +268,16 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     # LLM primary when it answered (engine/llm_gate.py): its verdict decides, the rules veto (deny wins)
     from . import llm_gate as G
     alias0 = (u.get("role_match") or {}).get("matched") if rules_role else None
-    verdict = G.decide(u, gate, req, [alias0] if alias0 else [])
+    rules_task = False
+    if u.get("llm_kind"):
+        from . import focus as F0
+        from . import intent as I0
+        named0 = F0.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
+        rules_task = bool(C.strong_task(u.get("bundles_matched"), k.fallback_bundle)) or I0.has_task(
+            req["task"], k, st, aliases=[alias0] if alias0 else [], named_topics=named0,
+            applicability_items=app["items"])["reason"] in ("KB task", "named topic", "applicability item",
+                                                             "review / overview request")
+    verdict = G.decide(u, gate, req, [alias0] if alias0 else [], rules_task=rules_task, app_items=app["items"])
     llm_ok = False
     if verdict:
         what, why, vetoed = verdict
