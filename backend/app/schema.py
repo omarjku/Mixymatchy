@@ -72,8 +72,24 @@ class Computed(BaseModel):
     segment_ids: list[str] = Field(min_length=1)
 
 
+class SourceRef(BaseModel):
+    """A guideline or drug label from the routing knowledge base (why a slot is shown)."""
+    id: str                      # e.g. "G01", "L02"
+    title: str
+    verification: Optional[str] = None
+    url: Optional[str] = None
+
+
+class ChecklistItem(BaseModel):
+    """One sub-item of a checklist / status-check card, judged independently."""
+    label: str
+    status: Literal["found", "documented_none", "not_documented"]
+    segment_ids: list[str] = []
+    note: Optional[str] = None
+
+
 class NeedResult(BaseModel):
-    need: str                    # e.g. "antithrombotic"
+    need: str                    # e.g. "antithrombotic" (legacy) or a KB slot id, e.g. "med_antithrombotic"
     label: str                   # e.g. "Blood thinners"
     status: Literal["documented", "not_documented", "not_applicable"]
     facts: list[Fact] = []
@@ -81,6 +97,16 @@ class NeedResult(BaseModel):
     superseded: list[Fact] = []  # older values hidden by "latest as of" / newer medication list
     reason: Optional[str] = None  # why not applicable, e.g. "patient is female"
     reason_segment_ids: list[str] = []
+    # Routing knowledge base (optional; empty with the legacy rulebook)
+    slot: Optional[str] = None   # KB slot id
+    shape: Optional[str] = None  # KB shape, e.g. "latest_value", "checklist"
+    priority: Optional[str] = None  # "P1" | "P2" | "P3" (legacy: "must" | "should")
+    why: Optional[str] = None    # why this is shown (bundle why_override or slot why, or the link rule)
+    sources: list[SourceRef] = []  # guideline / label badges
+    rules: list[str] = []        # link rules that surfaced the slot, e.g. ["R01"]
+    note: Optional[str] = None   # e.g. "As of 06/2015; no later value documented."
+    checklist: list[ChecklistItem] = []
+    label_panel: list[dict] = []  # rule R22: listed contraindications beside patient facts (never a verdict)
 
 
 class Briefing(BaseModel):
@@ -92,7 +118,10 @@ class Briefing(BaseModel):
     blind_spot: list[Fact] = []  # task facts missing from the latest letter
     findings: list[Finding] = []
     stats: dict = {}             # always computed from the briefing itself, never typed in
+    detail: Optional[str] = None  # "short" (P1) | "long" (P1-P3); KB rulebook only
+    routing: dict = {}           # role, bundles, matched tags, rules fired, fallback note, rulebook version
 
 
 class BriefingRequest(BaseModel):
     situation: str
+    detail: Literal["short", "long"] = "long"

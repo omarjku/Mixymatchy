@@ -6,6 +6,10 @@
   label of each displayed fact, plus its date) and linked to a source document.
 * 8 unseen situations must produce sensible, non-empty screens.
 * Every screen must build in under 1 second.
+
+The 15 answers, links and speed are checked for both rulebooks: the routing KB (default) and the legacy
+roles.json + tasks.json (pinned with rulebook="legacy" for the tests that name legacy need ids).
+KB-specific tests: engine/test_kb.py.
 """
 import json
 import os
@@ -76,11 +80,12 @@ class TestCases(unittest.TestCase):
         with open(os.path.join(ROOT, "eval", "answer_keys.json"), encoding="utf-8") as fh:
             cls.keys = json.load(fh)
         cls.st = store()
-        cls.screens = {}
+        cls.screens, cls.kb_screens = {}, {}
         for sid, text in SITUATIONS.items():
-            t0 = time.perf_counter()
-            cls.screens[sid] = build_screen(text, use_llm=False)
-            cls.screens[sid]["_wall"] = time.perf_counter() - t0
+            for out, rb in ((cls.screens, "legacy"), (cls.kb_screens, "kb")):
+                t0 = time.perf_counter()
+                out[sid] = build_screen(text, use_llm=False, rulebook=rb)
+                out[sid]["_wall"] = time.perf_counter() - t0
 
     def _shown_build(self, screen):
         facts = [self.st.fact_by_id[x] for x in card_facts(screen)]
@@ -91,13 +96,14 @@ class TestCases(unittest.TestCase):
 
     def test_15_answers(self):
         failures = []
-        for qid in sorted(k for k in self.keys if not k.startswith("_")):
-            sid = qid.split(".")[0]
-            b, texts = self._shown_build(self.screens[sid])
-            res = eval_question(b, qid, self.keys[qid], texts)
-            if not res["pass"]:
-                failures.append((qid, [(i["name"], i["missing"]) for i in res["items"] if not i["pass"]],
-                                 res["forbidden_hits"]))
+        for name, screens in (("legacy", self.screens), ("kb", self.kb_screens)):
+            for qid in sorted(k for k in self.keys if not k.startswith("_")):
+                sid = qid.split(".")[0]
+                b, texts = self._shown_build(screens[sid])
+                res = eval_question(b, qid, self.keys[qid], texts)
+                if not res["pass"]:
+                    failures.append((name, qid, [(i["name"], i["missing"]) for i in res["items"] if not i["pass"]],
+                                     res["forbidden_hits"]))
         self.assertEqual(failures, [], "questions not answered on screen: %r" % failures)
 
     def test_not_documented_answers(self):
@@ -125,7 +131,7 @@ class TestCases(unittest.TestCase):
                          "Candesartan (Blopress) 16 mg 1-0-1")
 
     def test_proof_bar_and_speed(self):
-        for sid, s in self.screens.items():
+        for sid, s in list(self.screens.items()) + list(self.kb_screens.items()):
             pb = s["proof_bar"]
             self.assertGreater(pb["facts_shown"], 0)
             self.assertEqual(pb["facts_shown"], pb["facts_verified"])
@@ -140,7 +146,7 @@ class TestUnseen(unittest.TestCase):
         for text, role, task, checks in UNSEEN:
             with self.subTest(role=role):
                 t0 = time.perf_counter()
-                s = build_screen(text, use_llm=False)
+                s = build_screen(text, use_llm=False, rulebook="legacy")
                 self.assertLess(time.perf_counter() - t0, 1.0)
                 u = s["understood"]
                 self.assertEqual(u["role_id"], role, text)
@@ -154,12 +160,12 @@ class TestUnseen(unittest.TestCase):
                     self.assertEqual(c["status"], status, "%s: %s -> %s" % (role, need, c["value_en"]))
 
     def test_other_role_fallback(self):
-        s = build_screen("I am a physiotherapist seeing her after the operation.", use_llm=False)
+        s = build_screen("I am a physiotherapist seeing her after the operation.", use_llm=False, rulebook="legacy")
         self.assertEqual(s["understood"]["role_id"], "other")
         self.assertTrue(s["cards"])
 
     def test_fuzzy_role(self):
-        s = build_screen("anesthesiologst here, pre-op visit", use_llm=False)
+        s = build_screen("anesthesiologst here, pre-op visit", use_llm=False, rulebook="legacy")
         self.assertEqual(s["understood"]["role_id"], "anaesthetist")
 
 

@@ -8,6 +8,7 @@ For the 5 case situations (title + description only, never the questions):
     only to what the briefing contains (label, value, unit, side, status, date of each Fact), linked to a
     source document through its segment ids
   * each briefing builds in under 1 second
+Run for the routing KB rulebook (default, long and short detail) and the legacy rulebook (roles.json + tasks.json).
 Skipped when data/build/ cannot be built (no patient data).
 """
 import json
@@ -27,14 +28,32 @@ from engine.test_engine import SITUATIONS  # noqa: E402  (the 5 case situations,
 from eval.core import Build, eval_question, norm  # noqa: E402
 
 
-@pytest.fixture(scope="module")
-def briefings():
+MODES = {"kb": dict(rulebook="kb"), "kb_short": dict(rulebook="kb", detail="short"),
+         "legacy": dict(rulebook="legacy")}
+
+
+def _build(**kw):
     out = {}
     for sid, text in SITUATIONS.items():
         t0 = time.perf_counter()
-        b = adapter.build_briefing(text, use_llm=False)
+        b = adapter.build_briefing(text, use_llm=False, **kw)
         out[sid] = (b, time.perf_counter() - t0)
     return out
+
+
+@pytest.fixture(scope="module", params=sorted(MODES))
+def briefings(request):
+    return _build(**MODES[request.param])
+
+
+@pytest.fixture(scope="module")
+def kb_briefings():
+    return _build(**MODES["kb"])
+
+
+@pytest.fixture(scope="module")
+def legacy_briefings():
+    return _build(**MODES["legacy"])
 
 
 def all_facts(b: Briefing):
@@ -111,7 +130,9 @@ def test_15_answers_on_screen(briefings):
     assert failures == [], failures
 
 
-def test_superseded_and_computed(briefings):
+def test_superseded_and_computed(legacy_briefings):
+    briefings = legacy_briefings
+
     def need(sid, key):
         return next(n for n in briefings[sid][0].needs if n.need == key)
 
@@ -124,6 +145,32 @@ def test_superseded_and_computed(briefings):
     assert all(f.trust == "conflicting" for f in need("1", "carotid").facts)
     duplex = need("5", "carotid_duplex_done")
     assert duplex.status == "not_documented" and duplex.computed  # linked to the recommendation
+
+
+def test_kb_cards(kb_briefings):
+    def need(sid, key):
+        return next(n for n in kb_briefings[sid][0].needs if n.need == key)
+
+    bp = need("4", "med_antihypertensive")
+    assert [f.label_en for f in bp.facts] == ["Candesartan (Blopress) 16 mg 1-0-1"]
+    assert any("1-0-1/2" in f.label_en and f.date.startswith("2015") for f in bp.superseded)
+    w = need("3", "weight")
+    assert w.computed and w.computed[0].value.startswith("-12 kg")
+    lvef = need("1", "lvef")
+    assert lvef.priority == "P1" and "no later value documented" in lvef.note
+    assert all(f.trust == "conflicting" for f in need("1", "carotid_stenosis").facts)
+    done = need("5", "followup_done")
+    duplex = next(c for c in done.checklist if "duplex" in c.label.lower())
+    assert duplex.status == "not_documented" and duplex.segment_ids  # linked to the recommendation
+    assert any("duplex" in c.label.lower() and c.segment_ids for c in done.computed)
+    age = need("1", "age_sex")
+    assert age.computed and age.computed[0].label == "Age"
+    for sid, (b, _) in kb_briefings.items():
+        assert b.routing["rulebook"].startswith("kb") and b.detail == "long"
+        for n in b.needs:
+            assert n.slot == n.need and n.shape and n.priority in ("P1", "P2", "P3") and n.why, (sid, n.need)
+    assert {s.id for s in need("1", "med_antithrombotic").sources} >= {"G02", "G03"}
+    assert not any(n.need == "receptors_ki67" for n in kb_briefings["1"][0].needs)
 
 
 def test_findings_kinds(briefings):

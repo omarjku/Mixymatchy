@@ -26,6 +26,14 @@ Mapping rules (documented once, applied everywhere)
                           values (e.g. weight change never written down) -> Finding(kind=silence)
   open follow-ups      -> Finding(kind=followup)
   stats                -> counted from the Briefing object itself
+
+Routing knowledge base (default rulebook; SECOND_LOOK_RULEBOOK=legacy for roles.json + tasks.json)
+  card slot/shape/priority/why/sources/rules/note -> the optional NeedResult fields of the same name
+  checklist / status_check sub-items -> NeedResult.checklist (found / documented_none / not_documented)
+  status_check open items -> Computed "no record that this took place after ..." linked to the recommendation
+  age calculated from the date of birth -> Computed linked to the date-of-birth passages
+  rule R22 label panel -> NeedResult.label_panel
+  item status word (KB status vocabulary: ruled out / suspected / past) -> Fact.status
 """
 from __future__ import annotations
 
@@ -40,7 +48,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:  # engine/, pipeline/, compare/ are top-level packages of the repo
     sys.path.insert(0, str(ROOT))
 
-from .schema import Briefing, Computed, Document, Fact, Finding, NeedResult, Segment  # noqa: E402
+from .schema import (Briefing, ChecklistItem, Computed, Document, Fact, Finding, NeedResult,  # noqa: E402
+                     Segment, SourceRef)
 
 BUILD_DIR = Path(os.environ.get("SECOND_LOOK_BUILD", ROOT / "data" / "build"))
 RAW_DIR = ROOT / "data" / os.environ.get("PATIENT_ID", "patient-0000-0001")
@@ -72,7 +81,10 @@ def ensure_build() -> None:
 @lru_cache
 def engine_store():
     ensure_build()
-    from engine.data import store
+    from engine.data import rulebook_mode, store
+    if rulebook_mode() == "kb":  # validate the routing KB at start-up; refuses to start on errors
+        from engine.kb import kb
+        kb()
     return store()
 
 
@@ -153,7 +165,7 @@ def item_fact(st, it: dict, trust: str) -> Fact:
         label_en=label, value=None if value in (None, "") else str(value), unit=unit or None,
         date=str(it.get("date"))[:10] if it.get("date") else None,
         side=_side({str((f.get("attrs") or {}).get("side") or "").lower() for f in members}),
-        status=it.get("status") or rep.get("status"), segment_ids=seg_ids, trust=trust)
+        status=it.get("status_display") or it.get("status") or rep.get("status"), segment_ids=seg_ids, trust=trust)
 
 
 def _trust(card_status: str) -> str:
@@ -162,11 +174,29 @@ def _trust(card_status: str) -> str:
 
 # ----------------------------------------------------------------- cards -> needs
 
+def _kb_fields(card: dict) -> dict:
+    out = {"slot": card.get("slot"), "shape": card.get("shape"), "priority": card.get("priority"),
+           "why": card.get("why"), "rules": list(card.get("rules") or []), "note": card.get("note"),
+           "sources": [SourceRef(id=s["id"], title=s["title"], verification=s.get("verification") or None,
+                                 url=s.get("url") or None) for s in card.get("sources") or []],
+           "checklist": [ChecklistItem(label=r["label"], status=r["status"], segment_ids=list(r.get("passages") or []),
+                                       note=r.get("note")) for r in card.get("checklist") or []],
+           "label_panel": list(card.get("label_panel") or [])}
+    return {k: v for k, v in out.items() if v not in (None, [], "")}
+
+
+def _open_checks(card: dict) -> list[Computed]:
+    return [Computed(label=o["label"], value=o["note"][:1].upper() + o["note"][1:],
+                     formula="searched every fact of the matching kind dated after %s (as of the briefing date)"
+                             % o["threshold"], segment_ids=o["passages"])
+            for o in card.get("open_checks") or [] if o.get("passages")]
+
+
 def need_result(st, card: dict) -> NeedResult:
     status = card.get("status")
     res = NeedResult(need=card["need"], label=card.get("label_en") or card["need"],
                      status="not_applicable" if status == "not_applicable"
-                     else "not_documented" if status == "not_documented" else "documented")
+                     else "not_documented" if status == "not_documented" else "documented", **_kb_fields(card))
     if res.status == "not_applicable":
         res.reason = card.get("value_en", "").replace("Not applicable: ", "") or None
         res.reason_segment_ids = list(card.get("passages") or [])
@@ -174,6 +204,9 @@ def need_result(st, card: dict) -> NeedResult:
     if res.status == "not_documented":
         res.reason = card.get("value_en") or "Not documented"
         res.reason_segment_ids = list(card.get("passages") or [])  # possible mentions, open to check
+        if card.get("open_checks") is not None:  # KB status_check: one computed line per open recommendation
+            res.computed.extend(_open_checks(card))
+            return res
         for rec in card.get("related") or []:  # absent_after: the recommendation it was checked against
             res.computed.append(Computed(
                 label=rec["label_en"], value="No record that this took place after %s" % card.get("threshold"),
@@ -196,8 +229,14 @@ def need_result(st, card: dict) -> NeedResult:
     for rec in card.get("related") or []:  # absent_after with a later record: show what it answered
         res.facts.append(item_fact(st, rec, trust))
 
+    res.computed.extend(_open_checks(card))
     calc = card.get("calculated")
-    if calc and card.get("items"):
+    if calc and calc.get("kind") == "age" and card.get("items"):
+        res.computed.append(Computed(
+            label="Age", value="%d years" % calc["age"],
+            formula="full years from the date of birth %s to %s (anchor: latest document)" % (calc["dob"], calc["at"]),
+            segment_ids=list(card["items"][0]["passages"])))
+    elif calc and card.get("items"):
         first, last = card["items"][0], card["items"][-1]
         unit = calc.get("unit") or ""
         v0, v1 = (st.fact_by_id[i["facts"][0]] for i in (first, last))
@@ -285,12 +324,24 @@ def stats_of(b: Briefing, facts_dropped: int, task_concepts: int | None) -> dict
     }
 
 
-def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | None = None) -> Briefing:
+def _routing(screen: dict) -> dict:
+    u = screen["understood"]
+    if screen.get("rulebook") != "kb":
+        return {"rulebook": "legacy", "role": u.get("role_id"), "tasks": u.get("task_ids")}
+    return {"rulebook": u.get("rulebook"), "role": u.get("role_id"), "role_match": u.get("role_match"),
+            "bundles": u.get("bundle_ids"), "bundles_matched": u.get("bundles_matched"), "implied": u.get("implied"),
+            "rules_fired": u["rules"]["fired"], "rules_not_fired": u["rules"]["not_fired"],
+            "fallback_note": u.get("fallback_note"), "slots_total": len(u.get("slots") or []),
+            "slots_shown": len(screen.get("cards") or []), "anchor_date": u.get("anchor_date")}
+
+
+def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | None = None,
+                   detail: str = "long", rulebook: str | None = None) -> Briefing:
     st = engine_store()
     from engine.screen import build_screen
     if use_llm is None:
         use_llm = os.environ.get("SECOND_LOOK_LLM") == "1"
-    screen = build_screen(situation, as_of=as_of, use_llm=use_llm)
+    screen = build_screen(situation, as_of=as_of, use_llm=use_llm, detail=detail, rulebook=rulebook)
     u = screen["understood"]
 
     cards, seen = [], set()
@@ -301,7 +352,8 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
     found, blind = findings(st, screen)
     b = Briefing(situation=situation, role=u.get("role_id") or "other",
                  task=", ".join(u.get("task_labels") or []) or situation, as_of=u.get("as_of_date") or "",
-                 needs=[need_result(st, c) for c in cards], blind_spot=blind, findings=found)
+                 needs=[need_result(st, c) for c in cards], blind_spot=blind, findings=found,
+                 detail=screen.get("detail"), routing=_routing(screen))
     bs = screen.get("blind_spot") or {}
     b.stats = stats_of(b, len(st.removed), bs.get("of_total_problems"))
     b.stats["engine_ms"] = screen.get("timing_ms")

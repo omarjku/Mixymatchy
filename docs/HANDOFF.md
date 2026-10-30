@@ -35,7 +35,8 @@ Everything a new coding session needs to continue. Start a new session with:
 | Fact store | `pipeline/` (`python3 -m pipeline.build`) | 359 passages, 254 facts (161 rule, 93 IBM), every quote verified, 0 dropped |
 | Compare | `compare/` (`python3 -m compare.build`) | 5 counted contradictions, 3 documentation notes, blind spots (9 of 30 important items missing from the latest letter), open follow-ups, propagation chains |
 | Query engine | `engine/` (`python3 -m engine.query --brief "<text>"`) | situation -> role/task -> needs -> answer cards (consistent / conflicting / outdated / not documented / not applicable), ~50 ms |
-| Rulebook | `rulebook/roles.json`, `tasks.json` (engine), `rulebook/scaffold/` (teammate's originals), `needs.json`, `synonyms.json`, `drugs.json` | 211 rows with `TODO-cite` |
+| Routing KB (default rulebook) | `rulebook/kb/routing_knowledge_base.json` (medical team), `rulebook/slot_map.json` (slot -> fact categories / ICD-10 / ATC), `engine/kb.py` (load + validate, `python3 -m engine.kb`), `engine/route.py`, `engine/kbfill.py`, `engine/test_kb.py` | 63 slots, 18 bundles, 20 roles, rules R01-R20 evaluated on facts, R21 staleness, R22 label panel; `--detail short|long`; `--legacy-rulebook` / `SECOND_LOOK_RULEBOOK=legacy` falls back |
+| Legacy rulebook | `rulebook/roles.json`, `tasks.json` (engine), `rulebook/scaffold/` (teammate's originals), `needs.json`, `synonyms.json`, `drugs.json` | 211 rows with `TODO-cite`; kept until KB parity is signed off |
 | Eval | `eval/run.py` (strict fact-store scorer), `eval/run_api.py` (HTTP scorer), `eval/answer_keys.json` | 15/15, 0 invariant violations |
 | API | `backend/app/main.py` + `adapter.py` (engine -> `schema.py` Briefing) | `SECOND_LOOK_BACKEND=llm` switches to the teammate's LLM store |
 | Frontend | `frontend/` (Next.js 15) | builds; static export used in deployment |
