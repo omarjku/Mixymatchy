@@ -1,4 +1,4 @@
-"""Second Look access security: hashing, sessions, PIN lock, rate limits, audit.
+"""Second Eye access security: hashing, sessions, PIN lock, rate limits, audit.
 
 Framework-agnostic core. ``security/server.py`` exposes it over HTTP, but any
 Python backend can import :class:`AuthService` and call ``authorize(token)``

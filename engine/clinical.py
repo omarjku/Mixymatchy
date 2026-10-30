@@ -27,7 +27,7 @@ PREFIX_MIN = 6
 PREFIX_MIN_INTL = 8
 ARABIC = re.compile(r"[\u0600-\u06FF]")
 
-NOT_AUTHORISED_MESSAGE = ("Second Look shows patient information only to clinical staff for a care task. "
+NOT_AUTHORISED_MESSAGE = ("Second Eye shows patient information only to clinical staff for a care task. "
                           "Please state your clinical role and what you are doing, e.g. 'Anaesthetist, pre-op check'.")
 NOT_AUTHORISED_SUGGESTIONS = [
     "Anaesthetist, pre-op check before breast surgery",

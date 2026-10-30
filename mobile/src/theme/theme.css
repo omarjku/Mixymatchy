@@ -5,13 +5,13 @@
 */
 
 @theme {
-  /* Brand: periwinkle, hue ~233°
-     primary        #7085ff  fills behind dark text, borders, focus rings (3.2:1 with white: never white text on it)
+  /* Brand: periwinkle, hue ~229°. primary = the logo's own blue (AppIcon tile #6381FD)
+     primary        #6381fd  fills behind dark text, borders, focus rings (3.5:1 with white: never white text on it)
      primary-strong            buttons with white text (5.2:1)
      primary-hover             hover/pressed state of strong (6.4:1), darker, never faded
      primary-deep              brand-colored text and links (8.9:1 on white, 7.8:1 on soft)
      primary-soft              selected and highlighted backgrounds */
-  --color-primary: #7085ff;
+  --color-primary: #6381fd;
   --color-primary-strong: #4a5bef;
   --color-primary-hover: #3d4ed9;
   --color-primary-deep: #2f3bb0;
@@ -55,7 +55,7 @@
   --color-border: var(--color-line);
   --color-input: var(--color-line);
   --color-ring: var(--color-primary);
-  --color-primary-foreground: var(--color-ink); /* dark text on #7085ff: 5.4:1 */
+  --color-primary-foreground: var(--color-ink); /* dark text on #6381fd: 5.1:1 */
   --color-popover: var(--color-surface);
   --color-highlighter: #ffe15a; /* the cited words in a letter, nothing else */
   --color-ink-blue: #1d3c8f;
@@ -134,7 +134,7 @@
   --color-contradiction-deep: #fda4af;
   --color-contradiction-soft: #3a1222;
 
-  --color-primary-foreground: #141831; /* dark text on #7085ff stays dark */
+  --color-primary-foreground: #141831; /* dark text on #6381fd stays dark */
   --color-highlighter: #6e5a00; /* deep gold behind light text */
   --color-ink-blue: #9fb4ff;
   --color-scrim: #000000;
