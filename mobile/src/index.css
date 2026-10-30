@@ -29,4 +29,14 @@
     @apply bg-canvas font-sans text-ink antialiased;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* CSS animations follow the device's reduce-motion setting (motion/react ones do via MotionConfig) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
 }

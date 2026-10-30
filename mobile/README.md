@@ -4,8 +4,8 @@ Responsive, phone-first web app for Track 1: a clinician picks a role, types a t
 patient facts that task needs, each linked to its source. Opens in a phone browser, no native build.
 
 Stack: React 19, Vite, TypeScript, Tailwind CSS 4, shadcn/ui primitives, Watermelon UI components
-(quick-switcher, expandable-profile-card, continuous-tabs, alert, bionis-dashboard layout), Hugeicons,
-Motion, Recharts (dashboard only, lazy-loaded).
+(quick-switcher, expandable-profile-card, continuous-tabs, alert, faq-1, error-1, bionis-dashboard layout),
+shadcn accordion + dropdown-menu (Radix), Hugeicons, Motion, Recharts (dashboard only, lazy-loaded).
 
 Layouts: phone (< 768 px, one column), tablet (2-column fact grid), desktop (≥ 1024 px, sticky left column
 with patient card and view controls).
@@ -33,6 +33,10 @@ numbers, no IBM data).
 | Dashboard tab (3rd level): proof ring, change tiles, weight and recorded-vs-calculated BMI charts, blood-pressure comparisons, dated facts without trends. All derived numbers computed in `src/lib/stats.ts`; no scores, predictions or advice | done |
 | Read-only notice ("Second Look ändert keine Daten") on results and flag sheet | done |
 | Responsive layouts (phone, tablet, desktop) | done |
+| AppBar on every screen: periwinkle bar, SE logo as home link, patient name once the patient card scrolls away, "Neue Anfrage", help; secondary actions in a ⋯ menu on phones | done |
+| App icon: favicons, apple-touch-icon, web manifest (`public/`) | done |
+| Help page `/hilfe` with FAQ | done |
+| 404 page and crash screen (error boundary); dev-only `/dev/crash` to test it | done |
 | Read aloud (Web Speech API, German voices only, prefers on-device voices) | done |
 | Source viewer with the three tracks (dialog-stack), flag form, PDF export, EN/DE toggle | to do |
 
@@ -49,8 +53,9 @@ schema.
 ## Layout
 
 ```
-src/screens/      RoleTaskSelectScreen, LoadingScreen, ResultsScreen, StyleguideScreen (/dev/styleguide, dev only)
-src/components/   TaskBar, PatientCard, FactCard, ContradictionCard, ViewTabs, ValueHistory, Sparkline
+src/screens/      RoleTaskSelectScreen, LoadingScreen, ResultsScreen, HelpScreen, StyleguideScreen (/dev/styleguide, dev only)
+src/components/   AppBar, TaskBar, PatientCard, FactCard, ContradictionCard, ViewTabs, ValueHistory, Sparkline,
+                  Faq, ErrorPage (404 + crash), ErrorBoundary
 src/components/dashboard/   PatientDashboard (lazy), ProofRing, MetricTile, WeightChart, BmiChart, FactPanels, Panel
 src/components/ui/          app-level Button, Card, Badge, Modal, Chip, Icon, Skeleton, Notice (use these)
 src/components/primitives/  shadcn/ui source the ui/ components wrap

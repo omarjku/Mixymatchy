@@ -1,6 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft01Icon, Download04Icon, StopCircleIcon, VolumeHighIcon } from "@hugeicons/core-free-icons";
+import {
+  Add01Icon,
+  Download04Icon,
+  LanguageSkillIcon,
+  StopCircleIcon,
+  VolumeHighIcon,
+} from "@hugeicons/core-free-icons";
+import { AppBar } from "@/components/AppBar";
 import { ContradictionCard } from "@/components/ContradictionCard";
 import { FactCard } from "@/components/FactCard";
 import { PatientCard } from "@/components/PatientCard";
@@ -54,6 +61,18 @@ export function ResultsScreen() {
   // Stop any reading when leaving the screen
   useEffect(() => () => stopSpeaking(), []);
 
+  // When the patient card scrolls under the AppBar, the bar shows the patient instead of the app name
+  const [cardEl, setCardEl] = useState<HTMLElement | null>(null);
+  const [cardVisible, setCardVisible] = useState(true);
+  useEffect(() => {
+    if (!cardEl) return;
+    const observer = new IntersectionObserver(([entry]) => setCardVisible(entry.isIntersecting), {
+      rootMargin: "-56px 0px 0px 0px", // the AppBar's height
+    });
+    observer.observe(cardEl);
+    return () => observer.disconnect();
+  }, [cardEl]);
+
   if (!state || !brief) return <Navigate to="/" replace />;
 
   const roleName = t(roles.find((r) => r.id === brief.role)?.nameKey ?? "role.gp.name");
@@ -72,13 +91,22 @@ export function ResultsScreen() {
   const comingSoon = (title: string) => setSheet({ kind: "info", title });
 
   return (
-    // Phone: one column. Tablet: facts in 2 columns. Desktop: patient + view controls in a sticky left column.
-    <main className="mx-auto min-h-dvh max-w-md px-4 pb-10 pt-[env(safe-area-inset-top)] md:max-w-3xl md:px-8 lg:max-w-6xl">
-      <div className="sticky top-0 z-10 -mx-4 flex h-14 items-center justify-between bg-canvas px-2 md:-mx-8 md:px-6">
-        <Button variant="icon" icon={ArrowLeft01Icon} label={t("action.back")} onClick={() => navigate("/")} />
-        <div className="flex items-center">
+    <>
+      <AppBar
+        back={{ label: t("action.back"), onClick: () => navigate("/") }}
+        showTitle={!cardVisible}
+        title={
+          <p className="truncate leading-tight">
+            <span className="block truncate text-[15px] font-semibold">{brief.patientLabel}</span>
+            <span className="block truncate text-xs">
+              {roleName} · {brief.task}
+            </span>
+          </p>
+        }
+        actions={
           <Button
             variant="icon"
+            tone="onBrand"
             icon={speaking ? StopCircleIcon : VolumeHighIcon}
             label={
               voiceAvailable
@@ -90,153 +118,158 @@ export function ResultsScreen() {
             aria-pressed={speaking}
             disabled={!voiceAvailable}
             onClick={toggleReading}
-            className={speaking ? "bg-primary-soft text-primary-deep" : "disabled:opacity-40"}
+            className={speaking ? "bg-white/20" : "disabled:opacity-40"}
           />
-          <Button
-            variant="icon"
-            icon={Download04Icon}
-            label={t("action.export")}
-            onClick={() => comingSoon(t("action.export"))}
-          />
-          <button
-            type="button"
-            onClick={() => comingSoon(t("results.language"))}
-            aria-label={`${t("results.language")}: Deutsch`}
-            className="ml-1 h-9 rounded-full border border-line px-3 text-xs font-semibold text-ink-muted hover:border-primary/60 hover:text-primary-deep"
-          >
-            DE
-          </button>
-        </div>
-      </div>
+        }
+        menuActions={[
+          { id: "new", label: t("appbar.newRequest"), icon: Add01Icon, emphasis: true, onClick: () => navigate("/") },
+          {
+            id: "export",
+            label: t("action.export"),
+            icon: Download04Icon,
+            onClick: () => comingSoon(t("action.export")),
+          },
+          {
+            id: "language",
+            label: `${t("results.language")}: Deutsch`,
+            icon: LanguageSkillIcon,
+            text: "DE",
+            onClick: () => comingSoon(t("results.language")),
+          },
+        ]}
+        contentClassName="md:max-w-3xl lg:max-w-6xl"
+      />
+      {/* Phone: one column. Tablet: facts in 2 columns. Desktop: patient + view controls in a sticky left column. */}
+      <main className="mx-auto min-h-dvh max-w-md px-4 pb-10 pt-4 md:max-w-3xl md:px-8 lg:max-w-6xl">
+        <div className="lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start lg:gap-8">
+          <aside className="lg:sticky lg:top-20">
+            <header ref={setCardEl}>
+              <PatientCard brief={brief} roleName={roleName} generatedAt={generatedAt} />
+            </header>
 
-      <div className="lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start lg:gap-8">
-        <aside className="lg:sticky lg:top-16">
-          <header className="mt-2">
-            <PatientCard brief={brief} roleName={roleName} generatedAt={generatedAt} />
-          </header>
+            <Notice tone="readonly" title={t("readonly.title")} className="mt-4">
+              {t("readonly.body")}
+            </Notice>
 
-          <Notice tone="readonly" title={t("readonly.title")} className="mt-4">
-            {t("readonly.body")}
-          </Notice>
+            <div className="mt-4">
+              <ViewTabs
+                tabs={[
+                  { id: "overview", label: t("results.view.overview") },
+                  { id: "history", label: t("results.view.history") },
+                  { id: "dashboard", label: t("results.view.dashboard") },
+                ]}
+                active={view}
+                onChange={setView}
+                label={t("results.view.label")}
+                panelId="facts-panel"
+              />
+              <p className="mt-2 px-2 text-xs text-ink-muted" aria-live="polite">
+                {view === "overview"
+                  ? t("results.view.overviewHint")
+                  : view === "dashboard"
+                    ? t("results.view.dashboardHint")
+                    : historyCount > 0
+                      ? t("results.view.historyAvailable", { n: historyCount, m: brief.facts.length })
+                      : t("results.view.historyNone")}
+              </p>
+            </div>
+          </aside>
 
-          <div className="mt-4">
-            <ViewTabs
-              tabs={[
-                { id: "overview", label: t("results.view.overview") },
-                { id: "history", label: t("results.view.history") },
-                { id: "dashboard", label: t("results.view.dashboard") },
-              ]}
-              active={view}
-              onChange={setView}
-              label={t("results.view.label")}
-              panelId="facts-panel"
-            />
-            <p className="mt-2 px-2 text-xs text-ink-muted" aria-live="polite">
-              {view === "overview"
-                ? t("results.view.overviewHint")
-                : view === "dashboard"
-                  ? t("results.view.dashboardHint")
-                  : historyCount > 0
-                    ? t("results.view.historyAvailable", { n: historyCount, m: brief.facts.length })
-                    : t("results.view.historyNone")}
-            </p>
-          </div>
-        </aside>
-
-        <div className="mt-6 space-y-6 lg:mt-2">
-          {brief.contradictions.length > 0 && (
-            <section aria-labelledby="contradictions-heading">
-              <h2 id="contradictions-heading" className="mb-3 text-sm font-semibold text-contradiction-deep">
-                {t("results.contradictionsHeading")} ({brief.contradictions.length})
-              </h2>
-              <div className="space-y-3">
-                {brief.contradictions.map((c) => (
-                  <ContradictionCard
-                    key={c.id}
-                    contradiction={c}
-                    onPressSource={(source) => setSheet({ kind: "source", source })}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {view === "dashboard" ? (
-            <section id="facts-panel" aria-label={t("results.view.dashboard")}>
-              <Suspense fallback={<Skeleton className="h-64 w-full rounded-2xl" />}>
-                <PatientDashboard
-                  brief={brief}
-                  onPressSources={(title, sources) => setSheet({ kind: "sources", title, sources })}
-                />
-              </Suspense>
-            </section>
-          ) : (
-            <section id="facts-panel" aria-labelledby="facts-heading">
-              <h2 id="facts-heading" className="mb-3 text-sm font-semibold text-ink-muted">
-                {t("results.factsHeading")} ({brief.facts.length})
-              </h2>
-              {brief.facts.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-ink-faint/60 p-5 text-center text-sm text-ink-muted">
-                  {t("results.empty")}
-                </p>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {brief.facts.map((fact) => (
-                    <FactCard
-                      key={fact.id}
-                      fact={fact}
-                      showHistory={view === "history"}
-                      onPressSource={showSource}
-                      onPressGuideline={showGuideline}
-                      onPressFlag={() => comingSoon(t("results.flagTitle"))}
+          <div className="mt-6 space-y-6 lg:mt-2">
+            {brief.contradictions.length > 0 && (
+              <section aria-labelledby="contradictions-heading">
+                <h2 id="contradictions-heading" className="mb-3 text-sm font-semibold text-contradiction-deep">
+                  {t("results.contradictionsHeading")} ({brief.contradictions.length})
+                </h2>
+                <div className="space-y-3">
+                  {brief.contradictions.map((c) => (
+                    <ContradictionCard
+                      key={c.id}
+                      contradiction={c}
+                      onPressSource={(source) => setSheet({ kind: "source", source })}
                     />
                   ))}
                 </div>
-              )}
-            </section>
-          )}
+              </section>
+            )}
+
+            {view === "dashboard" ? (
+              <section id="facts-panel" aria-label={t("results.view.dashboard")}>
+                <Suspense fallback={<Skeleton className="h-64 w-full rounded-2xl" />}>
+                  <PatientDashboard
+                    brief={brief}
+                    onPressSources={(title, sources) => setSheet({ kind: "sources", title, sources })}
+                  />
+                </Suspense>
+              </section>
+            ) : (
+              <section id="facts-panel" aria-labelledby="facts-heading">
+                <h2 id="facts-heading" className="mb-3 text-sm font-semibold text-ink-muted">
+                  {t("results.factsHeading")} ({brief.facts.length})
+                </h2>
+                {brief.facts.length === 0 ? (
+                  <p className="rounded-2xl border border-dashed border-ink-faint/60 p-5 text-center text-sm text-ink-muted">
+                    {t("results.empty")}
+                  </p>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {brief.facts.map((fact) => (
+                      <FactCard
+                        key={fact.id}
+                        fact={fact}
+                        showHistory={view === "history"}
+                        onPressSource={showSource}
+                        onPressGuideline={showGuideline}
+                        onPressFlag={() => comingSoon(t("results.flagTitle"))}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
         </div>
-      </div>
 
-      <p className="mt-8 text-center text-xs leading-snug text-ink-muted">{t("app.disclaimer")}</p>
+        <p className="mt-8 text-center text-xs leading-snug text-ink-muted">{t("app.disclaimer")}</p>
 
-      <Modal
-        open={sheet !== null}
-        onOpenChange={(open) => !open && setSheet(null)}
-        title={sheetTitle(sheet)}
-        description={sheetDescription(sheet)}
-      >
-        {sheet?.kind === "source" && <Excerpt text={sheet.source.excerpt} />}
-        {sheet?.kind === "sources" && (
-          <ul className="space-y-4">
-            {uniqueSources(sheet.sources).map((s) => (
-              <li key={s.documentId + s.excerpt}>
-                <p className="mb-1.5 text-xs font-medium text-ink-muted">{s.documentLabel}</p>
-                <Excerpt text={s.excerpt} />
-              </li>
-            ))}
-          </ul>
-        )}
-        {sheet?.kind === "guideline" && (
-          <>
-            <Excerpt text={sheet.guideline.excerpt} />
-            {sheet.guideline.reference && (
-              <p className="mt-3 break-words text-xs text-ink-muted">{sheet.guideline.reference}</p>
-            )}
-          </>
-        )}
-        {sheet?.kind === "info" && (
-          <>
-            {sheet.title === t("results.flagTitle") && (
-              <Notice tone="readonly" title={t("readonly.title")} className="mb-3">
-                {t("readonly.body")}
-              </Notice>
-            )}
-            <p className="text-[15px] text-ink-muted">{t("results.comingSoon")}</p>
-          </>
-        )}
-      </Modal>
-    </main>
+        <Modal
+          open={sheet !== null}
+          onOpenChange={(open) => !open && setSheet(null)}
+          title={sheetTitle(sheet)}
+          description={sheetDescription(sheet)}
+        >
+          {sheet?.kind === "source" && <Excerpt text={sheet.source.excerpt} />}
+          {sheet?.kind === "sources" && (
+            <ul className="space-y-4">
+              {uniqueSources(sheet.sources).map((s) => (
+                <li key={s.documentId + s.excerpt}>
+                  <p className="mb-1.5 text-xs font-medium text-ink-muted">{s.documentLabel}</p>
+                  <Excerpt text={s.excerpt} />
+                </li>
+              ))}
+            </ul>
+          )}
+          {sheet?.kind === "guideline" && (
+            <>
+              <Excerpt text={sheet.guideline.excerpt} />
+              {sheet.guideline.reference && (
+                <p className="mt-3 break-words text-xs text-ink-muted">{sheet.guideline.reference}</p>
+              )}
+            </>
+          )}
+          {sheet?.kind === "info" && (
+            <>
+              {sheet.title === t("results.flagTitle") && (
+                <Notice tone="readonly" title={t("readonly.title")} className="mb-3">
+                  {t("readonly.body")}
+                </Notice>
+              )}
+              <p className="text-[15px] text-ink-muted">{t("results.comingSoon")}</p>
+            </>
+          )}
+        </Modal>
+      </main>
+    </>
   );
 }
 

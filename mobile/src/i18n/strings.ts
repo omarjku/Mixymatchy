@@ -3,6 +3,47 @@
 
 export const strings = {
   "app.name": "Second Look",
+  "appbar.home": "Second Look: zur Startseite",
+  "appbar.menu": "Weitere Aktionen",
+  "appbar.help": "Hilfe",
+  "appbar.newRequest": "Neue Anfrage",
+
+  // Error pages
+  "error.404.title": "Seite nicht gefunden",
+  "error.404.body": "Diese Adresse gibt es in Second Look nicht. Patientendaten sind davon nicht betroffen.",
+  "error.crash.code": "Fehler",
+  "error.crash.title": "Diese Ansicht konnte nicht angezeigt werden",
+  "error.crash.body": "Ein technischer Fehler ist aufgetreten. Es wurden keine Daten geändert.",
+  "error.home": "Zur Startseite",
+  "error.reload": "Neu laden",
+
+  // Help / FAQ
+  "help.title": "Häufige Fragen",
+  "help.intro": "Wie Second Look arbeitet, was die Markierungen bedeuten und was die App nicht tut.",
+  "help.q1": "Was zeigt Second Look?",
+  "help.a1":
+    "Für eine Rolle und eine Aufgabe zeigt Second Look nur die Angaben aus den Patientendokumenten, die für diese Aufgabe erforderlich sind. Jede Angabe verweist auf ihre Quellstelle.",
+  "help.q2": "Woher stammen die Angaben?",
+  "help.a2":
+    "Aus den Arztbriefen und Befunden der Patientin bzw. des Patienten. „Quelle“ öffnet den genauen Satz oder die Tabellenzeile, aus der eine Angabe stammt.",
+  "help.q3": "Was bedeuten Verifiziert, Prüfung erforderlich und Nicht dokumentiert?",
+  "help.a3":
+    "Verifiziert: wörtlich in einem Dokument gefunden. Prüfung erforderlich: von der KI abgeleitet und nicht wörtlich bestätigt. Nicht dokumentiert: in keinem Dokument gefunden. Second Look ergänzt fehlende Angaben nie.",
+  "help.q4": "Was ist ein Widerspruch?",
+  "help.a4":
+    "Zwei Dokumente machen zur selben Sache unvereinbare Angaben, zum Beispiel zu Allergien. Beide Stellen werden nebeneinander gezeigt. Welche Angabe zutrifft, entscheidet Second Look nicht.",
+  "help.q5": "Kann ich Daten ändern?",
+  "help.a5":
+    "Nein. Second Look ändert keine Arztbriefe, Befunde oder Notizen. Über „Melden“ lässt sich ein Fehler melden; jede Meldung wird geprüft.",
+  "help.q6": "Gibt Second Look Diagnosen oder Empfehlungen?",
+  "help.a6":
+    "Nein. Gezeigt werden nur dokumentierte Angaben und daraus berechnete Werte, etwa eine Gewichtsänderung. Es gibt keine Diagnosen, keine Therapieempfehlungen und keine Vorhersagen.",
+  "help.q7": "Was zeigen Übersicht, Verlauf und Dashboard?",
+  "help.a7":
+    "Übersicht: die aktuellen Werte. Verlauf: frühere Werte, wo dokumentiert. Dashboard: berechnete Änderungen, den Abgleich von notiertem und berechnetem BMI und Blutdruckvergleiche, jeweils mit beiden Quellen.",
+  "help.q8": "Wie funktioniert Vorlesen?",
+  "help.a8":
+    "Im Modus „Vorlesen“ liest der Browser die Übersicht vor. Das geht nur mit einer deutschen Stimme auf dem Gerät; Stimmen, die direkt auf dem Gerät laufen, werden bevorzugt.",
   "readonly.title": "Nur Lesen: Second Look ändert keine Daten",
   "readonly.body":
     "Arztbriefe, Befunde und Notizen bleiben unverändert. Fehler lassen sich nur melden; jede Meldung wird geprüft.",
