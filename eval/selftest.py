@@ -64,6 +64,8 @@ def redteam(use_llm):
     res = rt.run(use_llm=use_llm, out=lambda *_: None)
     say("redteam (%s): leaks %d/%d, false blocks %d/%d" % (
         "llm" if use_llm else "rules only", len(res["leaks"]), res["block"], len(res["false_blocks"]), res["data"]))
+    if res.get("latency"):
+        say("  " + res["latency"])
     for r in res["leaks"]:
         say("  LEAK %s %s" % (r["id"], r["text"]))
     for r in res["false_blocks"]:

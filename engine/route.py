@@ -364,7 +364,13 @@ def current_meds(store, as_of):
 
 # ----------------------------------------------------------------- entry point
 
-def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=None, force_role=None):
+def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=None, force_role=None, llm_pending=None):
+    """Rules routing; with the LLM on, its reading (started in parallel: engine/llm.start, or here) is primary:
+    for request_kind 'clinical_task' with a valid role its role and bundles replace the rules' routing.  The
+    authorisation decision itself (incl. the deterministic veto) is made in engine/llm_gate.py."""
+    if use_llm and llm_pending is None:
+        from .focus import concepts as record_concepts
+        llm_pending = llm.start(text, kb, record_concepts(store)[0])
     t = norm_text(text)
     role_id, alias, method = match_role(t, kb)
     if force_role and force_role != role_id and force_role in kb.role_by_id:  # role read earlier (e.g. by the LLM)
@@ -376,39 +382,26 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
     matched = match_bundles(t_task, kb)
     chosen = choose_bundles(matched, role)
     how = "kb_alias_tags"
-    llm_note, llm_used, llm_reason, llm_info, llm_focus = None, False, None, None, None
-    llm_task, llm_requester = None, None
-    if use_llm:
-        # every request: the model's reading is merged in (rules result + LLM-added bundles); the role is
-        # taken from the model only when the rules found none or only a fuzzy (low-confidence) match
-        from .focus import concepts as record_concepts
-        prop, llm_info = llm.propose(text, kb, record_concepts(store)[0])
+    llm_note, llm_used, llm_reason, llm_info, llm_focus, llm_kind, prop = None, False, None, None, None, None, None
+    if use_llm and llm_pending is not None:
+        prop, llm_info = llm_pending.result()  # never waits past the LLM deadline
         if prop:
-            if prop.get("requester_is_clinical") is False:  # may only restrict (engine/screen.py)
-                llm_requester = {"clinical": False, "reason": prop.get("requester_reason") or None}
-            if prop.get("actionable_clinical_task") is not None:  # may only restrict (engine/screen.py)
-                llm_task = {"actionable": prop["actionable_clinical_task"],
-                            "reason": prop.get("task_reason") or prop.get("reason") or None}
+            llm_kind, llm_reason = prop.get("kind"), prop.get("reason") or None
             if prop.get("focus_concepts"):  # promoted by engine/focus.py after the clinical gate
-                llm_focus = {"concepts": list(prop["focus_concepts"]), "reason": prop.get("reason") or None}
+                llm_focus = {"concepts": list(prop["focus_concepts"]), "reason": llm_reason}
             rid = prop.get("role_id")
-            if rid in kb.role_by_id and (not role or (method == "fuzzy" and rid != role_id)):
-                role_id, role, alias, method = rid, kb.role_by_id[rid], None, "llm"
-                t_task = t
-                matched = match_bundles(t_task, kb)
-                chosen = choose_bundles(matched, role)
+            if llm_kind == "clinical_task" and rid in kb.role_by_id:
+                if rid != role_id:
+                    role_id, role, alias, method = rid, kb.role_by_id[rid], None, "llm"
+                    t_task = t
+                    matched = match_bundles(t_task, kb)
+                    chosen = choose_bundles(matched, role)
+                llm_b = [x for x in prop.get("bundle_ids") or [] if x in kb.bundle_by_id and x != kb.fallback_bundle]
+                if llm_b and llm_b != chosen:
+                    chosen = sorted(llm_b, key=lambda x: int(x[1:]))
+                    how = "kb_llm"
+                    llm_note = "AI reading: %s" % ", ".join(chosen)
                 llm_used = True
-            added = [b for b in prop.get("bundle_ids") or [] if b in kb.bundle_by_id and b not in chosen
-                     and b != kb.fallback_bundle]
-            if chosen:  # the rules already found the task: one extra bundle at most (no screen dumps)
-                added = added[:LLM_EXTRA_WITH_RULES]
-            if added:
-                how = "kb_llm" if not chosen else "kb_alias_tags+llm"
-                chosen = sorted(set(chosen) | set(added), key=lambda b: int(b[1:]))
-                llm_used = True
-                llm_note = "LLM added %s" % ", ".join(added)
-            if llm_used:
-                llm_reason = prop.get("reason") or None
     note = None
     if force_bundles:  # screen.py: a recognised role's own task when the wording is not recognised
         chosen, how = list(force_bundles), "role_default"
@@ -443,8 +436,9 @@ def route(text, kb, store, as_of, detail="long", use_llm=True, force_bundles=Non
         "llm_reason": llm_reason,
         "llm": llm_info,
         "llm_focus_proposal": llm_focus,
-        "llm_task_check": llm_task,
-        "llm_requester_check": llm_requester,
+        "llm_kind": llm_kind,
+        "llm_role": (prop or {}).get("role_id"),
+        "llm_ms": (llm_info or {}).get("llm_ms"),
         "rules": rules,
         "detail": detail,
         "slots": [{"slot": s, "priority": info[s]["priority"], "origins": info[s]["origins"]} for s in order],

@@ -231,10 +231,15 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     # request semantics (engine/request.py): instructions inside the text are blanked before anything reads
     # it (they can never add content, pick a role or authorise); excluded topics are blanked from the task
     from . import request as R
+    pending = None
+    if use_llm:  # the LLM reading runs in parallel with the rules (request analysis + routing), never longer
+        from . import llm as L                        # than its deadline (engine/llm.py timeout_s)
+        from .focus import concepts as record_concepts
+        pending = L.start(text, k, record_concepts(st)[0])
     req = R.analyse(text, st)
     if req["other_patient"] and C.classify(req["clean"])["decision"] != "not_clinical":
         return other_patient_screen(text, req, detail, t0)  # (a non-clinical requester gets the gate's refusal)
-    u = route(req["task"], k, st, as_of, detail=detail, use_llm=use_llm)
+    u = route(req["task"], k, st, as_of, detail=detail, use_llm=use_llm and pending is not None, llm_pending=pending)
     u["text"] = text
     u["as_of_date"] = as_of
     u["anchor_date"] = anchor
@@ -260,9 +265,38 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         # even when the task itself is clinical
         gate = {"decision": "not_clinical", "clinical": False, "term": req["withdrawn_roles"][0], "label": None}
     u["clinical_gate"] = gate
-    # no requester role stated (decision 'no_role' or 'clinical_task': the task alone is clear): never data, the
-    # needs_task screen asks who is asking and for the task (DECISIONS 19); a greeting alone asks for the task
-    if gate["decision"] in ("no_role", "clinical_task"):
+    # LLM primary when it answered (engine/llm_gate.py): its verdict decides, the rules veto (deny wins)
+    from . import llm_gate as G
+    alias0 = (u.get("role_match") or {}).get("matched") if rules_role else None
+    verdict = G.decide(u, gate, req, [alias0] if alias0 else [])
+    llm_ok = False
+    if verdict:
+        what, why, vetoed = verdict
+        u["llm_verdict"] = {"verdict": what, "reason": why, "veto": vetoed}
+        if what == "refuse":
+            gate = dict(gate, decision="llm_not_clinical", clinical=False)
+            scr = not_authorised_screen(u, gate, detail, t0)
+            scr["understood"].update(clinical_gate=gate, llm_used=True, llm_reason=why)
+            return scr
+        if what == "spam":
+            return needs_task_screen(u, "LLM: spam or abuse", detail, t0, llm_reason=why, message=G.SPAM_MESSAGE)
+        if what == "no_role":
+            ask = re.sub(r"\s+", " ", req["task"]).strip(" ,;:.?!")[:80]
+            u["clinical_gate"] = dict(gate, clinical=False)
+            return needs_task_screen(u, "LLM: no requester role", detail, t0, llm_reason=why,
+                                     message=C.NEEDS_ROLE_MESSAGE, role_missing=True,
+                                     suggestions=["%s, %s" % (r_, ask) for r_ in C.ROLE_EXAMPLES])
+        if what == "no_task":
+            return needs_task_screen(u, "LLM: no clinical task", detail, t0, llm_reason=why)
+        if what == "data":
+            llm_ok = True
+            gate = {"decision": "llm_clinical", "clinical": True, "term": None,
+                    "label": role["name"] if role else None}
+            u.update(clinical_gate=gate, llm_used=True, llm_reason=why)
+    # rules path (no LLM reading, or a rules veto): no requester role stated (decision 'no_role' or
+    # 'clinical_task': the task alone is clear): never data, the needs_task screen asks who is asking and for
+    # the task (DECISIONS 19); a greeting alone asks for the task
+    if not llm_ok and gate["decision"] in ("no_role", "clinical_task"):
         from . import intent as I
         words = re.findall(r"[^\W\d_][\w'-]*", req["clean"])
         if words and all(w in I.lexicon()["never"] for w in words):
@@ -274,30 +308,17 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
                                      suggestions=["%s, %s" % (r_, ask) for r_ in C.ROLE_EXAMPLES], role_missing=True)
     if not gate["clinical"]:
         return not_authorised_screen(u, gate, detail, t0)
-    rq = u.get("llm_requester_check")
-    if rq and rq.get("clinical") is False:  # the optional LLM may only restrict: requester not clinical -> refuse
-        gate = dict(gate, decision="llm_not_clinical", clinical=False)
-        scr = not_authorised_screen(u, gate, detail, t0)
-        scr["understood"].update(clinical_gate=gate, llm_used=True,
-                                 llm_reason=rq.get("reason") or "requester is not clinical staff")
-        return scr
     # no task, no data (engine/intent.py, docs/DECISIONS.md 19): a greeting, filler or a role alone never opens
-    # the record.  The optional LLM may only restrict: when the rules found no KB task it can say the request is
-    # not an actionable clinical task; it can never turn this screen into data.
+    # the record (rules path; the LLM path decided above, a greeting-only request is vetoed there)
     from . import focus as F
     from . import intent as I
     alias = (u.get("role_match") or {}).get("matched") if rules_role else None
     named_pre = F.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
     intent = I.has_task(req["task"], k, st, aliases=[alias] if alias else [], named_topics=named_pre,
                         applicability_items=app["items"])
-    llm_chk = u.get("llm_task_check")
     u["task_check"] = {"actionable": intent["actionable"], "reason": intent["reason"], "words": intent["words"][:8]}
-    if not intent["actionable"]:
+    if not intent["actionable"] and not llm_ok:  # with the LLM's clinical_task verdict, its reading of the task holds
         return needs_task_screen(u, intent["reason"], detail, t0)
-    rules_task = intent["reason"] != "clinical content word" or bool(u.get("bundles_matched"))
-    if llm_chk and llm_chk.get("actionable") is False and not rules_task:
-        return needs_task_screen(u, "LLM: not an actionable clinical task", detail, t0,
-                                 llm_reason=llm_chk.get("reason") or "not an actionable clinical task")
     # recognised role (or a clinical requester the lexicon knows), task wording not recognised: the role's own
     # typical task (rulebook/kb_overlay.json role_fallback_bundles, else its first default bundle) with a
     # visible note, instead of the generic safety summary

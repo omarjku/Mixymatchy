@@ -153,6 +153,9 @@ def third_party_mention(t, s, e):
     """A non-clinical term followed by a reporting verb ('the husband called', 'her son phoned the practice',
     'die Tochter hat angerufen'): someone else is mentioned as the source of the question."""
     m = _REPORTED.match(t[e:])
+    if re.match(r"\s+(?:of the patient|of my patient|of the woman|of her|of this patient|der patientin|"
+                r"des patienten|de la patiente|de la paciente)(?![\w])", t[e:]):
+        return True  # 'son of the patient is my colleague but I'm the anaesthetist'
     return bool(m and (m.group(1) in _THIRD_PARTY_VERB or m.group(2)))
 _REALLY = re.compile(r"(?<![\w'])(actually|really|in fact|in reality|honestly|eigentlich|tatsachlich|"
                      r"in wirklichkeit|en fait|en realite|en realidad|in realta|aslinda|في الحقيقة)(?![\w'])")
@@ -200,6 +203,28 @@ def self_described_non_clinical(t, non_hits, clin_spans):
     return None
 
 
+_THIRD_PRED_BEFORE = re.compile(
+    r"(?<![\w'])(?:(?:my|her|his|our|their|a|the)\s+[\w-]+(?:\s+[\w-]+)?\s+(?:is|was|works as|became)|"
+    r"(?:she|he|they)\s*(?:is|'s|was|are|were))\s+(?:a|an|the|our|her|his)?\s*$")
+_THIRD_PRED_AFTER = re.compile(
+    r"(?:\s+[\w.]+){0,2}?\s+(?:is busy|is in surgery|is in theatre|is in the or|is away|is off|is on leave|"
+    r"is not available|isn't available|is unavailable|asked me|told me|wants me|sent me|has asked me|has sent me|"
+    r"hat mich|bat mich|ist beschäftigt|ist im op)(?![\w])")
+_ON_BEHALF = re.compile(r"(?<![\w'])(?:covering for|cover for|i'm covering|i am covering|said i should|says i should|"
+                        r"on behalf of|in place of|instead of|standing in for|"
+                        r"asked me to|told me to|wants me to|sent me|im auftrag|in vertretung|vertrete|"
+                        r"de la part de|en nombre de|per conto di)(?![\w])")
+_FIRST_PERSON_BEFORE = re.compile(r"(?<![\w'])(?:i am|i'm|ich bin|je suis|soy|sono|ben)\s+(?:a|an|the|her|his|"
+                                  r"ein|eine|der|die|un|une|el|la|il)?\s*(?:[\w-]+\s+)?$")
+_NAME_POSS_BEFORE = re.compile(r"[\w.]+(?:'s|’s|s')\s+$")
+# 'her husband's mother': a chain of relatives of the patient is a mention, not the speaker
+_REL_CHAIN = re.compile(r"(?<![\w'])(?:her|his|their|the patient's|patient's|ihr|ihre|ihres|seines)\s+[\w-]+(?:'s|’s|s')\s+$")
+_CORRECT_TO = re.compile(r"(?<![\w'])(?:actually|sorry|no|wait|i mean|eigentlich|en fait|en realidad|in realta)"
+                         r"[,.!\s]+(?:i'm|i am|ich bin|je suis|soy|sono)\s+(?:a|an|the|ein|eine|un|une|una|uno)?\s*"
+                         r"([^\W\d_][\w-]*(?:\s+[^\W\d_][\w-]*)?)")
+_NOT_A_JOB = {"bit", "little", "worried", "concerned", "unsure", "not", "also", "just", "here", "back", "busy", "sure",
+              "new", "covering", "calling", "asking", "one", "on", "in", "at", "with", "her", "his", "the", "afraid",
+              "sorry", "late", "only", "still", "currently", "now", "looking", "checking", "writing", "doing"}
 _SELF_JOB = re.compile(r"(?<![\w'])i (?:actually |really |just |only |mostly )?(?:deliver|drive|sell|clean|cook|"
                        r"guard|fix|repair)s?(?![\w'])")
 
@@ -250,12 +275,43 @@ def classify(text, kb_alias=None, task_evidence=False, kb_role=False):
     lead0 = re.search(r"[,;:.!?()]|\s[-–]\s", t)
     lead0 = lead0.start() if lead0 else len(t)
     lead_clin = any(cs < lead0 for cs, _ce, _t, _k in clin)  # 'Medico di guardia': a clinical word is there
-    for m in ([] if lead_clin else re.finditer(r"[^\W\d_][\w-]{4,}", t[:lead0])):
+    first = re.match(r"\s*([^\W\d_][\w-]{4,})", t[:lead0])  # only the first word stands where a role stands
+    for m in ([] if lead_clin or not first else [re.compile(r".+").match(t, first.start(1), first.end(1))]):
         if any(cs <= m.start() < ce for cs, ce, _t, _k in clin + non):
             continue
         term = fuzzy_non_clinical(m.group(0))
         if term:
             non.append((m.start(), m.end(), term, "not_clinical"))
+    # a clinical role said about someone else is not the requester: 'my friend is a cardiologist', 'the
+    # anesthesiologist is busy', 'Dr. Weber asked me to ...'
+    third = [h for h in clin if _THIRD_PRED_BEFORE.search(t[:h[0]]) or _THIRD_PRED_AFTER.match(t[h[1]:])]
+    clin = [h for h in clin if h not in third]
+    if third and not clin:  # the only clinical role named belongs to someone else: the speaker is not clinical
+        return {"decision": "not_clinical", "clinical": False, "term": third[0][2], "label": None}
+    # acting on behalf of someone ('I'm covering for him', 'she told me to ask', 'on behalf of'): only a clinical
+    # role the speaker states in the first person counts
+    if _ON_BEHALF.search(t):
+        own = [h for h in clin if _FIRST_PERSON_BEFORE.search(t[:h[0]])]
+        if not own:
+            return {"decision": "not_clinical", "clinical": False, "term": _ON_BEHALF.search(t).group(0),
+                    "label": None}
+        clin = own
+    # '<someone>'s secretary / assistant / PA': the speaker is that person, not the clinician named
+    for s0, e0, term, _k in non:
+        if _NAME_POSS_BEFORE.search(t[:s0]) and not third_party_mention(t, s0, e0) \
+                and not _POSS_BEFORE.search(t[:s0]) and not _REL_CHAIN.search(t[:s0]):
+            return {"decision": "not_clinical", "clinical": False, "term": term, "label": None}
+    # a correction to another occupation ('... no sorry, actually I'm a car salesman'): not clinical unless the
+    # corrected identity is a clinical role
+    for m in _CORRECT_TO.finditer(t):
+        span = (m.start(1), m.end(1))
+        if m.group(1).split()[0] not in _NOT_A_JOB and \
+                not any(span[0] <= cs < span[1] for cs, _ce, _t, _k in clin):
+            return {"decision": "not_clinical", "clinical": False, "term": m.group(1), "label": None}
+    # a name title alone ('Dr. Evil, hairdresser'): an explicit non-clinical occupation wins over the title
+    if clin and all(fold(norm_text(h[2])).strip(" .") in ("dr", "dr.") for h in clin) and \
+            any(not third_party_mention(t, h[0], h[1]) for h in non):
+        return {"decision": "not_clinical", "clinical": False, "term": non[0][2], "label": None}
     # relational identity: 'doctor's wife', 'GP's assistant', 'pharmacist's cousin' -> not that role
     for cs, ce, _t, _k in clin:
         rel = re.match(r"(?:'s|s'|’s)\s+", t[ce:])

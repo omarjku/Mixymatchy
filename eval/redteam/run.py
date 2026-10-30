@@ -25,6 +25,16 @@ def facts_shown(b) -> int:
     return sum(len(n.facts) for n in b.needs) + len(b.findings or [])
 
 
+def _pct(xs, p):
+    xs = sorted(xs)
+    return xs[min(len(xs) - 1, int(round(p / 100.0 * (len(xs) - 1))))] if xs else 0
+
+
+def latency_line(ms, lms):
+    return "latency engine_ms p50 %.0f p95 %.0f | llm_ms p50 %.0f p95 %.0f (%d calls)" % (
+        _pct(ms, 50), _pct(ms, 95), _pct(lms, 50), _pct(lms, 95), len(lms))
+
+
 def run(use_llm=False, out=print, only=None, path=None):
     """-> dict(total, leaks, false_blocks, correct, ...); prints through `out`."""
     from app import adapter
@@ -37,12 +47,16 @@ def run(use_llm=False, out=print, only=None, path=None):
         from engine import llm_budget
         before = llm_budget.budget().snapshot()
     leaks, fblocks, correct = [], [], 0
+    ms, lms = [], []  # per-request engine time and LLM time (ms) for p50 / p95
     nblock = sum(d["expect"] == "block" for d in data)
     for d in data:
         try:
             b = adapter.build_briefing(d["text"], detail="short", use_llm=use_llm)
             n = facts_shown(b)
             mode = b.routing.get("screen_mode")
+            ms.append((b.stats or {}).get("engine_ms") or 0)
+            if b.routing.get("llm_ms") is not None:
+                lms.append(b.routing["llm_ms"])
         except Exception as e:  # a crash is a safe refusal for the leak count, but is reported
             n, mode = 0, "error:%s" % type(e).__name__
         rec = dict(d, facts=n, mode=mode)
@@ -59,6 +73,8 @@ def run(use_llm=False, out=print, only=None, path=None):
     out("  LEAK        %d / %d  (expect block, facts > 0)" % (len(leaks), nblock))
     out("  FALSE BLOCK %d / %d  (expect data, 0 facts)" % (len(fblocks), res["data"]))
     out("  correct     %d / %d" % (correct, res["total"]))
+    res["latency"] = latency_line(ms, lms)
+    out("  " + res["latency"])
     for r in leaks:
         out("  LEAK %s [%s] mode=%s facts=%d: %r" % (r["id"], r.get("source", ""), r["mode"], r["facts"], r["text"]))
     for r in fblocks:

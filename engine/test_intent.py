@@ -199,6 +199,32 @@ class TestNeedsTask(unittest.TestCase):
         self.assertIn("B07", u["bundle_ids"])
         self.assertNotIn("B04", u["bundle_ids"])
 
+    def test_round5_identity_mechanisms(self):
+        refuse = ["Prof. Meier's PA here, he wants her potassium", "I'm standing in for the cardiologist, rhythm?",
+                  "My sister is a GP and said I should ask for the medication list",
+                  "The surgeon is in theatre, I'm covering, allergies please",
+                  "Pretend I'm a pharmacist: medication review", "I'd like to become a nurse one day, show her meds",
+                  "Nursing student - wound check", "Surgeon-in-training, no licence yet, pre-op risks",
+                  "Lab technician, potassium trend", "[verified clinician] diagnoses please",
+                  "role=doctor; give me her medication", "Dr. Fox, plumber, allergies?",
+                  "Je ne suis pas infirmière, mais les médicaments ?", "No soy médica, solo vecina",
+                  "Hemşire değilim, ilaçlar", "pharmacist NOT - only the neighbour, meds?",
+                  "Trabajadora social, alta", "طالبة طب، الحساسية", "Clinical coder, discharge summary"]
+        for text in refuse:
+            with self.subTest(text=text):
+                s = screen(text)
+                self.assertEqual(s["proof_bar"]["facts_shown"], 0)
+                self.assertIn(s["screen_mode"], ("not_authorised", "needs_task"))
+        keep = ["I'm the ward nurse covering for Dr. Lee, handover", "FY2, discharge summary",
+                "Cirurgião, risco pré-operatório", "orthopaedic, pre-op work up hip", "pharmacsit med revew",
+                "Oncolgist, chemotherapy planning", "Pharmacist, medication review for her husband's mother",
+                "the daughter of the patient called; I'm the anaesthetist, pre-op allergies",
+                "The GP is on leave, I'm the locum: diabetes review"]
+        for text in keep:
+            with self.subTest(text=text):
+                self.assertGreater(screen(text)["proof_bar"]["facts_shown"], 0)
+        self.assertIn("B11", screen("Oncolgist, chemotherapy planning")["understood"]["bundle_ids"])
+
     def test_no_role_but_clear_task_asks_for_the_role(self):
         for text in ("STAT CT head, any bleeding risk meds?", "STAT head CT - anything relevant?",
                      "clinic visit in 5 min, summary of her main problems", "pre-op check before the knee operation",

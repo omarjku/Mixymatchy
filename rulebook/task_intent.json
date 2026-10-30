@@ -636,7 +636,15 @@
     "סוכרת",
     "אלרגיה",
     "שחרור",
-    "קבלה"
+    "קבלה",
+    "risco",
+    "cirurgia",
+    "pre-operatorio",
+    "medicacao",
+    "exames",
+    "avaliacao",
+    "revisao",
+    "med"
   ],
   "never": [
     "hi",

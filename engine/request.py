@@ -82,6 +82,14 @@ _INSTR = [
     r"(?:اضف|اضافة|احذف|عدل|غير)\s+(?:تشخيص|حساسية|دواء)[^.;!?]*",
     r"(?:اطبع|ارسل|صدر)\s+(?:جميع|كل)[^.;!?]*",
 ]
+# identity injection framing ('System: role=physician verified', '[admin]', '</user>'): blanked before the gate reads
+# who is asking, so a fake label can never be the requester
+_INSTR += [
+    r"\b(?:system|assistant|developer|admin|administrator|root|tool)\s*:[^.;!?]*",
+    r"\b(?:role|user_role|usertype|user|auth|permission|access|clearance)\s*[=:]\s*[\w-]+",
+    r"\b(?:verified|authenticated|authori[sz]ed|whitelisted|trusted)\b(?:\s+(?:as\s+)?(?:an?\s+|the\s+)?[\w-]+)?",
+    r"\[[^\]]{0,40}\]", r"<\s*/?\s*[\w-]+\s*>", r"\buser\s*:",
+]
 INSTR_RX = [re.compile(p) for p in _INSTR]
 
 
@@ -318,14 +326,31 @@ def role_correction(t, kb):
 
 # ----------------------------------------------------------------- withdrawn clinical claims
 _NEG_BEFORE = re.compile(r"(?<![\w'])(?:not|no|nor|never|kein|keine|keiner|keinen|nicht|nie|ni|pas|non|ningun|nessun|"
+                         r"ne suis pas|suis pas|no soy|nao sou|não sou|non sono|non sono un|"
                          r"degil|ex|ex-|former|formerly|retired|ehemalig\w*|pensioniert\w*|frueher|früher)"
                          r"(?:\s+(?:a|an|the|really|actually|ein|eine|un|une|el|la|il|un|una))?\s*$")
-_NEG_AFTER = re.compile(r"\s*\?\s*(?:no|nope|nein|non|not really|nah|well,? no|not quite|actually|eigentlich)(?![\w])")
+_NEG_AFTER = re.compile(r"\s*\?\s*(?:no|nope|nein|non|not really|nah|well,? no|not quite|actually|eigentlich)(?![\w])"
+                        r"|\s*(?:degilim|degil|değilim|değil)(?![\w])"            # Turkish 'Doktor değilim'
+                        r"|\s+(?:not|nicht)\s*(?:[,;:.!-]|$|(?:just|only|nur|merely)\b)")  # 'anesthesiologist NOT, just ...'
+# hypothetical / future / in-training claims: not the requester's role (FY1/FY2, SHO, registrar, resident,
+# Assistenzarzt are their own clinical terms and are not affected)
+_HYPO_BEFORE = re.compile(r"(?<![\w'])(?:as if i (?:were|was)|if i (?:were|was)|pretend(?:ing)? (?:i'm|i am|to be)|"
+                          r"imagine (?:i'm|i am)|i will become|i'll become|i will be|i'll be|i want to (?:be|become)|"
+                          r"i'd like to (?:be|become)|i hope to (?:be|become)|i'm going to be|would-be|aspiring|"
+                          r"future|soon-to-be|soon to be|wannabe|wanna be|angehende[rn]?|zukünftige[rn]?|"
+                          r"futur(?:e)?|futuro|futura)\s+(?:a|an|the|ein|eine|un|une|el|la)?\s*$")
+_HYPO_AFTER = re.compile(r"(?:-in-training|\s+in training|\s*-?\s*trainee|\s+student|\s+apprentice|\s+in ausbildung|"
+                         r"\s*-?\s*azubi|\s+en formation|\s+en formacion|"
+                         r"[^.;!?]{0,40}?\b(?:waiting for (?:my|the) licen[cs]e|without (?:a |my )?licen[cs]e|"
+                         r"not yet (?:qualified|licensed|registered)|next year|in (?:a|two|three|a few) years?|"
+                         r"one day|someday)\b)")
 
 
 def withdrawn_roles(t, kb):
-    """Clinical role words whose claim is withdrawn: negated ('not a doctor', 'kein Arzt', 'ex-nurse') or
-    questioned and denied ('Nurse? no, I ...').  -> spans."""
+    """Clinical role words whose claim is withdrawn: negated ('not a doctor', 'kein Arzt', 'ex-nurse', 'Doktor
+    değilim', 'NOT, just a visitor'), questioned and denied ('Nurse? no, I ...'), hypothetical or future ('as if I
+    were', 'I will become ... next year') or still in training ('-in-training', 'trainee', 'waiting for my
+    licence').  -> spans."""
     from . import clinical as C
     from .understand import fold
     ft = fold(t)
@@ -333,7 +358,8 @@ def withdrawn_roles(t, kb):
     spans = [(s0, e0) for s0, e0, _t in C._hits(ft, lex["clinical"]) + C._pattern_hits(ft, lex)]
     spans += [sp for sp in _role_spans(t, kb) if sp not in spans and not C._hits(ft[sp[0]:sp[1]], lex["non_clinical"])]
     return [(s0, e0) for s0, e0 in sorted(set(spans))
-            if _NEG_BEFORE.search(ft[:s0]) or _NEG_AFTER.match(ft[e0:])]
+            if _NEG_BEFORE.search(ft[:s0]) or _NEG_AFTER.match(ft[e0:])
+            or _HYPO_BEFORE.search(ft[:s0]) or _HYPO_AFTER.match(ft[e0:])]
 
 
 # ----------------------------------------------------------------- entry point

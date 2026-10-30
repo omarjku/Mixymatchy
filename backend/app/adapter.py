@@ -409,6 +409,8 @@ def _routing(screen: dict) -> dict:
             "role_missing": bool(u.get("role_missing")),
             "clinical_gate": (u.get("clinical_gate") or {}).get("decision"),
             "llm_used": bool(u.get("llm_used")), "llm_reason": u.get("llm_reason") if u.get("llm_used") else None,
+            "llm_kind": u.get("llm_kind"), "llm_verdict": u.get("llm_verdict"), "llm_ms": u.get("llm_ms"),
+            "engine_ms": screen.get("timing_ms"),
             "applicability_note": u.get("applicability_note"), "applicability": u.get("applicability"),
             "task_focus": u.get("task_focus"), "llm_focus": u.get("llm_focus"),
             "also_relevant": u.get("also_relevant") or [], "also_relevant_more": u.get("also_relevant_more") or 0,
