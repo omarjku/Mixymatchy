@@ -12,8 +12,10 @@ interface SecondLookLock {
 }
 
 // SECOND_LOOK_AUTH=0 on the backend turns sign-in and the PIN lock off: GET /auth/config -> {"auth": false}.
-// Any failure means auth stays on.
+// Any failure means auth stays on. VITE_MOCK=1 (local dev only, invented mock briefs, no backend) skips it too:
+// there is no patient data to protect and no /auth to sign in against.
 async function authEnabled(): Promise<boolean> {
+  if (import.meta.env.VITE_MOCK === "1") return false;
   try {
     const r = await fetch("/auth/config", { cache: "no-store" });
     if (!r.ok) return true;

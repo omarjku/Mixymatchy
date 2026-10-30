@@ -8,6 +8,7 @@ import { t } from "@/i18n/strings";
 import { cn } from "@/lib/utils";
 import { Sparkline } from "@/components/Sparkline";
 import type { Fact, FactRow, FactTrust } from "@/types/fact";
+import { KeepDoses } from "@/components/ui/KeepDoses";
 
 // One patient fact. Presentational only: the parent screen decides what source/guideline/flag do.
 // Trust tier shows three ways at once (outline, badge, value styling) so it never depends on color alone.
@@ -169,7 +170,7 @@ function Row({ row, onPress }: { row: FactRow; onPress: (row: FactRow) => void }
   return (
     <li className="flex items-start gap-2 py-1" data-row={row.id}>
       <p className="min-w-0 flex-1 text-[14px] leading-snug">
-        <span className="font-semibold text-ink">{row.text}</span>
+        <span className="font-semibold text-ink"><KeepDoses text={row.text} /></span>
         {row.date && <span className="text-[13px] text-ink-muted"> · {row.date}</span>}
         {row.computed && <span className="text-[13px] text-ink-muted"> · {t("results.computed")}</span>}
       </p>

@@ -20,7 +20,7 @@ export function ProofRing({ backed, total, removed }: ProofRingProps) {
   ];
 
   return (
-    <section className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-4">
+    <section className="flex items-center justify-between gap-4 rounded-lg border border-line bg-surface p-4">
       <div className="min-w-0">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
           <IconTile icon={DocumentValidationIcon} />

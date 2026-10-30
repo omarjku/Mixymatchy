@@ -65,7 +65,7 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
     <>
       <motion.div
         layoutId={layoutId}
-        style={{ borderRadius: 20 }}
+        style={{ borderRadius: 8 }}
         className="group relative border border-line bg-surface p-4 shadow-[0_1px_2px_rgba(20,24,49,0.05)] transition-colors hover:border-primary/60"
       >
         <PatientIdentity
@@ -76,9 +76,14 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
           heading="h1"
         />
 
-        <div className="mt-3 grid grid-cols-4 gap-1.5" role="group" aria-label={t("patient.trustSummary")}>
+        {/* plain row split by thin rules, no box per number */}
+        <div
+          className="mt-3 grid grid-cols-4 divide-x divide-line border-t border-line pt-2.5"
+          role="group"
+          aria-label={t("patient.trustSummary")}
+        >
           {counts.map(({ trust, marker, count }) => (
-            <div key={trust} className="rounded-xl bg-canvas px-2 py-1.5">
+            <div key={trust} className="px-2 first:pl-0">
               <span className="flex items-center gap-1.5">
                 <span aria-hidden className={cn("size-2.5 shrink-0 rounded-full", marker)} />
                 <span className="text-lg font-semibold leading-none text-ink">{count}</span>
@@ -101,7 +106,7 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
           aria-expanded={open}
           aria-haspopup="dialog"
           aria-label={`${t("patient.openDetails")}: ${brief.patientLabel}`}
-          className="absolute inset-0 rounded-[20px] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+          className="absolute inset-0 rounded-lg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
         />
       </motion.div>
 
@@ -113,14 +118,14 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
-              className="absolute inset-0 bg-ink/50"
+              className="absolute inset-0 bg-scrim/50"
             />
             <motion.div
               layoutId={layoutId}
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
-              style={{ borderRadius: 24 }}
+              style={{ borderRadius: 8 }}
               className="relative flex w-full max-w-md flex-col overflow-hidden border border-line bg-surface shadow-xl md:max-w-2xl"
             >
               <div className="flex items-start gap-2 border-b border-line p-4 pr-2">
@@ -170,7 +175,7 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
                   <h3 id={`${titleId}-docs`} className="text-sm font-semibold text-ink">
                     {t("patient.documents")} ({documents.length})
                   </h3>
-                  <ul className="mt-3 divide-y divide-line rounded-2xl border border-line">
+                  <ul className="mt-3 divide-y divide-line rounded-lg border border-line">
                     {documents.map((doc) => (
                       <li key={doc.documentId} className="flex items-center gap-3 px-3 py-3">
                         <Icon icon={File01Icon} size={18} className="text-ink-muted" />
@@ -216,7 +221,7 @@ function PatientIdentity({
 
 function SeriesRow({ fact }: { fact: Fact }) {
   return (
-    <li className="rounded-2xl border border-line p-3">
+    <li className="rounded-lg border border-line p-3">
       <p className="text-sm text-ink-muted">{fact.label}</p>
       <p className="text-[17px] font-semibold text-ink">{fact.value}</p>
       <ValueHistory fact={fact} />

@@ -437,7 +437,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     _annotate_followups(st, cards + focus + also)
     notes = []
     if req["instructions"]:
-        notes.append("Instructions inside the request were ignored (Second Look never changes or adds record "
+        notes.append("Instructions inside the request were ignored (Second Eye never changes or adds record "
                       "content): %s." % "; ".join("'%s'" % x[:60] for x in req["instructions"]))
     if excluded:
         notes.append("Left out as requested: %s (allergies and age/sex always stay)."
@@ -546,7 +546,7 @@ def disagreement_card(st, shown_cards, contras, excluded=(), review=False):
 
 def other_patient_screen(text, req, detail, t0):
     """The request names a different patient: nothing of the open record is shown."""
-    msg = ("Different patient: %s Second Look shows only the record that is open; open the other patient's record "
+    msg = ("Different patient: %s Second Eye shows only the record that is open; open the other patient's record "
            "to ask about them." % req["other_patient"])
     u = {"text": text, "task_text": "", "role_match": {"method": "none", "matched": None},
          "clinical_gate": {"decision": "other_patient", "clinical": False, "term": None, "label": None},

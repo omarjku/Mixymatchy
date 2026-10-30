@@ -122,7 +122,7 @@ function LetterBody({
   }, [load, index]);
 
   const stepper = list.length > 1 && (
-    <div className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-canvas px-2 py-1.5">
+    <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-canvas px-2 py-1.5">
       <Button
         variant="icon"
         icon={ArrowLeft01Icon}
@@ -150,7 +150,7 @@ function LetterBody({
     return (
       <>
         {stepper}
-        <blockquote className="rounded-xl bg-primary-soft p-4 font-serif text-[15px] leading-relaxed text-ink">
+        <blockquote className="rounded-lg bg-primary-soft p-4 font-serif text-[15px] leading-relaxed text-ink">
           „{current?.excerpt}“
         </blockquote>
       </>

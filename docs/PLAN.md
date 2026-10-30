@@ -4,7 +4,7 @@ Full plan and the visual overview were shared as PDFs (Second_Look_Team_Plan.pdf
 This file is the living version; it includes the team additions agreed on 30.10.2026.
 
 ## Pitch
-"Other tools summarise the record. Second Look checks it, for the task in front of you."
+"Other tools summarise the record. Second Eye checks it, for the task in front of you."
 
 ## Features
 | # | Feature | Owner |

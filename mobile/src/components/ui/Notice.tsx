@@ -32,7 +32,7 @@ export interface NoticeProps {
 export function Notice({ tone = "info", title, children, className }: NoticeProps) {
   const { className: toneClass, icon, role } = tones[tone];
   return (
-    <Alert role={role} className={cn("rounded-2xl px-4 py-3", toneClass, className)}>
+    <Alert role={role} className={cn("rounded-lg px-4 py-3", toneClass, className)}>
       <Icon icon={icon} size={18} />
       <AlertTitle className="line-clamp-none font-semibold">{title}</AlertTitle>
       {children && <AlertDescription className="text-current">{children}</AlertDescription>}

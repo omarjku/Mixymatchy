@@ -73,16 +73,7 @@ export function TaskBar({ value, onValueChange, mode, onModeChange, onSubmit, ca
         </span>
       </button>
 
-      <div className="relative flex h-full min-w-0 flex-1 items-center overflow-hidden px-3">
-        <AnimatePresence mode="popLayout" initial={false}>
-          {value.length === 0 && (
-            <AnimatedPlaceholder
-              key={placeholder}
-              text={placeholder}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 whitespace-nowrap text-[17px] font-medium text-ink-faint"
-            />
-          )}
-        </AnimatePresence>
+      <div className="flex h-full min-w-0 flex-1 items-center px-3">
         <input
           type="text"
           value={value}
@@ -90,22 +81,21 @@ export function TaskBar({ value, onValueChange, mode, onModeChange, onSubmit, ca
           onKeyDown={(e) => {
             if (e.key === "Enter" && canSubmit) onSubmit();
           }}
+          placeholder={placeholder}
           aria-label={placeholder}
           enterKeyHint="send"
           autoComplete="off"
           // 17px keeps iOS from zooming on focus (needs >= 16px)
-          className="w-full min-w-0 flex-1 border-none bg-transparent text-[17px] font-medium text-ink outline-hidden"
+          className="w-full min-w-0 flex-1 border-none bg-transparent text-[17px] font-medium text-ink outline-hidden placeholder:text-ink-faint"
         />
       </div>
 
-      <motion.button
+      <button
         type="button"
         onClick={onSubmit}
         disabled={!canSubmit}
         aria-label={t("bar.send")}
         title={t("bar.send")}
-        whileHover={canSubmit ? { x: 2 } : undefined}
-        whileTap={canSubmit ? { scale: 0.9 } : undefined}
         className={cn(
           "flex size-12 shrink-0 items-center justify-center rounded-full transition-colors",
           "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
@@ -115,27 +105,7 @@ export function TaskBar({ value, onValueChange, mode, onModeChange, onSubmit, ca
         )}
       >
         <Icon icon={ArrowRight02Icon} size={22} />
-      </motion.button>
+      </button>
     </div>
-  );
-}
-
-// Letter-by-letter placeholder swap, the signature effect of the original quick-switcher.
-function AnimatedPlaceholder({ text, className }: { text: string; className?: string }) {
-  return (
-    <span className={className} style={{ display: "inline-flex" }} aria-hidden>
-      {text.split("").map((char, i) => (
-        <motion.span
-          key={i}
-          initial={{ y: 10, opacity: 0, scale: 0.5 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: -10, opacity: 0, scale: 0.5 }}
-          transition={{ type: "spring", stiffness: 240, damping: 16, mass: 1.2, delay: i * 0.014 }}
-          style={{ display: "inline-block", whiteSpace: char === " " ? "pre" : undefined }}
-        >
-          {char}
-        </motion.span>
-      ))}
-    </span>
   );
 }

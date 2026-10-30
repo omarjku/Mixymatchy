@@ -41,6 +41,7 @@ interface BackendNeed {
   status: "documented" | "not_documented" | "not_applicable";
   facts: BackendFact[];
   computed: BackendComputed[];
+  superseded?: BackendFact[]; // older values replaced by a newer letter / medication list
   reason?: string | null;
   reason_segment_ids: string[];
   shape?: string | null;
@@ -137,6 +138,7 @@ function segmentIdsOf(briefing: BackendBriefing): string[] {
   for (const need of briefing.needs) {
     need.facts.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
     need.computed.forEach((c) => c.segment_ids.forEach((s) => ids.add(s)));
+    need.superseded?.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
     need.reason_segment_ids.forEach((s) => ids.add(s));
   }
   briefing.blind_spot.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
@@ -232,6 +234,13 @@ function needToFacts(need: BackendNeed, cite: Citer): Fact[] {
     priority: need.priority ?? undefined,
     rows,
   };
+  // Details view ("Medication changes"): the older values a newer letter replaced, each with its source
+  if (need.superseded?.length) {
+    fact.superseded = need.superseded.map((f) => ({
+      id: `${need.need}:old:${f.id}`, text: factValue(f), date: f.date ? formatDate(f.date) : undefined,
+      sources: cite(f.segment_ids),
+    }));
+  }
 
   // Trend: one line "78 kg → 67 kg → 66 kg" plus the calculated change (one numeric series in one unit).
   const numeric = need.facts.filter((f) => f.value && f.date && /^-?\d+([.,]\d+)?$/.test(f.value));

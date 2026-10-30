@@ -24,7 +24,7 @@ PATH = os.environ.get("SECOND_LOOK_TASK_INTENT", os.path.join(ROOT, "rulebook", 
 PREFIX_MIN = 6
 WORD = re.compile(r"[^\W\d_][\w'-]*")
 
-NEEDS_TASK_MESSAGE = ("Please describe your task. Second Look shows patient information only for a clinical task: "
+NEEDS_TASK_MESSAGE = ("Please describe your task. Second Eye shows patient information only for a clinical task: "
                       "state your role and what you are doing, e.g. 'Anaesthetist, pre-op check'.")
 NEEDS_TASK_SUGGESTIONS = [  # generic examples, nothing taken from the open record
     "Anaesthetist, pre-op check",

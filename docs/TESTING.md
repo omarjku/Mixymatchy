@@ -1,4 +1,4 @@
-# Testing record: Second Look
+# Testing record: Second Eye
 
 Purpose: let the team trace every test set, test run and iteration later.
 Written 30 Oct 2026. Source: git history on `main`, `docs/DECISIONS.md`, live Render logs.

@@ -1,4 +1,4 @@
-/* Second Look lock screen in the app's look: periwinkle brand, teal "verified" mark, IBM Plex Sans, light only.
+/* Second Eye lock screen in the app's look: periwinkle brand, teal "verified" mark, IBM Plex Sans, light only.
    Overrides the --sl-* tokens of lock.css (a verbatim copy of security/web/lock.css). */
 :root,
 :root:is(*) {

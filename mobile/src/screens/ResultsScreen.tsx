@@ -1,31 +1,42 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { lazy, type ReactNode, Suspense, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Add01Icon, LanguageSkillIcon, StopCircleIcon, VolumeHighIcon } from "@hugeicons/core-free-icons";
 import { AppBar } from "@/components/AppBar";
 import { ContradictionCard } from "@/components/ContradictionCard";
-import { FactCard, FactRows, RowSource, TrendLine } from "@/components/FactCard";
+import { FactRows, RowSource, TrendLine } from "@/components/FactCard";
+import { FactList } from "@/components/FactList";
+import { HistoryLog } from "@/components/HistoryLog";
 import { PatientCard } from "@/components/PatientCard";
 import { SourceViewer } from "@/components/SourceViewer";
-import { hasHistory } from "@/components/ValueHistory";
 import { ViewTabs } from "@/components/ViewTabs";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Modal } from "@/components/ui/Modal";
-import { Notice } from "@/components/ui/Notice";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { mockBriefInEnglish } from "@/data/mockFacts";
 import { roles } from "@/data/roles";
-import { intlLocale, toggleLocale, useLocale } from "@/i18n/locale";
+import { toggleLocale, useLocale } from "@/i18n/locale";
 import { t } from "@/i18n/strings";
+import { USE_MOCK } from "@/lib/api";
 import { getResults } from "@/lib/session";
+import { formatDate } from "@/lib/stats";
 import { speak, stopSpeaking, useVoiceAvailable } from "@/lib/speech";
 import { cn } from "@/lib/utils";
 import type { Fact, FactRow, GuidelineCitation, PatientBrief, SourceCitation } from "@/types/fact";
 import type { BriefRequest } from "@/types/request";
+import { KeepDoses } from "@/components/ui/KeepDoses";
 
 // Results: patient + how the request was read, banners (not authorised / not applicable / task not
-// recognised), the record's contradictions, the facts the task needs (P1), "Also relevant" (P2, always
-// visible), documentation notes and open items. Every source link opens the original letter.
+// recognised), then three levels with different content:
+//   Overview: plain text, what matters now: contradictions, the facts the task needs (P1), "Also relevant" (P2)
+//   Details:  the in-depth view: charts of changes, medication changes, calculations, record checks, open items
+//   History:  a plain log of every dated entry, newest first
+// Every source link opens the original letter.
 
-type View = "overview" | "history";
+type View = "overview" | "details" | "history";
+
+// Details level: charts (recharts) load only when the tab is opened
+const DetailsView = lazy(() => import("@/components/details/DetailsView"));
 type Viewer = { citations: SourceCitation[]; index: number; title: string };
 
 export function ResultsScreen() {
@@ -39,7 +50,11 @@ export function ResultsScreen() {
   const [guideline, setGuideline] = useState<{ guideline: GuidelineCitation; label: string } | null>(null);
   const [view, setView] = useState<View>("overview");
 
-  const brief = state?.brief;
+  // Mock mode in English: the invented German demo data shown in English (letter quotes stay German)
+  const brief = useMemo(
+    () => (state?.brief && USE_MOCK && locale === "en" ? mockBriefInEnglish(state.brief, formatDate) : state?.brief),
+    [state?.brief, locale],
+  );
   const speechText = useMemo(() => (brief ? briefToSpeech(brief) : ""), [brief]);
   const speechEvents = useMemo(() => ({ onStart: () => setSpeaking(true), onEnd: () => setSpeaking(false) }), []);
 
@@ -67,15 +82,13 @@ export function ResultsScreen() {
   // The backend's own label for the role it read; the chip name only in mock mode. Never a "GP" default.
   const roleName =
     brief.roleLabel ?? (roles.find((r) => r.id === brief.role && r.id !== "other") ? t(roles.find((r) => r.id === brief.role)!.nameKey) : brief.role);
-  const generatedAt = new Intl.DateTimeFormat(intlLocale(), { dateStyle: "medium" }).format(new Date(brief.generatedAt));
+  const generatedAt = formatDate(brief.generatedAt) // same numeric format as every date in the brief;
   const mode = brief.screenMode ?? "task";
   const notAuthorised = mode === "not_authorised";
   // No task, no data (docs/DECISIONS.md 19): a greeting or a bare role gets a banner, nothing from the record.
   const needsTask = mode === "needs_task";
   const gated = notAuthorised || needsTask;
   const stats = brief.stats ?? {};
-  const allFacts = [...brief.facts, ...(brief.alsoRelevant ?? [])];
-  const historyCount = allFacts.filter((f) => f.trust !== "not_documented" && hasHistory(f)).length;
 
   const openSources = (citations: SourceCitation[], index: number, title: string) =>
     citations.length > 0 && setViewer({ citations, index, title });
@@ -94,21 +107,10 @@ export function ResultsScreen() {
   }
 
   const contradictions = brief.contradictions.filter((c) => (c.tier ?? "contradiction") === "contradiction");
-  const notes = brief.contradictions.filter((c) => c.tier === "documentation_note");
-  const gaps = brief.gaps ?? [];
-  const droppedOnScreen = gaps.filter((g) => g.kind === "dropped").length;
+  const droppedOnScreen = (brief.gaps ?? []).filter((g) => g.kind === "dropped").length;
   const blindSpot = stats.blind_spot ?? 0;
   const taskConcepts = stats.task_concepts ?? 0;
   const otherIssues = stats.other_record_issues ?? 0;
-  const factCard = (fact: Fact) => (
-    <FactCard
-      key={fact.id}
-      fact={fact}
-      showHistory={view === "history"}
-      onPressSource={showSource}
-      onPressGuideline={showGuideline}
-    />
-  );
 
   return (
     <>
@@ -168,14 +170,12 @@ export function ResultsScreen() {
               <span className="font-medium text-ink">{brief.taskLabel ?? brief.task}</span>
             </p>
 
-            {/* one line on the results screen (the full text is on the start screen and in Help) */}
-            <Notice tone="readonly" title={t("readonly.title")} className="mt-3 py-2 text-[13px]" />
-
             {!gated && (
               <div className="mt-3">
                 <ViewTabs
                   tabs={[
                     { id: "overview", label: t("results.view.overview") },
+                    { id: "details", label: t("results.view.details") },
                     { id: "history", label: t("results.view.history") },
                   ]}
                   active={view}
@@ -183,12 +183,12 @@ export function ResultsScreen() {
                   label={t("results.view.label")}
                   panelId="facts-panel"
                 />
-                <p className={cn("px-2 text-xs text-ink-muted", view === "history" && "mt-2")} aria-live="polite">
+                <p className="mt-2 px-2 text-xs text-ink-muted" aria-live="polite">
                   {view === "overview"
-                    ? <span className="sr-only">{t("results.view.overviewHint")}</span>
-                    : historyCount > 0
-                      ? t("results.view.historyAvailable", { n: historyCount, m: allFacts.length })
-                      : t("results.view.historyNone")}
+                    ? t("results.view.overviewHint")
+                    : view === "details"
+                      ? t("results.view.detailsHint")
+                      : t("results.view.historyHint")}
                 </p>
               </div>
             )}
@@ -199,7 +199,7 @@ export function ResultsScreen() {
               <section
                 role="alert"
                 data-banner="not_authorised"
-                className="rounded-2xl border-2 border-contradiction-border bg-contradiction-soft p-5"
+                className="rounded-lg border-2 border-contradiction-border bg-contradiction-soft p-5"
               >
                 <h2 className="text-[19px] font-semibold text-contradiction-deep">{t("results.notAuthorised.title")}</h2>
                 {brief.message && <p className="mt-2 text-[15px] leading-relaxed text-ink">{brief.message}</p>}
@@ -211,7 +211,7 @@ export function ResultsScreen() {
               <section
                 role="alert"
                 data-banner="needs_task"
-                className="rounded-2xl border-2 border-primary bg-primary/10 p-5"
+                className="rounded-lg border-2 border-primary bg-primary/10 p-5"
               >
                 <h2 className="text-[19px] font-semibold text-primary-deep">{t("results.needsTask.title")}</h2>
                 <p className="mt-2 text-[15px] leading-relaxed text-ink">{t("results.needsTask.body")}</p>
@@ -223,7 +223,7 @@ export function ResultsScreen() {
               <section
                 role="status"
                 data-banner="not_applicable"
-                className="rounded-2xl border-2 border-dashed border-ink-faint bg-surface p-5"
+                className="rounded-lg border-2 border-dashed border-ink-faint bg-surface p-5"
               >
                 <h2 className="text-[19px] font-semibold text-ink">{t("results.notApplicable.title")}</h2>
                 {brief.applicabilityNote && (
@@ -243,7 +243,7 @@ export function ResultsScreen() {
             )}
 
             {!gated && brief.routeNote && (
-              <section data-banner="fallback" className="rounded-2xl border border-primary bg-primary/10 p-4">
+              <section data-banner="fallback" className="rounded-lg border border-primary bg-primary/10 p-4">
                 <p className="text-[15px] font-medium text-primary-deep">{brief.routeNote}</p>
                 <Suggestions
                   items={brief.suggestions ?? []}
@@ -253,7 +253,7 @@ export function ResultsScreen() {
             )}
 
             {/* Margin note: shown only when the dropped facts are on this screen */}
-            {!gated && blindSpot > 0 && taskConcepts > 0 && droppedOnScreen > 0 && (
+            {!gated && view === "overview" && blindSpot > 0 && taskConcepts > 0 && droppedOnScreen > 0 && (
               <section data-blind-spot className="border-l-4 border-contradiction pl-4">
                 <h2 className="text-[15px] font-semibold text-contradiction-deep">{t("results.blindSpot.title")}</h2>
                 <p className="mt-0.5 text-[15px] text-ink">
@@ -262,7 +262,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {contradictions.length > 0 && (
+            {view === "overview" && contradictions.length > 0 && (
               <section aria-labelledby="contradictions-heading">
                 <h2 id="contradictions-heading" className="mb-3 text-sm font-semibold text-contradiction-deep">
                   {t("results.contradictionsHeading")} ({contradictions.length})
@@ -279,22 +279,40 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {!gated && (
+            {!gated && view === "details" && (
+              <section id="facts-panel" aria-label={t("results.view.details")}>
+                <Suspense fallback={<Skeleton className="h-64 w-full rounded-lg" />}>
+                  <DetailsView brief={brief} onOpenSources={openSources} />
+                </Suspense>
+              </section>
+            )}
+
+            {!gated && view === "history" && (
+              <section id="facts-panel" aria-label={t("results.view.history")}>
+                <HistoryLog brief={brief} onOpenSources={openSources} />
+              </section>
+            )}
+
+            {!gated && view === "overview" && (
               <section id="facts-panel" aria-labelledby="facts-heading">
                 <h2 id="facts-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.factsHeading")} ({brief.facts.length})
                 </h2>
                 {brief.facts.length === 0 ? (
-                  <p className="rounded-2xl border border-dashed border-ink-faint/60 p-5 text-center text-sm text-ink-muted">
+                  <p className="rounded-lg border border-dashed border-ink-faint/60 p-5 text-center text-sm text-ink-muted">
                     {t("results.empty")}
                   </p>
                 ) : (
-                  <div className={cn("grid gap-2.5 md:grid-cols-2", viewer && "lg:grid-cols-1")}>{brief.facts.map(factCard)}</div>
+                  <FactList
+                    facts={brief.facts}
+                    onPressSource={showSource}
+                    onPressGuideline={showGuideline}
+                  />
                 )}
               </section>
             )}
 
-            {!gated && (brief.alsoRelevant?.length ?? 0) > 0 && (
+            {!gated && view === "overview" && (brief.alsoRelevant?.length ?? 0) > 0 && (
               <section aria-labelledby="also-heading" data-also-relevant>
                 <h2 id="also-heading" className="mb-3 text-sm font-semibold text-ink-muted">
                   {t("results.alsoRelevant")} ({brief.alsoRelevant!.length})
@@ -303,52 +321,7 @@ export function ResultsScreen() {
               </section>
             )}
 
-            {notes.length > 0 && (
-              <section aria-labelledby="notes-heading">
-                <h2 id="notes-heading" className="mb-3 text-sm font-semibold text-ink-muted">
-                  {t("results.notesHeading")} ({notes.length})
-                </h2>
-                <div className="space-y-3">
-                  {notes.map((c) => (
-                    <ContradictionCard
-                      key={c.id}
-                      contradiction={c}
-                      onPressSource={(source, all) => openSources(all, all.indexOf(source), c.factLabel)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {gaps.length > 0 && (
-              <section aria-labelledby="gaps-heading">
-                <h2 id="gaps-heading" className="mb-3 text-sm font-semibold text-ink-muted">
-                  {t("results.gapsHeading")} ({gaps.length})
-                </h2>
-                <ul className="divide-y divide-line rounded-2xl border border-line bg-surface">
-                  {gaps.map((gap) => (
-                    <li key={gap.id} className="px-4 py-3">
-                      <p className="text-xs font-medium text-ink-muted">{t(`results.gap.${gap.kind}`)}</p>
-                      <p className="mt-0.5 text-[15px] font-semibold text-ink">{gap.title}</p>
-                      {gap.explanation && <p className="mt-0.5 text-[14px] text-ink-muted">{gap.explanation}</p>}
-                      {gap.sources.length > 0 && (
-                        <button
-                          type="button"
-                          data-source
-                          onClick={() => openSources(gap.sources, 0, gap.title)}
-                          className="mt-2 text-[13px] font-medium text-primary-deep underline underline-offset-2"
-                        >
-                          {t("results.source")}
-                          {gap.sources.length > 1 ? ` (${gap.sources.length})` : ""}
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {!gated && otherIssues > 0 && (
+            {!gated && view === "overview" && otherIssues > 0 && (
               <p className="text-sm text-ink-muted" data-other-issues>
                 {t("results.otherIssues", { n: otherIssues })}
               </p>
@@ -356,7 +329,10 @@ export function ResultsScreen() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs leading-snug text-ink-muted">{t("app.disclaimer")}</p>
+        {/* read-only statement lives here as plain text (full explanation in Help), not as a banner */}
+        <p className="mt-6 text-center text-xs leading-snug text-ink-muted">
+          {t("readonly.title")}. {t("app.disclaimer")}
+        </p>
 
         {viewer && (
           <SourceViewer
@@ -376,7 +352,7 @@ export function ResultsScreen() {
         >
           {guideline && (
             <>
-              <p className="rounded-xl bg-canvas p-4 text-[15px] leading-relaxed text-ink">{guideline.guideline.excerpt}</p>
+              <p className="rounded-lg bg-canvas p-4 text-[15px] leading-relaxed text-ink">{guideline.guideline.excerpt}</p>
               {guideline.guideline.reference && (
                 <p className="mt-3 break-words text-xs text-ink-muted">{guideline.guideline.reference}</p>
               )}
@@ -392,7 +368,7 @@ export function ResultsScreen() {
 // become rows, and what the engine collapsed sits behind "+N more". Always visible, no tap needed.
 function AlsoRelevantList({ facts, onPressSource }: { facts: Fact[]; onPressSource: (fact: Fact) => void }) {
   return (
-    <ul className="divide-y divide-line rounded-2xl border border-line bg-surface px-4 py-1">
+    <ul className="divide-y divide-line border-y border-line">
       {facts.map((fact) => {
         const openRow = (row: FactRow) => onPressSource({ ...fact, source: row.sources[0], sources: row.sources });
         const rows = fact.rows ?? [];
@@ -416,7 +392,7 @@ function AlsoRelevantList({ facts, onPressSource }: { facts: Fact[]; onPressSour
               <div className="flex items-start gap-2">
                 <p className="min-w-0 flex-1 text-[14px] leading-snug">
                   {label}
-                  <span className="font-semibold text-ink">{r.text}</span>
+                  <span className="font-semibold text-ink"><KeepDoses text={r.text} /></span>
                   {r.date && <span className="text-[13px] text-ink-muted"> · {r.date}</span>}
                 </p>
                 {r.sources.length > 0 && <RowSource row={r} onPress={openRow} />}
@@ -428,7 +404,7 @@ function AlsoRelevantList({ facts, onPressSource }: { facts: Fact[]; onPressSour
           body = (<>{label}<FactRows rows={rows} onPressRow={openRow} /></>);
         }
         return (
-          <li key={fact.id} className="py-1.5" data-fact={fact.id} data-trust={fact.trust}>
+          <li key={fact.id} className="px-3 py-2.5" data-fact={fact.id} data-trust={fact.trust}>
             {body}
           </li>
         );

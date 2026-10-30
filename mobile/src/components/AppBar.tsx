@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft01Icon, HelpCircleIcon, MoreVerticalIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, HelpCircleIcon, Moon02Icon, MoreVerticalIcon, Sun03Icon } from "@hugeicons/core-free-icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Icon, type IconGlyph } from "@/components/ui/Icon";
 import { t } from "@/i18n/strings";
+import { toggleTheme, useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 // Top bar for every screen: solid brand periwinkle (#4a5bef, white text 5.2:1), SE logo + name as the
@@ -43,6 +44,15 @@ export function AppBar({ back, title, showTitle = false, actions, menuActions = 
     icon: HelpCircleIcon,
     onClick: () => navigate("/hilfe"),
   };
+  // Light/dark toggle on every screen, like help. Icon and label say what tapping will switch to.
+  const isDark = useTheme() === "dark";
+  const themeToggle: AppBarAction = {
+    id: "theme",
+    label: isDark ? t("appbar.themeLight") : t("appbar.themeDark"),
+    icon: isDark ? Sun03Icon : Moon02Icon,
+    onClick: toggleTheme,
+  };
+  const always = [themeToggle, help];
   const titleVisible = showTitle && Boolean(title);
 
   return (
@@ -55,7 +65,7 @@ export function AppBar({ back, title, showTitle = false, actions, menuActions = 
         <Link
           to="/"
           aria-label={t("appbar.home")}
-          className="flex shrink-0 items-center gap-2 rounded-xl p-1 outline-hidden focus-visible:ring-2 focus-visible:ring-white"
+          className="flex shrink-0 items-center gap-2 rounded-lg p-1 outline-hidden focus-visible:ring-2 focus-visible:ring-white"
         >
           <img src="/logo-128.png" alt="" width={32} height={32} className="size-8 rounded-lg" />
           {!titleVisible && <span className="text-[17px] font-semibold tracking-tight">{t("app.name")}</span>}
@@ -82,7 +92,7 @@ export function AppBar({ back, title, showTitle = false, actions, menuActions = 
 
         {/* Tablet and desktop: everything inline */}
         <div className="hidden items-center gap-1 md:flex">
-          {[...menuActions, help].map((a) =>
+          {[...menuActions, ...always].map((a) =>
             a.emphasis ? (
               <button
                 key={a.id}
@@ -127,14 +137,18 @@ export function AppBar({ back, title, showTitle = false, actions, menuActions = 
           ))}
         <div className="md:hidden">
           {menuActions.filter((a) => !a.text).length === 0 ? (
-            <Button variant="icon" tone="onBrand" icon={help.icon} label={help.label} onClick={help.onClick} />
+            <div className="flex items-center">
+              {always.map((a) => (
+                <Button key={a.id} variant="icon" tone="onBrand" icon={a.icon} label={a.label} onClick={a.onClick} />
+              ))}
+            </div>
           ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="icon" tone="onBrand" icon={MoreVerticalIcon} label={t("appbar.menu")} />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={6} className="min-w-52 rounded-xl border-line p-1.5">
-                {[...menuActions.filter((a) => !a.text), help].map((a) => (
+              <DropdownMenuContent align="end" sideOffset={6} className="min-w-52 rounded-lg border-line p-1.5">
+                {[...menuActions.filter((a) => !a.text), ...always].map((a) => (
                   <DropdownMenuItem
                     key={a.id}
                     onSelect={a.onClick}

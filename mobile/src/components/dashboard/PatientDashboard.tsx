@@ -57,13 +57,13 @@ export default function PatientDashboard({ brief, onPressSources }: PatientDashb
         <p role="status" className="sr-only">
           {t("dash.loading")}
         </p>
-        <Skeleton className="h-28 w-full rounded-2xl" />
+        <Skeleton className="h-28 w-full rounded-lg" />
         <div className="grid grid-cols-2 gap-3">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-[150px] rounded-2xl" />
+            <Skeleton key={i} className="h-[150px] rounded-lg" />
           ))}
         </div>
-        <Skeleton className="h-64 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-lg" />
       </div>
     );
   }

@@ -97,7 +97,7 @@ export function LoadingScreen() {
       <div className="lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start lg:gap-8">
         <div>
           {/* Patient card */}
-          <div className="rounded-2xl border border-line bg-surface p-4">
+          <div className="rounded-lg border border-line bg-surface p-4">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="mt-3 h-6 w-48" />
             <div className="mt-4 flex gap-2">
@@ -106,20 +106,18 @@ export function LoadingScreen() {
               <Skeleton className="h-8 w-20 rounded-full" />
             </div>
           </div>
-          {/* Read-only notice */}
-          <Skeleton className="mt-4 h-16 w-full rounded-2xl" />
           {/* View tabs */}
           <Skeleton className="mt-4 h-12 w-full rounded-full" />
         </div>
 
         <div className="mt-4 lg:mt-0">
           {/* Contradiction */}
-          <Skeleton className="h-20 w-full rounded-2xl" />
+          <Skeleton className="h-20 w-full rounded-lg" />
 
           {/* Fact cards */}
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl border border-line bg-surface p-4">
+              <div key={i} className="rounded-lg border border-line bg-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <Skeleton className="h-3 w-24" />

@@ -24,6 +24,77 @@ const anaesthetistBrief: PatientBrief = {
         guidelineName: "DGAI/DGCH Empfehlung perioperatives Gerinnungsmanagement",
         excerpt: "Pausierung direkter oraler Antikoagulanzien abhängig von Blutungsrisiko und Nierenfunktion.",
       },
+      // invented: the dose a newer letter replaced (Details: "Medication changes")
+      rows: [
+        {
+          id: "an-1:now",
+          text: "Apixaban 5 mg 1-0-1",
+          date: "01.09.2026",
+          sources: [
+            {
+              documentId: "doc-medplan-2026",
+              documentLabel: "Bundeseinheitlicher Medikationsplan, Sept. 2026",
+              excerpt: "Apixaban 5 mg, 1-0-1, bei Vorhofflimmern",
+            },
+          ],
+        },
+      ],
+      superseded: [
+        {
+          id: "an-1:old",
+          text: "Apixaban 2,5 mg 1-0-1",
+          date: "12.03.2026",
+          sources: [
+            {
+              documentId: "doc-outpatient-2026",
+              documentLabel: "Ambulanzbrief, März 2026",
+              excerpt: "Apixaban 2,5 mg 1-0-1.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // invented: weight series as the backend sends a trend need (Details: "Changes over time")
+      id: "an-6",
+      label: "Gewicht",
+      value: "81 kg → 70 kg → 69 kg",
+      trust: "consistent",
+      source: {
+        documentId: "doc-discharge-2025",
+        documentLabel: "Entlassbrief Kardiologie, Juni 2025",
+        excerpt: "Gewicht 81 kg, Größe 168 cm.",
+      },
+      sources: [
+        { documentId: "doc-discharge-2025", documentLabel: "Entlassbrief Kardiologie, Juni 2025", excerpt: "Gewicht 81 kg, Größe 168 cm." },
+        { documentId: "doc-outpatient-2026", documentLabel: "Ambulanzbrief, März 2026", excerpt: "Gewicht 70 kg, Größe 169 cm, BMI 28,4 kg/m²." },
+        { documentId: "doc-anamnesis-2026", documentLabel: "Aufnahmebogen, Okt. 2026", excerpt: "Gewicht 69 kg, Größe 168 cm." },
+      ],
+      isTimeSeries: true,
+      history: [
+        { date: "2025-06-27", value: "81", unit: "kg" },
+        { date: "2026-03-12", value: "70", unit: "kg" },
+        { date: "2026-10-14", value: "69", unit: "kg" },
+      ],
+      trend: {
+        points: [
+          { value: "81 kg", date: "27.06.2025" },
+          { value: "70 kg", date: "12.03.2026" },
+          { value: "69 kg", date: "14.10.2026" },
+        ],
+        numbers: [81, 70, 69],
+        change: "−12 kg in 16 Monaten",
+        formula: "69 kg − 81 kg",
+      },
+      rows: [
+        {
+          id: "an-6:bmi",
+          text: "BMI: 24,4 kg/m²",
+          computed: true,
+          note: "69 kg / (1,68 m)²",
+          sources: [{ documentId: "doc-anamnesis-2026", documentLabel: "Aufnahmebogen, Okt. 2026", excerpt: "Gewicht 69 kg, Größe 168 cm." }],
+        },
+      ],
     },
     {
       id: "an-2",
@@ -93,6 +164,28 @@ const anaesthetistBrief: PatientBrief = {
           documentLabel: "Aufnahmebogen, Okt. 2026",
           excerpt: "Allergien: keine bekannt.",
         },
+      ],
+    },
+    {
+      // invented: data-quality note (Details: "Record checks")
+      id: "an-n1",
+      factLabel: "BMI",
+      tier: "documentation_note",
+      explanation: "Im Ambulanzbrief steht BMI 28,4 kg/m²; aus 70 kg und 169 cm ergeben sich 24,5 kg/m².",
+      conflictingSources: [
+        { documentId: "doc-outpatient-2026", documentLabel: "Ambulanzbrief, März 2026", excerpt: "Gewicht 70 kg, Größe 169 cm, BMI 28,4 kg/m²." },
+      ],
+    },
+  ],
+  // invented: a task fact the latest letter no longer mentions (Details: "Blind spot")
+  gaps: [
+    {
+      id: "an-g1",
+      kind: "dropped",
+      title: "Schlafapnoe",
+      explanation: "Zuletzt erwähnt im Entlassbrief Kardiologie, Juni 2025; im neuesten Brief nicht mehr aufgeführt.",
+      sources: [
+        { documentId: "doc-discharge-2025", documentLabel: "Entlassbrief Kardiologie, Juni 2025", excerpt: "Nebendiagnosen: Obstruktive Schlafapnoe (CPAP)." },
       ],
     },
   ],
@@ -295,3 +388,69 @@ export const mockBriefs: Partial<Record<RoleId, PatientBrief>> = {
   surgeon: surgeonBrief,
   gp: gpBrief,
 };
+
+// English mode: the invented demo briefs above are written in German. Labels, values and explanations are shown
+// in English; quotes from the letters (excerpt) and letter titles (documentLabel) stay as written, because
+// they are the source a clinician checks against. Decimal commas become points and dates follow the UI
+// language, like the backend's own fields.
+const english: Record<string, string> = {
+  "Fiktive Testperson A, 58 J.": "Fictitious test person A, 58 y",
+  "Fiktive Testperson B, 74 J.": "Fictitious test person B, 74 y",
+  "Fiktive Testperson C, 66 J.": "Fictitious test person C, 66 y",
+  "Fiktive Testperson D, 49 J.": "Fictitious test person D, 49 y",
+  Antikoagulation: "Anticoagulation",
+  Gewicht: "Weight",
+  Allergien: "Allergies",
+  "Penicillin (Exanthem)": "Penicillin (rash)",
+  "Atemweg / Intubation": "Airway / intubation",
+  "Schwierige Intubation möglich": "Difficult intubation possible",
+  Kreatinin: "Creatinine",
+  "Nüchternheit / PONV-Anamnese": "Fasting / PONV history",
+  "−12 kg in 16 Monaten": "−12 kg in 16 months",
+  "Im Ambulanzbrief steht BMI 28,4 kg/m²; aus 70 kg und 169 cm ergeben sich 24,5 kg/m².":
+    "The outpatient letter states BMI 28.4 kg/m²; 70 kg and 169 cm give 24.5 kg/m².",
+  Schlafapnoe: "Sleep apnoea",
+  "Zuletzt erwähnt im Entlassbrief Kardiologie, Juni 2025; im neuesten Brief nicht mehr aufgeführt.":
+    "Last mentioned in the cardiology discharge letter, June 2025; not listed in the latest letter.",
+  "Anzahl Dauermedikamente": "Number of regular medications",
+  "Selbstmedikation (OTC)": "Self-medication (OTC)",
+  Voroperationen: "Previous operations",
+  "Appendektomie 1992, Hysterektomie 2011": "Appendectomy 1992, hysterectomy 2011",
+  Hämoglobin: "Haemoglobin",
+  Metallallergie: "Metal allergy",
+  "Nickel möglich": "Nickel possible",
+  Thromboserisiko: "Thrombosis risk",
+  Entlassdiagnose: "Discharge diagnosis",
+  "NSTEMI, PCI mit DES (RIVA)": "NSTEMI, PCI with DES (LAD)",
+  "Duale Plättchenhemmung: Dauer": "Dual antiplatelet therapy: duration",
+  "12 Monate": "12 months",
+  "LDL-Cholesterin": "LDL cholesterol",
+  "Kardiologische Reha": "Cardiac rehabilitation",
+};
+
+// Keys whose strings are display text (translated); everything else (quotes, ids, ISO dates) is left alone
+const textKeys = new Set(["patientLabel", "label", "value", "text", "change", "formula", "note", "title", "explanation", "factLabel"]);
+const germanDate = /^(\d{2})\.(\d{2})\.(\d{4})$/;
+
+function toEnglish(text: string, formatDate: (iso: string) => string): string {
+  const date = germanDate.exec(text);
+  if (date) return formatDate(`${date[3]}-${date[2]}-${date[1]}`);
+  return (english[text] ?? text).replace(/(\d),(\d)/g, "$1.$2");
+}
+
+export function mockBriefInEnglish(brief: PatientBrief, formatDate: (iso: string) => string): PatientBrief {
+  const walk = (node: unknown, key = ""): unknown => {
+    // history readings stay raw ("1,0"): they are parsed as numbers and formatted where they are shown
+    if (key === "history") return node;
+    if (typeof node === "string") {
+      if (key === "date") return germanDate.test(node) ? toEnglish(node, formatDate) : node;
+      return textKeys.has(key) ? toEnglish(node, formatDate) : node;
+    }
+    if (Array.isArray(node)) return node.map((item) => walk(item));
+    if (node && typeof node === "object") {
+      return Object.fromEntries(Object.entries(node).map(([k, v]) => [k, walk(v, k)]));
+    }
+    return node;
+  };
+  return walk(brief) as PatientBrief;
+}

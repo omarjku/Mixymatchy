@@ -5,13 +5,13 @@
 */
 
 @theme {
-  /* Brand: periwinkle, hue ~233°
-     primary        #7085ff  fills behind dark text, borders, focus rings (3.2:1 with white: never white text on it)
+  /* Brand: periwinkle, hue ~229°. primary = the logo's own blue (AppIcon tile #6381FD)
+     primary        #6381fd  fills behind dark text, borders, focus rings (3.5:1 with white: never white text on it)
      primary-strong            buttons with white text (5.2:1)
      primary-hover             hover/pressed state of strong (6.4:1), darker, never faded
      primary-deep              brand-colored text and links (8.9:1 on white, 7.8:1 on soft)
      primary-soft              selected and highlighted backgrounds */
-  --color-primary: #7085ff;
+  --color-primary: #6381fd;
   --color-primary-strong: #4a5bef;
   --color-primary-hover: #3d4ed9;
   --color-primary-deep: #2f3bb0;
@@ -55,11 +55,12 @@
   --color-border: var(--color-line);
   --color-input: var(--color-line);
   --color-ring: var(--color-primary);
-  --color-primary-foreground: var(--color-ink); /* dark text on #7085ff: 5.4:1 */
+  --color-primary-foreground: var(--color-ink); /* dark text on #6381fd: 5.1:1 */
   --color-popover: var(--color-surface);
   --color-highlighter: #ffe15a; /* the cited words in a letter, nothing else */
   --color-ink-blue: #1d3c8f;
   --color-popover-foreground: var(--color-ink);
+  --color-scrim: #141831; /* backdrop behind sheets and panels (stays dark in both themes) */
 
   /* Type */
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -97,4 +98,48 @@
       transform: translateY(0);
     }
   }
+}
+
+/*
+  Dark theme. Set on <html data-theme="dark"> by the inline script in index.html (system setting by
+  default, or the AppBar toggle). Only the color values change; light values above stay as they are.
+  Every pairing below was checked (WCAG 2.2): text >= 4.5:1, icons/borders/focus >= 3:1.
+    ink on canvas 16.6, ink-muted on surface 8.9, primary-deep on surface 8.8 / on soft 7.0,
+    white on primary-strong 5.2 (AppBar, buttons), white on verified 5.5, inferred on its badge 9.4,
+    undocumented on its badge 6.3, white on contradiction 6.3, contradiction-deep on its tint 8.6,
+    ink on highlighter 5.9 (45% tint: 10.5), ink-blue outline on highlighter 3.3, focus ring 5.8.
+  The periwinkle brand (primary, primary-strong) is the same in both themes.
+*/
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-primary-deep: #aab5ff;
+  --color-primary-soft: #232a55;
+
+  --color-canvas: #0d1021;
+  --color-surface: #161a2e;
+  --color-line: #2b3152;
+  --color-ink: #eef0fb;
+  --color-ink-muted: #b4b9d8;
+  --color-ink-faint: #8b91b3;
+
+  --color-verified-soft: #0d2e2b;
+
+  --color-inferred: #fcd34d;
+  --color-inferred-soft: #3b2c0b;
+
+  --color-undocumented: #a3a9c4;
+  --color-undocumented-soft: #22273d;
+
+  --color-contradiction-deep: #fda4af;
+  --color-contradiction-soft: #3a1222;
+
+  --color-primary-foreground: #141831; /* dark text on #6381fd stays dark */
+  --color-highlighter: #6e5a00; /* deep gold behind light text */
+  --color-ink-blue: #9fb4ff;
+  --color-scrim: #000000;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
