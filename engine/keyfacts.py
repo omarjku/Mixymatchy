@@ -207,6 +207,18 @@ def status_check_line(card: dict) -> dict | None:
                  group=card.get("group_kb"), trust=card.get("status")) if computed else None
 
 
+def question_line(card: dict) -> dict:
+    """A 'Your question: X' card (engine/ask.py): its facts, its verbatim passages, or 'Nothing found ...'."""
+    if card.get("status") == "not_documented":
+        return _line("not_documented", [card["need"]], card["label_en"], text=card.get("value_en"))
+    items = card.get("items") or []
+    computed = [{"label": c["label"], "value": c["value"], "formula": c.get("formula") or "",
+                 "passages": list(c.get("passages") or [])} for c in card.get("computed_lines") or []][:2]
+    more = max(0, len(items) - MAX_ITEMS) + len(card.get("computed_lines") or []) - len(computed)
+    return _line("need", [card["need"]], card["label_en"], items[:MAX_ITEMS], computed, more=more,
+                 trust=card.get("status"))
+
+
 def key_facts(st, k, cards: list, focus: list, contradictions: list, patient: dict, terms_text: str,
               as_of: str | None = None, mode: str = "task") -> list[dict]:
     """Ordered key-fact lines for one screen ([] on gated / not-applicable screens)."""
@@ -219,6 +231,9 @@ def key_facts(st, k, cards: list, focus: list, contradictions: list, patient: di
     if safety:
         lines.append(safety)
         shown |= _fact_ids(safety["items"])
+    asked = [question_line(c) for c in focus if c.get("group") == "question"]  # the user's own question first
+    lines += asked
+    shown |= {f for ln in asked for f in _fact_ids(ln["items"])}
     reserved = (1 if any(c.get("status") == "not_documented" and c.get("need") not in SAFETY_CORE for c in cards)
                 else 0) + (1 if _conflict(contradictions) else 0)
     extras = [x for x in focus if str(x.get("need", "")).startswith(EXTRA_NEEDS)]

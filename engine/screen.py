@@ -316,6 +316,11 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     named_pre = F.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
     intent = I.has_task(req["task"], k, st, aliases=[alias] if alias else [], named_topics=named_pre,
                         applicability_items=app["items"])
+    if not intent["actionable"]:  # a question about a known subject is a task ('does she hav a pacemakr?', engine/ask.py)
+        from . import ask as Q
+        known = [s for s in Q.subjects(u.get("task_text")) if Q.slot_for(s, k) or Q.search_words(s)[1]]
+        if Q.is_question(u.get("task_text") or "") and known:
+            intent = dict(intent, actionable=True, reason="question about a known subject", words=known)
     u["task_check"] = {"actionable": intent["actionable"], "reason": intent["reason"], "words": intent["words"][:8]}
     if not intent["actionable"] and not llm_ok:  # with the LLM's clinical_task verdict, its reading of the task holds
         return needs_task_screen(u, intent["reason"], detail, t0)
@@ -415,12 +420,50 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     if excluded:
         ex_slots = {x for tp in excluded for x in tp.get("slots") or []}
         slots = [x for x in slots if x in SAFETY_CORE or x not in ex_slots]
-    if mode != "not_applicable":
+    # specific questions (engine/ask.py, routing guide layer 3): subjects no topic or bundle tag covers get an
+    # answer card; a question that names no task gets only the safety core and its answers, not the role's
+    # whole default view
+    from . import ask as Q
+    from .understand import fold
+    asked =mode in ("task", "fallback", "not_applicable") and Q.is_question(u.get("task_text") or "")
+    tags = [t for v in (u.get("bundles_matched") or {}).values() for t in v.get("tags") or []]
+    ex_text = fold(norm_text(req["excluded_text"] or ""))
+    ask_subs = [s for s in Q.subjects(u.get("task_text")) if not Q.covered(s, k, (), tags)
+                and not (ex_text and fold(s) in ex_text)  # 'not interested in X' wins
+                and not any(r.get("term") and fold(norm_text(r["term"]))[:6] in fold(s)  # applicability answers it
+                            for r in app["items"])] if asked else []
+    if tags:  # a matched task already answers its own words; an unknown word beside it is likely a typo of one
+        ask_subs = [s for s in ask_subs if Q.slot_for(s, k) or Q.search_words(s)[1]]
+    ask_slots = [x for x in dict.fromkeys(Q.slot_for(s, k) for s in ask_subs) if x]  # a KB slot answers these
+    ask_subs = [s for s in ask_subs if not Q.slot_for(s, k)]
+    unanswered = ask_subs[Q.MAX_SUBJECTS:]
+    ask_subs = ask_subs[:Q.MAX_SUBJECTS]
+    # only when the rules and the LLM chose no task (the role's default or the general fallback stood in)
+    question_only = bool(asked and mode != "not_applicable" and (named or ask_subs or ask_slots)
+                         and not u.get("bundles_matched") and u.get("tasks_from") in ("role_default", "fallback"))
+    if question_only:
+        mode = "task"
+        slots = [x for x in SAFETY_CORE if x in k.slot_by_id]
+        for x in slots:
+            _ensure_info(k, info, x, "safety core")
+        asked_about = [tp["label"] for tp in named] + [k.slot_by_id[x]["label"] for x in ask_slots] + ask_subs
+        u["task_labels"] = ["Your question: %s" % ", ".join(asked_about)]
+        u["fallback_note"] = ("Answering your question only (%s). For the full view, name the task as well, e.g. %s."
+                              % (", ".join(asked_about), ", ".join("'%s'" % x for x in
+                                                                    _suggest_bundles(k, u.get("task_text"), role))))
+    for x in ask_slots:
+        if x not in slots:
+            slots.append(x)
+            _ensure_info(k, info, x, "your question")
+    u["question_only"] = question_only
+    u["asked_subjects"] = ask_subs
+    u["unanswered_subjects"] = unanswered
+    if mode != "not_applicable" or asked:  # a not-applicable item never hides the other things asked about
         for x in F.topic_slots(k, named, excluded)[:tsettings.get("max_topic_slots", 5)]:
             if x not in slots:
                 slots.append(x)
                 _ensure_info(k, info, x, "named topic")
-    if named and u.get("tasks_from") == "role_default":
+    if named and u.get("tasks_from") == "role_default" and not question_only:
         u["fallback_note"] = "Showing the topics you named (%s) and what %s usually needs (%s)." % (
             ", ".join(tp["label"] for tp in named), ("a %s" % role["name"]) if role else "a clinician",
             ", ".join(k.bundle_by_id[b]["title"] for b in u["bundle_ids"]))
@@ -437,16 +480,19 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     focus = []
     if mode != "not_applicable":  # task focus (engine/focus.py): after the clinical gate, never a dump
         from .focus import focus_cards
-        focus, finfo = focus_cards(st, k, u.get("task_text") or "", req["task"], as_of, cards, u.get("llm_focus_proposal"))
-        u.update(finfo)
-        if finfo["llm_focus"]:
-            u["llm_used"] = True
-            u["llm_reason"] = u.get("llm_reason") or finfo["llm_focus"]["reason"]
+        if not question_only:
+            focus, finfo = focus_cards(st, k, u.get("task_text") or "", req["task"], as_of, cards,
+                                       u.get("llm_focus_proposal"))
+            u.update(finfo)
+            if finfo["llm_focus"]:
+                u["llm_used"] = True
+                u["llm_reason"] = u.get("llm_reason") or finfo["llm_focus"]["reason"]
         tcards, tinfo = F.topic_cards(st, k, named, excluded, u.get("task_text") or "", as_of, cards + focus, tsettings)
         focus = focus + tcards
         u["topic_cards"] = tinfo
+    focus = [Q.answer_card(st, s, as_of) for s in ask_subs] + focus  # also beside a not-applicable item
     also = []
-    if detail == "short" and mode == "task":  # P2 'also relevant' group, shown without a second request
+    if detail == "short" and mode == "task" and not question_only:  # P2 'also relevant' group, shown without a second request
         p2_all = {x["slot"] for x in u["slots"] if x["priority"] == "P2" and x["slot"] not in slots}
         in_bundles = [x for b_ in u["bundle_ids"] for x in (k.bundle_by_id[b_].get("slots") or {}).get("P2") or []]
         p2 = [x for x in dict.fromkeys(in_bundles + [x["slot"] for x in u["slots"]]) if x in p2_all]  # KB order
@@ -484,6 +530,8 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
                     it["conflicts"] = hit
     _annotate_followups(st, cards + focus + also)
     notes = []
+    if unanswered:
+        notes.append("Not answered here, ask again on its own: %s." % ", ".join(unanswered))
     if req["instructions"]:
         notes.append("Instructions inside the request were ignored (Second Look never changes or adds record "
                       "content): %s." % "; ".join("'%s'" % x[:60] for x in req["instructions"]))
@@ -502,6 +550,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     contra_out = [c for c in contra_all if c["relevant"]]
     contra_other = [c for c in contra_all if not c["relevant"]]
     domain = _slot_domain(st, k, cards, as_of, text)
+    domain |= {x for c in focus if c.get("group") in ("question", "named_topic") for x in c.get("facts") or []}
     bs, bs_other = _task_blind_spot(compare_blind_spot(st) or blind_spot(st), domain)
     comp = st.compare if isinstance(st.compare, dict) else {}
     fus = [fu for fu in comp.get("open_followups") or [] if fu.get("is_open")]
