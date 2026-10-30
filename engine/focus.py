@@ -147,11 +147,26 @@ def _eligible(store, ids, as_of, shown, taken):
     return out
 
 
-def focus_cards(store, kb, task_text, text, as_of, shown_cards, llm_focus=None):
+def out_of_scope(overlay, role_id, task_text):
+    """-> fact filter for rulebook/kb_overlay.json 'task_focus_scope': facts whose label matches an entry are
+    not promoted for roles outside its only_roles, unless the request names them or its own subject
+    (unless_text: 'pathology resident', 'tumour board', 'chemo').  No role: no filter."""
+    rxs = []
+    for e in overlay.get("task_focus_scope") or []:
+        rx = re.compile(e["label_match"], re.I)
+        why_not = e.get("unless_text") and re.search(e["unless_text"], task_text or "", re.I)
+        if role_id and role_id not in (e.get("only_roles") or []) and not rx.search(task_text or "") and not why_not:
+            rxs.append(rx)
+    return lambda f: any(rx.search(str(f.get("label_en") or "")) for rx in rxs)
+
+
+def focus_cards(store, kb, task_text, text, as_of, shown_cards, llm_focus=None, role_id=None):
     """-> (cards, routing info).  shown_cards: the cards already on the screen (their open facts are not
     repeated)."""
     overlay = getattr(kb, "overlay", None) or {}
     shown = _open_ids(shown_cards)
+    skip = out_of_scope(overlay, role_id, task_text)
+    shown |= {f["id"] for f in store.facts if skip(f)}  # treated as already shown: never promoted
     cards, info = [], {"task_focus": None, "llm_focus": None}
 
     # deterministic: task terms + overlay relevance

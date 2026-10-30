@@ -2160,6 +2160,16 @@
    "source": "TODO-cite"
   }
  ],
+ "task_focus_scope": [
+  {
+   "id": "TS01",
+   "label_match": "histolog|receptor|\\bher2\\b|ki-?67|proliferation|\\btnm\\b|\\bp?t[0-4][a-d]?\\b|\\bg[1-3]\\b|grading|tumou?r extent",
+   "only_roles": ["surgeon", "radiation_oncologist", "medical_oncologist", "gynaecologist", "radiologist"],
+   "unless_text": "patholog|histolog|biops|sample|specimen|tumou?r ?board|oncolog|onkolog|staging|chemo|endocrine therap",
+   "why": "Tumour pathology (histology, receptor status, Ki-67, TNM) guides cancer treatment, not anaesthesia, nursing or rehabilitation: it is left out of 'Relevant to your task' for other roles unless the request names it (challenge example: receptor status left out for the anaesthetist).",
+   "source": "TODO-cite"
+  }
+ ],
  "role_stems": {
   "_note": "Accent-folded word stems; a word starting with one names the role (first such word in the text). Only used when no alias matched. TODO-cite (vocabulary).",
   "cardiologist": [

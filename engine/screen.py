@@ -482,7 +482,7 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
         from .focus import focus_cards
         if not question_only:
             focus, finfo = focus_cards(st, k, u.get("task_text") or "", req["task"], as_of, cards,
-                                       u.get("llm_focus_proposal"))
+                                       u.get("llm_focus_proposal"), role_id=u.get("role_id"))
             u.update(finfo)
             if finfo["llm_focus"]:
                 u["llm_used"] = True
