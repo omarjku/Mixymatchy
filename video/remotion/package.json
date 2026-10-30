@@ -2,7 +2,7 @@
   "name": "second-look-video",
   "private": true,
   "version": "1.0.0",
-  "description": "Code-rendered submission video for Second Look (Remotion).",
+  "description": "Code-rendered submission video for Second Eye (Remotion).",
   "scripts": {
     "metrics": "python3 ../scripts/export_metrics.py",
     "capture": "node ../scripts/capture_app.mjs",

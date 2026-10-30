@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="t">
-  <title id="t">Second Look</title>
+  <title id="t">Second Eye</title>
   <defs>
     <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
     <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
@@ -34,6 +34,8 @@
     <g class="se" fill="#fff">
       <path d="M253 145C245 130 230 128 210 128C185 128 172 140 172 156C172 174 190 180 210 186C236 194 250 203 250 222C250 240 232 247 210 247C188 247 172 240 165 226" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
       <rect x="285" y="114" width="38" height="143" rx="10"/>
+      <rect x="285" y="114" width="99" height="37" rx="14"/>
+      <rect x="285" y="170" width="89" height="33" rx="12"/>
       <rect x="285" y="220" width="101" height="37" rx="14"/>
     </g>
     <rect class="sweep" x="0" y="-40" width="150" height="600" fill="url(#sheen)"/>

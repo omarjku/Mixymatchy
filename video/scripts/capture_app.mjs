@@ -1,4 +1,4 @@
-// Capture the real Second Look app for the "screen" and "switch" scenes.
+// Capture the real Second Eye app for the "screen" and "switch" scenes.
 //
 //   node video/scripts/capture_app.mjs [--root <checkout>] [--port 8765] [--no-build]
 //

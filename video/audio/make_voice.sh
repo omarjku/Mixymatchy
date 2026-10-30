@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Voice-over for the Second Look video, aligned to video/audio/captions.srt.
+# Voice-over for the Second Eye video, aligned to video/audio/captions.srt.
 # macOS only (uses the built-in `say`, voice Samantha, fallback Daniel).
 #
 #   video/audio/make_voice.sh            # -> video/out/audio/voice.wav, then mixes it

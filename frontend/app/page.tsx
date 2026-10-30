@@ -110,7 +110,7 @@ export default function Home() {
   return (
     <main className="mx-auto max-w-7xl p-6">
       <header className="mb-4">
-        <h1 className="text-2xl font-bold">Second Look</h1>
+        <h1 className="text-2xl font-bold">Second Eye</h1>
         <p className="text-sm text-[var(--muted)]">Anna Musterfrau · born 15.03.1959 · 8 documents</p>
       </header>
 

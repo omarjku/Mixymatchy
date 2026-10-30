@@ -1,4 +1,4 @@
-# Frontend plan: Second Look (mobile app)
+# Frontend plan: Second Eye (mobile app)
 
 > **For Zoha and her Claude Code session.** Open Claude in the repo root and say:
 > *"Read docs/FRONTEND.md, docs/INTEGRATION.md, docs/CHALLENGE.md, docs/design/prototype.html and docs/contract/briefing.example.json. Then do Phase 1. Follow the Rules exactly."*
@@ -16,7 +16,7 @@ A clinician types who they are and what they are doing. One screen shows:
 2. **"Not documented" / "Not applicable"** where the letters are silent,
 3. **where the record is wrong**: contradictions, facts the latest letter dropped, open follow-ups.
 
-Pitch: *"Other tools summarise the record. Second Look checks it, for the task in front of you."*
+Pitch: *"Other tools summarise the record. Second Eye checks it, for the task in front of you."*
 
 The backend already answers all 15 test questions correctly in ~20 ms. **The frontend is what the jury sees and remembers.**
 
@@ -53,7 +53,7 @@ The backend already answers all 15 test questions correctly in ~20 ms. **The fro
 
 ## 3. Design direction: "the annotated letter"
 
-The record is a stack of paper discharge letters. Second Look is the senior colleague's review of it: **highlighter** on what matters, **red pen** where the record contradicts itself, **margin notes** for what is missing. Everything else stays quiet.
+The record is a stack of paper discharge letters. Second Eye is the senior colleague's review of it: **highlighter** on what matters, **red pen** where the record contradicts itself, **margin notes** for what is missing. Everything else stays quiet.
 
 See `docs/design/prototype.html` (open in a browser at 390 px) and `docs/design/prototype.png`. Both use invented data.
 

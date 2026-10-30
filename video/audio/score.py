@@ -1,4 +1,4 @@
-"""Procedural score and sound design for the Second Look video.
+"""Procedural score and sound design for the Second Eye video.
 
 120 BPM (one beat = 0.5 s, one bar = 2 s), D minor. Every storyboard boundary is
 an integer second, so sections land on bar lines. Musical arc:
