@@ -275,7 +275,10 @@ def route(text, kb, store, as_of, detail="long", use_llm=True):
     how = "kb_alias_tags"
     llm_note = None
     if use_llm:
-        prop = llm.understand(text, [r["id"] for r in kb.roles], [b["id"] for b in kb.bundles])
+        prop = llm.understand(
+            text, [r["id"] for r in kb.roles], [b["id"] for b in kb.bundles],
+            role_info={r["id"]: "%s (%s)" % (r["name"], ", ".join(r.get("aliases_en", [])[:4])) for r in kb.roles},
+            task_info={b["id"]: "%s. %s" % (b["title"], b.get("description", "")) for b in kb.bundles})
         if prop:
             rid = prop.get("role_id")
             bids = [x for x in prop.get("task_ids") or prop.get("bundle_ids") or [] if x in kb.bundle_by_id]
