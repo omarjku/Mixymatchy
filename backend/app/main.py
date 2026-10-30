@@ -105,7 +105,7 @@ API_PREFIXES = ("auth", "briefing", "documents", "segments", "health", "docs", "
 STATIC_DIR = Path(os.environ["STATIC_DIR"]).resolve() if os.environ.get("STATIC_DIR") else None
 
 if STATIC_DIR:
-    @app.get("/{path:path}", include_in_schema=False)
+    @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     def frontend(path: str):
         first = path.split("/", 1)[0]
         if first in API_PREFIXES:

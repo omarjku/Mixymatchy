@@ -103,6 +103,7 @@ def test_basic_site_gate_is_off_by_default(client):
 def test_spa_fallback(client):
     assert client.get("/").text.startswith("<!doctype html>")
     assert client.get("/results").text.startswith("<!doctype html>")  # deep link
+    assert client.head("/").status_code == 200  # Render health probe
     assert client.get("/hilfe/abc").text.startswith("<!doctype html>")
     assert client.get("/assets/app.js").text == "console.log(1)"
     assert client.get("/assets/missing.js").status_code == 404
