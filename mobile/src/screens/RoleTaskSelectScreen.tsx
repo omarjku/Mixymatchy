@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LanguageSkillIcon } from "@hugeicons/core-free-icons";
+import { AppBar } from "@/components/AppBar";
 import { TaskBar } from "@/components/TaskBar";
 import { Chip } from "@/components/ui/Chip";
 import { roles, type RoleId } from "@/data/roles";
@@ -46,18 +48,20 @@ export function RoleTaskSelectScreen() {
 
   return (
     // Phone: bar pinned to the bottom (thumb reach). Tablet/desktop: one centered composer column.
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pt-[env(safe-area-inset-top)] md:max-w-2xl md:px-8">
-      <header className="flex h-14 items-center justify-between md:h-20">
-        <span className="text-[15px] font-semibold tracking-tight text-primary-deep">{t("app.name")}</span>
-        <button
-          type="button"
-          onClick={toggleLocale}
-          aria-label={`${t("results.language")}: ${locale === "en" ? "English" : "Deutsch"}`}
-          className="h-9 rounded-full border border-line px-3 text-xs font-semibold text-ink-muted hover:border-primary/60 hover:text-primary-deep"
-        >
-          {locale === "en" ? "EN" : "DE"}
-        </button>
-      </header>
+    <>
+    <AppBar
+      contentClassName="md:max-w-2xl"
+      menuActions={[
+        {
+          id: "language",
+          label: t("appbar.language"),
+          icon: LanguageSkillIcon,
+          text: locale === "en" ? "EN" : "DE",
+          onClick: toggleLocale,
+        },
+      ]}
+    />
+    <main className="mx-auto flex min-h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] max-w-md flex-col px-4 md:max-w-2xl md:px-8">
 
       <div className="flex flex-1 flex-col md:justify-center md:pb-[12vh]">
         <section className="mt-6 md:mt-0 md:text-center">
@@ -116,5 +120,6 @@ export function RoleTaskSelectScreen() {
         </div>
       </div>
     </main>
+    </>
   );
 }

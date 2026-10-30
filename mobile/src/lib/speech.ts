@@ -1,7 +1,7 @@
 // Read-aloud (text to speech) via the browser's built-in Web Speech API. No package, no server of ours.
 //
 // Privacy: some browsers' default voices are cloud-based (e.g. Chrome's "Google Deutsch" sends the text
-// to Google). We prefer on-device voices (localService) and only fall back to a cloud voice if none exists.
+// to Google). Only on-device voices (localService) are used; with none, read-aloud is not offered.
 //
 // iOS Safari only allows speech that starts from a user tap. Call unlockSpeech() inside the tap handler
 // (e.g. the send button) so speech triggered later, when results arrive, is allowed to play.
@@ -13,11 +13,12 @@ export function isSpeechSupported(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 }
 
-// A voice in the UI language (German voice for DE, English voice for EN), on-device first.
+// An on-device voice in the UI language (German voice for DE, English voice for EN). Never a cloud voice.
 function pickVoice(): SpeechSynthesisVoice | undefined {
   const prefix = getLocale();
-  const matching = window.speechSynthesis.getVoices().filter((v) => v.lang.replace("_", "-").startsWith(prefix));
-  return matching.find((v) => v.localService) ?? matching[0];
+  return window.speechSynthesis
+    .getVoices()
+    .find((v) => v.localService && v.lang.replace("_", "-").startsWith(prefix));
 }
 
 // A voice in another language would mispronounce drug names and values, so read-aloud is only offered
@@ -50,7 +51,8 @@ export function speak(text: string, events: { onStart?: () => void; onEnd?: () =
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = intlLocale();
   const voice = pickVoice();
-  if (voice) utterance.voice = voice;
+  if (!voice) return; // never let the browser fall back to its default (possibly cloud) voice
+  utterance.voice = voice;
   if (events.onStart) utterance.onstart = events.onStart;
   if (events.onEnd) {
     utterance.onend = events.onEnd;

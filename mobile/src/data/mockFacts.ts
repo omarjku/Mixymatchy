@@ -5,7 +5,7 @@ import type { RoleId } from "@/data/roles";
 
 const anaesthetistBrief: PatientBrief = {
   patientId: "P-10482",
-  patientLabel: "Anna Musterfrau, 58 J.",
+  patientLabel: "Fiktive Testperson A, 58 J.",
   role: "anaesthetist",
   task: "Prämedikation: Mamma-OP",
   generatedAt: "2026-10-29T08:12:00Z",
@@ -100,7 +100,7 @@ const anaesthetistBrief: PatientBrief = {
 
 const pharmacistBrief: PatientBrief = {
   patientId: "P-20917",
-  patientLabel: "Klaus Beispiel, 74 J.",
+  patientLabel: "Fiktive Testperson B, 74 J.",
   role: "pharmacist",
   task: "Medikationsanalyse: Polypharmazie",
   generatedAt: "2026-10-29T08:12:00Z",
@@ -179,7 +179,7 @@ const pharmacistBrief: PatientBrief = {
 
 const surgeonBrief: PatientBrief = {
   patientId: "P-31055",
-  patientLabel: "Maria Muster, 66 J.",
+  patientLabel: "Fiktive Testperson C, 66 J.",
   role: "surgeon",
   task: "OP-Planung: Hüft-TEP rechts",
   generatedAt: "2026-10-29T08:12:00Z",
@@ -234,7 +234,7 @@ const surgeonBrief: PatientBrief = {
 
 const gpBrief: PatientBrief = {
   patientId: "P-40220",
-  patientLabel: "Peter Probe, 49 J.",
+  patientLabel: "Fiktive Testperson D, 49 J.",
   role: "gp",
   task: "Nachsorge: nach Krankenhausaufenthalt",
   generatedAt: "2026-10-29T08:12:00Z",

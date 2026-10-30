@@ -36,6 +36,7 @@ export async function fetchPatientBrief(role: RoleId, task: string, signal?: Abo
   const simulate = import.meta.env.DEV ? readSimulateFlag() : null;
   if (!USE_MOCK && !simulate) {
     const situation = ROLE_EN[role] ? `${ROLE_EN[role]}, ${task}` : task;
+    // Short view: P1 needs plus the P2 "also relevant" group (routing.also_relevant), one request.
     const briefing = await fetchBriefing(situation, "short", signal);
     return toPatientBrief(briefing, role, task, signal);
   }

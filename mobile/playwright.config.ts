@@ -19,6 +19,10 @@ export default defineConfig({
     screenshot: "off",
     trace: "off",
     video: "off",
+    // Use the preinstalled Chromium when the pinned browser cannot be downloaded (PW_CHROMIUM to override).
+    launchOptions: process.env.PW_CHROMIUM !== ""
+      ? { executablePath: process.env.PW_CHROMIUM ?? "/opt/pw-browsers/chromium" }
+      : {},
   },
   webServer: {
     command: `npx vite --port ${new URL(baseURL).port} --strictPort --host 127.0.0.1`,

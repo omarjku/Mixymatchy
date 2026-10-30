@@ -29,4 +29,29 @@
     @apply bg-canvas font-sans text-ink antialiased;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* CSS animations follow the device's reduce-motion setting (motion/react ones do via MotionConfig) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}
+
+/* Highlighter sweep on the cited passage when a letter opens (reduced motion: instant, see above) */
+@keyframes sl-sweep {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+.sl-sweep {
+  background-image: linear-gradient(var(--color-highlighter), var(--color-highlighter));
+  background-repeat: no-repeat;
+  animation: sl-sweep 350ms ease-out;
 }

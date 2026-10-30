@@ -58,6 +58,7 @@ interface BackendFinding {
   explanation: string;
   segment_ids: string[];
   severity: "high" | "medium" | "low";
+  on_screen?: boolean;
 }
 
 export interface BackendBriefing {
@@ -69,8 +70,14 @@ export interface BackendBriefing {
   findings: BackendFinding[];
   stats: Record<string, number>;
   detail?: "short" | "long" | null;
+  task?: string;
   routing?: {
     fallback_note?: string | null;
+    role_label?: string | null;
+    applicability_note?: string | null;
+    applicability?: { passage?: string | null } | null;
+    other_record_issues?: number;
+    also_relevant?: string[];
     anchor_date?: string;
     // clinical gate: "not_authorised" = no clinical role stated; needs/findings are empty
     screen_mode?: string | null;
@@ -79,16 +86,20 @@ export interface BackendBriefing {
   };
 }
 
-interface BackendSegment {
+export interface BackendSegment {
   id: string;
   doc_id: string;
   text: string;
+  start: number;
+  end: number;
 }
 
-interface BackendDocument {
+export interface BackendDocument {
   id: string;
   title: string;
   date: string;
+  department?: string;
+  type?: string;
   text: string;
   segments: BackendSegment[];
 }
@@ -110,7 +121,7 @@ export function fetchBriefing(situation: string, detail: "short" | "long", signa
 // Documents are small (8 letters) and never change, so each is fetched once per session.
 const documentCache = new Map<string, Promise<BackendDocument>>();
 
-function fetchDocument(id: string, signal?: AbortSignal): Promise<BackendDocument> {
+export function fetchDocument(id: string, signal?: AbortSignal): Promise<BackendDocument> {
   let pending = documentCache.get(id);
   if (!pending) {
     pending = getJson<BackendDocument>(`/documents/${encodeURIComponent(id)}`, undefined, signal);
@@ -129,16 +140,18 @@ function segmentIdsOf(briefing: BackendBriefing): string[] {
   }
   briefing.blind_spot.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
   briefing.findings.forEach((f) => f.segment_ids.forEach((s) => ids.add(s)));
+  const passage = briefing.routing?.applicability?.passage;
+  if (passage) ids.add(passage);
   return [...ids];
 }
 
-const docIdOf = (segmentId: string) => segmentId.split(":")[0];
+export const docIdOf = (segmentId: string) => segmentId.split(":")[0];
 
 // Needs with more facts than this are shortened (none of the five demo situations has more than 15).
 const LONG_LIST = 20;
 const LONG_LIST_SHOWN = 8;
 
-function formatDate(iso: string): string {
+export function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return d && m && y ? `${d}.${m}.${y}` : iso;
 }
@@ -146,8 +159,8 @@ function formatDate(iso: string): string {
 type Citer = (segmentIds: string[]) => SourceCitation[];
 
 // Loads every document the briefing cites and returns a function that turns segment ids into citations.
-async function loadCiter(briefing: BackendBriefing, signal?: AbortSignal): Promise<Citer> {
-  const ids = segmentIdsOf(briefing);
+async function loadCiter(briefings: BackendBriefing[], signal?: AbortSignal): Promise<Citer> {
+  const ids = [...new Set(briefings.flatMap(segmentIdsOf))];
   const docs = await Promise.all([...new Set(ids.map(docIdOf))].map((id) => fetchDocument(id, signal)));
   const docById = new Map(docs.map((d) => [d.id, d]));
   const segById = new Map(docs.flatMap((d) => d.segments.map((s) => [s.id, s] as const)));
@@ -156,13 +169,13 @@ async function loadCiter(briefing: BackendBriefing, signal?: AbortSignal): Promi
       const seg = segById.get(id);
       const doc = docById.get(docIdOf(id));
       if (!seg || !doc) return [];
-      return [{ documentId: doc.id, documentLabel: `${doc.title}, ${formatDate(doc.date)}`, excerpt: seg.text }];
+      return [{ documentId: doc.id, documentLabel: `${doc.title}, ${formatDate(doc.date)}`, excerpt: seg.text, segmentId: id }];
     });
 }
 
 const trustOf: Record<BackendTrust, FactTrust> = {
-  consistent: "verified",
-  single: "verified",
+  consistent: "consistent",
+  single: "single",
   conflicting: "conflicting",
   stale: "outdated",
 };
@@ -183,6 +196,7 @@ function toFact(id: string, label: string, f: BackendFact, cite: Citer, need: Ba
     sources,
     note: need.note ?? undefined,
     guideline: guidelineOf(need),
+    priority: need.priority ?? undefined,
   };
 }
 
@@ -195,13 +209,16 @@ function guidelineOf(need: BackendNeed): Fact["guideline"] {
 
 function needToFacts(need: BackendNeed, cite: Citer): Fact[] {
   if (need.status === "not_documented") {
-    return [{ id: need.need, label: need.label, value: null, trust: "not_documented", note: need.note ?? undefined }];
+    return [{
+      id: need.need, label: need.label, value: null, trust: "not_documented", note: need.note ?? undefined,
+      priority: need.priority ?? undefined,
+    }];
   }
   if (need.status === "not_applicable") {
     const sources = cite(need.reason_segment_ids);
     return [{
-      id: need.need, label: need.label, value: `${t("results.notApplicable")}: ${need.reason ?? ""}`.trim(),
-      trust: "verified", source: sources[0], sources,
+      id: need.need, label: need.label, value: need.reason ?? null,
+      trust: "not_applicable", source: sources[0], sources, priority: need.priority ?? undefined,
     }];
   }
 
@@ -213,7 +230,7 @@ function needToFacts(need: BackendNeed, cite: Citer): Fact[] {
     facts.push({
       ...toFact(`${need.need}:${latest.id}`, need.label, latest, cite, need),
       isTimeSeries: true,
-      history: numeric.map((f) => ({ date: f.date ?? "", value: `${f.value}${f.unit ? ` ${f.unit}` : ""}` })),
+      history: historyOf(numeric),
       sources: cite(numeric.flatMap((f) => f.segment_ids)),
     });
     need.facts.filter((f) => !numeric.includes(f)).forEach((f) =>
@@ -226,31 +243,56 @@ function needToFacts(need: BackendNeed, cite: Citer): Fact[] {
     const sources = cite(rest.flatMap((f) => f.segment_ids));
     facts.push({
       id: `${need.need}:more`, label: need.label, value: t("results.moreEntries", { n: rest.length }),
-      trust: "verified", source: sources[0], sources, note: rest.map((f) => f.label_en).join("; "),
+      trust: "single", badgeLabel: "", source: sources[0], sources, note: rest.map((f) => f.label_en).join("; "),
+      priority: need.priority ?? undefined,
     });
   } else {
     need.facts.forEach((f) => facts.push(toFact(`${need.need}:${f.id}`, need.label, f, cite, need)));
   }
+  // History view: a need with two or more dated values in one unit gets their history on its latest value.
+  if (need.shape !== "trend") {
+    const dated = numeric.filter((f) => f.date && (f.unit ?? "") === (numeric[0]?.unit ?? ""));
+    if (dated.length >= 2 && dated.length === numeric.length) {
+      const latest = [...dated].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "")).at(-1)!;
+      const card = facts.find((f) => f.id === `${need.need}:${latest.id}`);
+      if (card) Object.assign(card, { isTimeSeries: true, history: historyOf(dated) });
+    }
+  }
   need.computed.forEach((c, i) => {
     const sources = cite(c.segment_ids);
     facts.push({
-      id: `${need.need}:computed:${i}`, label: c.label, value: c.value, trust: "verified",
-      source: sources[0], sources, note: c.formula, computed: true,
+      id: `${need.need}:computed:${i}`, label: c.label, value: c.value, trust: "consistent",
+      badgeLabel: t("results.computed"), source: sources[0], sources, note: c.formula, computed: true,
+      priority: need.priority ?? undefined,
     });
   });
   return facts;
 }
 
+// Dated values oldest first, number and unit as the backend sends them (value / unit fields).
+function historyOf(facts: BackendFact[]): NonNullable<Fact["history"]> {
+  return [...facts]
+    .filter((f) => f.date && f.value)
+    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""))
+    .map((f) => ({ date: f.date ?? "", value: f.value ?? "", unit: f.unit ?? undefined }));
+}
+
+// P1 needs are the screen; the P2 needs listed in routing.also_relevant form the visible "Also relevant" group.
 export async function toPatientBrief(
   briefing: BackendBriefing,
   role: string,
   task: string,
   signal?: AbortSignal,
 ): Promise<PatientBrief> {
-  const cite = await loadCiter(briefing, signal);
+  const alsoIds = new Set(briefing.routing?.also_relevant ?? []);
+  const isAlso = (n: BackendNeed) => alsoIds.has(n.need);
+  const alsoNeeds = briefing.needs.filter(isAlso);
+  const cite = await loadCiter([briefing], signal);
   const age = briefing.needs.flatMap((n) => n.computed).find((c) => /^age$/i.test(c.label))?.value;
+  // Only what touches this task's screen; the rest is counted in stats.other_record_issues.
+  const onScreen = briefing.findings.filter((f) => f.on_screen !== false);
 
-  const contradictions: Contradiction[] = briefing.findings
+  const contradictions: Contradiction[] = onScreen
     .filter((f) => f.kind === "conflict")
     .map((f) => ({
       id: f.id,
@@ -261,23 +303,32 @@ export async function toPatientBrief(
       tier: f.tier ?? "contradiction",
     }));
 
-  const gaps: RecordGap[] = [
-    ...briefing.findings
-      .filter((f): f is BackendFinding & { kind: RecordGap["kind"] } => f.kind !== "conflict")
-      .map((f) => ({ id: f.id, kind: f.kind, title: f.title, explanation: f.explanation, sources: cite(f.segment_ids) })),
-  ];
+  const gaps: RecordGap[] = onScreen
+    .filter((f): f is BackendFinding & { kind: RecordGap["kind"] } => f.kind !== "conflict")
+    .map((f) => ({ id: f.id, kind: f.kind, title: f.title, explanation: f.explanation, sources: cite(f.segment_ids) }));
 
+  const routing = briefing.routing ?? {};
+  const passage = routing.applicability?.passage;
   return {
     patientId: "0000-0001",
     patientLabel: age ? `Patient 0000-0001, ${age}` : "Patient 0000-0001",
     role,
     task,
-    facts: briefing.needs.flatMap((n) => needToFacts(n, cite)),
+    situation: briefing.situation,
+    facts: briefing.needs.filter((n) => !isAlso(n)).flatMap((n) => needToFacts(n, cite)),
+    alsoRelevant: alsoNeeds.flatMap((n) => needToFacts(n, cite)),
     contradictions,
     gaps,
     stats: briefing.stats,
-    routeNote: briefing.routing?.fallback_note ?? null,
-    // "Stand" = the date of the latest document, the time anchor for "current" values
-    generatedAt: `${briefing.routing?.anchor_date ?? briefing.as_of}T12:00:00`,
+    routeNote: routing.fallback_note ?? null,
+    roleLabel: routing.role_label ?? null,
+    taskLabel: briefing.task ?? null,
+    screenMode: routing.screen_mode ?? null,
+    message: routing.message ?? null,
+    suggestions: routing.suggestions ?? [],
+    applicabilityNote: routing.applicability_note ?? null,
+    applicabilitySources: passage ? cite([passage]) : [],
+    // "As of" = the date of the latest document, the time anchor for "current" values
+    generatedAt: `${routing.anchor_date ?? briefing.as_of}T12:00:00`,
   };
 }

@@ -23,7 +23,7 @@ type IconButtonProps = {
   variant: "icon";
   icon: IconGlyph;
   label: string;
-  tone?: "default" | "flag";
+  tone?: "default" | "flag" | "onBrand";
 };
 
 export type ButtonProps = (TextButtonProps | IconButtonProps) &
@@ -41,6 +41,9 @@ const textStyles = {
 const iconTones = {
   default: "text-ink-muted hover:bg-primary-soft hover:text-primary-deep",
   flag: "text-ink-muted hover:bg-contradiction-soft hover:text-contradiction",
+  // on the periwinkle AppBar: white icon, white tint on hover/press, white focus ring
+  onBrand:
+    "text-primary-ink hover:bg-white/15 hover:text-primary-ink active:bg-white/25 focus-visible:ring-2 focus-visible:ring-white",
 } as const;
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => {

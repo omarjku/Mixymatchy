@@ -17,10 +17,17 @@ export interface PatientCardProps {
   generatedAt: string;
 }
 
-const tiers: { trust: FactTrust; marker: string }[] = [
-  { trust: "verified", marker: "bg-verified" },
-  { trust: "ai_inferred", marker: "border-2 border-dashed border-inferred-border bg-inferred-soft" },
-  { trust: "not_documented", marker: "border-2 border-dashed border-undocumented/60" },
+// Counts by the engine's trust labels. "Not applicable" and calculated values are never counted here
+// (in particular never as consistent / verified).
+const tiers: { trust: FactTrust; marker: string; matches: FactTrust[] }[] = [
+  { trust: "consistent", marker: "bg-verified", matches: ["consistent", "verified"] },
+  { trust: "single", marker: "border-2 border-line bg-surface", matches: ["single"] },
+  {
+    trust: "conflicting",
+    marker: "border-2 border-dashed border-inferred-border bg-inferred-soft",
+    matches: ["conflicting", "outdated", "ai_inferred"],
+  },
+  { trust: "not_documented", marker: "border-2 border-dashed border-undocumented/60", matches: ["not_documented"] },
 ];
 
 export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) {
@@ -46,12 +53,10 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
     };
   }, [open]);
 
-  const counts = tiers.map(({ trust, marker }) => ({
+  const counts = tiers.map(({ trust, marker, matches }) => ({
     trust,
     marker,
-    count: brief.facts.filter((f) =>
-      trust === "ai_inferred" ? ["ai_inferred", "conflicting", "outdated"].includes(f.trust) : f.trust === trust,
-    ).length,
+    count: brief.facts.filter((f) => f.badgeLabel === undefined && matches.includes(f.trust)).length,
   }));
   const series = brief.facts.filter(hasHistory);
   const documents = collectDocuments(brief);
@@ -71,7 +76,7 @@ export function PatientCard({ brief, roleName, generatedAt }: PatientCardProps) 
           heading="h1"
         />
 
-        <div className="mt-4 grid grid-cols-3 gap-2" role="group" aria-label={t("patient.trustSummary")}>
+        <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label={t("patient.trustSummary")}>
           {counts.map(({ trust, marker, count }) => (
             <div key={trust} className="rounded-xl bg-canvas px-2.5 py-2">
               <span className="flex items-center gap-1.5">

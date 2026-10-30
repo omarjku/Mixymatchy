@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { roles } from "@/data/roles";
 import { t } from "@/i18n/strings";
 import { BriefTimeoutError, fetchPatientBriefWithTimeout } from "@/lib/api";
+import { setResults } from "@/lib/session";
 import type { BriefRequest, ResultsState } from "@/types/request";
 
 // Fetches the brief, showing a skeleton in the shape of the results screen, then replaces itself with
@@ -26,7 +27,8 @@ export function LoadingScreen() {
     fetchPatientBriefWithTimeout(request.role, request.task, controller.signal)
       .then((brief) => {
         const state: ResultsState = { brief, readAloud: request.readAloud };
-        navigate("/results", { replace: true, state });
+        setResults(state); // memory only: patient data never goes into history.state
+        navigate("/results", { replace: true });
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return; // screen left or re-run; not a failure

@@ -11,7 +11,7 @@ import type { Contradiction, SourceCitation } from "@/types/fact";
 
 export interface ContradictionCardProps {
   contradiction: Contradiction;
-  onPressSource: (source: SourceCitation) => void;
+  onPressSource: (source: SourceCitation, all: SourceCitation[]) => void;
 }
 
 const severityStyles: Record<NonNullable<Contradiction["severity"]>, string> = {
@@ -44,13 +44,20 @@ export function ContradictionCard({ contradiction, onPressSource }: Contradictio
         <p className="mt-1 text-[14px] leading-snug text-ink-muted">{contradiction.explanation}</p>
       )}
 
-      {/* stacked on phones, side by side from tablet width so the passages can be compared directly */}
-      <ul className="mt-3 grid gap-2 md:grid-cols-2">
+      {/* side by side, so the passages can be compared directly; each opens its letter */}
+      <ul
+        className={cn(
+          "mt-3 grid gap-2",
+          contradiction.conflictingSources.length >= 2 ? "grid-cols-2" : "",
+        )}
+        data-passages={contradiction.conflictingSources.length}
+      >
         {contradiction.conflictingSources.map((source) => (
-          <li key={source.documentId + source.excerpt}>
+          <li key={source.segmentId ?? source.documentId + source.excerpt}>
             <button
               type="button"
-              onClick={() => onPressSource(source)}
+              data-source
+              onClick={() => onPressSource(source, contradiction.conflictingSources)}
               className={cn(
                 "h-full w-full rounded-xl border border-contradiction-border/50 bg-surface p-3 text-left transition-colors",
                 "hover:border-contradiction-border focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
@@ -60,7 +67,12 @@ export function ContradictionCard({ contradiction, onPressSource }: Contradictio
                 <Icon icon={File01Icon} size={14} />
                 {source.documentLabel}
               </span>
-              <span className="mt-1 block text-[15px] leading-snug text-ink">„{source.excerpt}“</span>
+              <span lang="de" className="mt-1 block break-words font-serif text-[14px] leading-snug text-ink">
+                „{source.excerpt}“
+              </span>
+              <span className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-primary-deep underline underline-offset-2">
+                {t("results.source")}
+              </span>
             </button>
           </li>
         ))}

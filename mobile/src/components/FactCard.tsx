@@ -16,11 +16,14 @@ export interface FactCardProps {
   showHistory?: boolean; // "Verlauf" view: add the value history when the fact has one
   onPressSource: (fact: Fact) => void;
   onPressGuideline: (fact: Fact) => void;
-  onPressFlag: (fact: Fact) => void;
+  onPressFlag?: (fact: Fact) => void; // hidden until flagging is wired to a backend
 }
 
 const tones: Record<FactTrust, CardTone> = {
   verified: "verified",
+  consistent: "verified",
+  single: "default",
+  not_applicable: "undocumented",
   ai_inferred: "inferred",
   conflicting: "contradiction",
   outdated: "inferred",
@@ -29,12 +32,18 @@ const tones: Record<FactTrust, CardTone> = {
 
 export function FactCard({ fact, showHistory = false, onPressSource, onPressGuideline, onPressFlag }: FactCardProps) {
   const documented = fact.trust !== "not_documented";
+  const notApplicable = fact.trust === "not_applicable";
 
   return (
-    <Card tone={tones[fact.trust]} className="relative pr-2">
-      <div className="pr-11">
+    <Card tone={tones[fact.trust]} className="relative pr-2" data-fact={fact.id} data-trust={fact.trust}>
+      <div className={onPressFlag ? "pr-11" : "pr-2"}>
         <h3 className="text-sm text-ink-muted">{fact.label}</h3>
-        {documented ? (
+        {notApplicable ? (
+          <p className="mt-1 text-[17px] font-medium leading-snug text-ink-muted">
+            {t("trust.not_applicable")}
+            {fact.value ? `: ${fact.value}` : ""}
+          </p>
+        ) : documented ? (
           <p className="mt-1 text-[17px] font-semibold leading-snug text-ink">{fact.value}</p>
         ) : (
           <p className="mt-1 text-[17px] font-medium leading-snug text-undocumented">{t("trust.not_documented")}</p>
@@ -54,23 +63,30 @@ export function FactCard({ fact, showHistory = false, onPressSource, onPressGuid
         </div>
       )}
 
-      <Button
-        variant="icon"
-        icon={Flag02Icon}
-        tone="flag"
-        label={`${t("action.flag")}: ${fact.label}`}
-        onClick={() => onPressFlag(fact)}
-        className="absolute right-1.5 top-1.5"
-      />
+      {onPressFlag && (
+        <Button
+          variant="icon"
+          icon={Flag02Icon}
+          tone="flag"
+          label={`${t("action.flag")}: ${fact.label}`}
+          onClick={() => onPressFlag(fact)}
+          className="absolute right-1.5 top-1.5"
+        />
+      )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Badge variant={fact.trust} />
+        {fact.badgeLabel === undefined ? (
+          <Badge variant={fact.trust} />
+        ) : (
+          fact.badgeLabel && <Badge variant="neutral">{fact.badgeLabel}</Badge>
+        )}
         {documented && fact.source && (
           <CitationButton
             icon={File01Icon}
-            label={t("results.source")}
+            label={notApplicable ? t("results.evidence") : t("results.source")}
             ariaLabel={`${t("action.source")}: ${fact.source.documentLabel}`}
             onClick={() => onPressSource(fact)}
+            data-source
             className="text-primary-deep hover:bg-primary-soft"
           />
         )}
@@ -94,7 +110,9 @@ function CitationButton({
   ariaLabel,
   onClick,
   className,
+  ...rest
 }: {
+  "data-source"?: boolean;
   icon: IconGlyph;
   label: string;
   ariaLabel: string;
@@ -104,6 +122,7 @@ function CitationButton({
   return (
     <button
       type="button"
+      {...rest}
       onClick={onClick}
       aria-label={ariaLabel}
       title={ariaLabel}

@@ -34,6 +34,7 @@ async function apiToken(): Promise<string> {
 }
 
 export const FACTS_HEADING = /What you need|Erforderliche Angaben/;
+export const RESULT_READY = '[data-read-as]';
 export const SOURCE_BUTTON = /^(Source|Quelle)$/;
 
 export interface Situation {
@@ -102,7 +103,7 @@ export async function submitSituation(page: Page, role: RoleKey, text: string): 
   await box.fill(text);
   const start = Date.now();
   await box.press("Enter");
-  await expect(page.getByRole("heading", { name: FACTS_HEADING }).first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator(RESULT_READY)).toBeVisible({ timeout: 10_000 });
   return Date.now() - start;
 }
 
