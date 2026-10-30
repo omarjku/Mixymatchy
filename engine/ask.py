@@ -27,7 +27,7 @@ ADMIN_CATEGORIES = {"case_number", "encounter", "date_of_birth", "age"}  # never
 QUESTION_RX = re.compile(
     r"\?|(?:^|[,:;.]\s*|\b(?:and|und)\s+)(?:does|did|do|has|had|have|is|was|were|are|any|what|which|when|"
     r"how|can|could|tell me|show me|check whether|check if|hat|hatte|ist|war|gibt es|gab es|wann|welche[rsn]?|"
-    r"wie|liegt)\b")
+    r"wie|liegt|i (?:want|need|would like) to know|ich (?:möchte|will) wissen)\b")
 
 # the subject follows these openings; the first pattern that matches wins
 _WHO = r"(?:she|he|they|the patient|patient|pt|the pt|sie|er|die patientin|der patient|pat\.?)"
@@ -43,6 +43,7 @@ SUBJECT_PATTERNS = [re.compile(p) for p in (
     r"\b(?:any|history of|hx of|known|evidence of|signs? of|record of|mention of|documented)\s+(.+)",
     r"\b(?:hat|hatte)\s+(?:sie|er|die patientin|der patient)\s+(?:je|jemals|schon|bereits|aktuell)?\s*(.+)",
     r"\b(?:gibt es|gab es|liegt)\s+(.+)",
+    r"\b(?:want|need|would like) to know (?:about\s+|whether\s+|if\s+)?(?:her|his|their|the patient'?s?|the)?\s*(.+)",
     r"\b(?:was ist|wie ist|wie hoch ist|welche[rsn]?)\s+(?:ihr|ihre|sein|seine|der|die|das)?\s*(.+)",
 )]
 
@@ -227,6 +228,24 @@ def covered(subject, kb, named_topics, bundle_tags):
     if match_topics(s, getattr(kb, "overlay", None) or {}):
         return True
     return any(fold(norm_text(t)) in s for t in bundle_tags if len(t) > 3)
+
+
+def mentioned(store, subject, fact_ids):
+    """Does any of these facts speak about the subject (a search word in its quote, the entry's label pattern or
+    the subject's own words in its English label)?  A topic card that only says 'good general condition' does
+    not answer 'any falls?'."""
+    words, _lex = search_words(subject)
+    rxs = [_word_rx(w) for w in words]
+    labels = [e["label"] for e in _entries(subject) if e["label"]]
+    for fid in fact_ids:
+        f = store.fact_by_id.get(fid)
+        if not f:
+            continue
+        eng = fold(re.sub(r"\([^)]*\)", "", str(f.get("label_en") or "")).lower())
+        if (any(r.search(fold(str(f.get("quote") or "").lower())) for r in rxs)
+                or any(rx.search(eng) for rx in labels) or _phrase_in(fold(subject), eng)):
+            return True
+    return False
 
 
 def answer_card(store, subject, as_of=None, ai_words=()):
