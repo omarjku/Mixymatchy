@@ -83,7 +83,8 @@ class Display(unittest.TestCase):
     def test_laterality_leads_with_the_finding(self):
         c = card(screen(EMERGENCY), "carotid_stenosis")
         self.assertTrue(c["value_en"].startswith("Left: Carotid artery stenosis, left, 60%"))
-        self.assertNotIn("statement", c["value_en"])
+        self.assertNotIn("(9 statements)", c["value_en"])  # counts are not the headline
+        self.assertIn("right in 2 of 11 statements", c["value_en"])  # the minority side is not a second finding
         self.assertEqual(max(c["sides"], key=c["sides"].get), "left")
 
 

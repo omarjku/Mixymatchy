@@ -810,9 +810,13 @@ def laterality(store, card, facts):
         head = [best(main_side)]
         head += [best(s) for s, _ in ranked[1:] if best(s) is not None and best(s) is not head[0]]
         lead = "%s: %s" % (main_side.capitalize(), shown(head[0]))
-        others = ["%s: %s" % (s.capitalize(), shown(best(s))) for s, _ in ranked[1:] if best(s) is not None]
+        # a minority side is not presented as a second finding: it says how few statements give it (often the
+        # side-swap that 'Letters disagree' flags)
+        total = sum(sides.values())
+        others = ["%s in %d of %d statements: %s" % (s, n, total, shown(best(s))) for s, n in ranked[1:]
+                  if best(s) is not None]
         rest = [shown(it) for it in card["items"] if all(it is not h for h in head)][:6]
-        card["value_en"] = "; ".join([lead] + ["also " + o[:1].lower() + o[1:] for o in others]) + (
+        card["value_en"] = "; ".join([lead] + others) + (
             " | " + "; ".join(rest) if rest else "")
     return card
 
