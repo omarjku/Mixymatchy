@@ -258,6 +258,23 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     u["clinical_gate"] = gate
     if not gate["clinical"]:
         return not_authorised_screen(u, gate, detail, t0)
+    # no task, no data (engine/intent.py, docs/DECISIONS.md 19): a greeting, filler or a role alone never opens
+    # the record.  The optional LLM may only restrict: when the rules found no KB task it can say the request is
+    # not an actionable clinical task; it can never turn this screen into data.
+    from . import focus as F
+    from . import intent as I
+    alias = (u.get("role_match") or {}).get("matched") if rules_role else None
+    named_pre = F.match_topics(u.get("task_text") or "", getattr(k, "overlay", None) or {})
+    intent = I.has_task(req["task"], k, st, aliases=[alias] if alias else [], named_topics=named_pre,
+                        applicability_items=app["items"])
+    llm_chk = u.get("llm_task_check")
+    u["task_check"] = {"actionable": intent["actionable"], "reason": intent["reason"], "words": intent["words"][:8]}
+    if not intent["actionable"]:
+        return needs_task_screen(u, intent["reason"], detail, t0)
+    rules_task = intent["reason"] != "clinical content word" or bool(u.get("bundles_matched"))
+    if llm_chk and llm_chk.get("actionable") is False and not rules_task:
+        return needs_task_screen(u, "LLM: not an actionable clinical task", detail, t0,
+                                 llm_reason=llm_chk.get("reason") or "not an actionable clinical task")
     # recognised role (or a clinical requester the lexicon knows), task wording not recognised: the role's own
     # typical task (rulebook/kb_overlay.json role_fallback_bundles, else its first default bundle) with a
     # visible note, instead of the generic safety summary
@@ -271,10 +288,11 @@ def build_screen_kb(text, as_of=None, use_llm=True, detail="short"):
     defaults = [b for b in cand if b in k.bundle_by_id]
     if (u["tasks_from"] == "fallback" and defaults and not app["items"]
             and not OVERVIEW_RX.search(u.get("task_text") or "")):
-        llm_focus = u.get("llm_focus_proposal")
+        llm_focus, tcheck = u.get("llm_focus_proposal"), u.get("task_check")
         u = route(req["task"], k, st, as_of, detail=detail, use_llm=False, force_bundles=defaults,
                   force_role=role["id"] if role else None)
         u.update(text=text, as_of_date=as_of, anchor_date=anchor, clinical_gate=gate, llm_focus_proposal=llm_focus,
+                 task_check=tcheck,
                  ignored_instructions=req["instructions"], excluded_text=req["excluded_text"] or None)
         info = u.pop("slot_info")
         u["suggestions"] = _suggest_bundles(k, u.get("task_text"), role)
@@ -538,6 +556,25 @@ def other_patient_screen(text, req, detail, t0):
     scr["understood"].update(fallback_note=msg, not_authorised_message=msg, role_label="Different patient",
                              task_labels=["Different patient"], other_patient=req["other_patient"])
     scr["proof_bar"]["summary_en"] = "No patient facts shown: the request is about a different patient."
+    return scr
+
+
+def needs_task_screen(u, reason, detail, t0, llm_reason=None):
+    """Clinical requester, no recognisable task: zero patient facts, no counts, a request to name the task."""
+    from . import intent as I
+    gate = u.get("clinical_gate") or {}
+    role_id = u.get("role_id") if u.get("role_id") not in (None, "other") else None
+    label = (u.get("role_label") if role_id else None) or gate.get("label") or "Clinician"
+    scr = not_authorised_screen(u, gate, detail, t0)
+    u = scr["understood"]
+    u.update({"role_id": role_id or "other", "role_label": label, "task_labels": ["Task not stated"],
+              "tasks_from": "needs_task", "screen_mode": "needs_task", "suggestions": list(I.NEEDS_TASK_SUGGESTIONS),
+              "fallback_note": I.NEEDS_TASK_MESSAGE, "not_authorised_message": None,
+              "needs_task_message": I.NEEDS_TASK_MESSAGE, "needs_task_reason": reason,
+              "llm_used": bool(llm_reason), "llm_reason": llm_reason})
+    scr["screen_mode"] = "needs_task"
+    scr["message"] = I.NEEDS_TASK_MESSAGE
+    scr["proof_bar"]["summary_en"] = "No patient facts shown: no clinical task stated."
     return scr
 
 

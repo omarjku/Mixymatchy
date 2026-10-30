@@ -8,7 +8,8 @@
     "Decision (engine/clinical.py): KB role or clinical term or no role -> see the engine docstring. When several role words appear, the first one in the text decides; an explicit non-clinical requester named first is refused.",
     "Generic keywords only; no patient content.",
     "Multilingual (TODO-cite / review by the medical team): clinical_intl / non_clinical_intl hold French, Spanish, Italian, Turkish and Arabic words. Matching is accent-folded (médecin = medecin, kardiyoloğ = kardiyolog; engine/understand.norm_text); terms of 6+ characters also match as a word prefix (Turkish / Romance inflections: doktoru, infirmières); Arabic terms also match with the article/conjunction prefixes (ال, و, ب, ل) and common suffixes (ة, ات, ين).",
-    "Specialty / service names (sports medicine, travel clinic, palliative care, ...) count as a clinical requester: a department asking for its own care task. A bare specialty word without a service word ('oncology') does not."
+    "Specialty / service names (sports medicine, travel clinic, palliative care, ...) count as a clinical requester: a department asking for its own care task. A bare specialty word without a service word ('oncology') does not.",
+    "Self-description overrides (engine/clinical.py self_described_non_clinical): a non-clinical term the requester uses about themselves anywhere in the text ('I am a nurse and her neighbour', 'I'm a doctor (I actually deliver pizza)') refuses the request even after a clinical role. Occupations added for this (pizza, courier, ...): TODO-cite."
   ],
   "patterns": {
     "_note": "Single words. Excluded words are checked first (non-clinical or not a person).",
@@ -392,7 +393,24 @@
     "my company",
     "her employer",
     "secretary",
-    "receptionist"
+    "receptionist",
+    "pizza",
+    "pizza delivery",
+    "delivery driver",
+    "courier",
+    "taxi driver",
+    "cashier",
+    "waiter",
+    "waitress",
+    "bartender",
+    "plumber",
+    "electrician",
+    "mechanic",
+    "accountant",
+    "engineer",
+    "programmer",
+    "software developer",
+    "shop assistant"
   ],
   "non_clinical_de": [
     "Feuerwehr",
@@ -479,7 +497,22 @@
     "Staatsanwaltschaft",
     "Staatsanwalt",
     "Forensik",
-    "Gutachter"
+    "Gutachter",
+    "Pizzalieferant",
+    "Pizzabote",
+    "Lieferant",
+    "Kurier",
+    "Taxifahrer",
+    "Kellner",
+    "Kellnerin",
+    "Installateur",
+    "Elektriker",
+    "Mechaniker",
+    "Buchhalter",
+    "Ingenieur",
+    "Programmierer",
+    "Verkäufer",
+    "Verkäuferin"
   ],
   "clinical_intl": [
     "medecin",

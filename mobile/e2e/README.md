@@ -9,7 +9,7 @@ Playwright suite for docs/FRONTEND.md §6. Runs against the real backend; no moc
 | source viewer | several passages: all marked, Next steps between them; desktop opens a side pane |
 | contradictions | both passages side by side, each opens its letter |
 | language toggle | English default, DE toggle and back |
-| banners | not authorised (firefighter), not applicable (prostate, female patient), unknown role label (never GP), suggestions for an unrecognised task |
+| banners | not authorised (firefighter), no task (chip Anaesthetist + "hi": needs_task banner, no patient card), not applicable (prostate, female patient), unknown role label (never GP), suggestions for an unrecognised task |
 | speed | submit to "What you need / Erforderliche Angaben" visible < 2 s |
 | unseen situations | the 15 situations in `eval/unseen_situations.json`, typed via "Other role / Andere Rolle", render with no console or page errors |
 | accessibility | axe (WCAG 2 A/AA) on the start and results screens: no serious or critical violations |

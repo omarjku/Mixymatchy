@@ -6,6 +6,12 @@ one-line reason; code validates every id again.  It never produces patient facts
 'not documented' decisions, and it cannot authorise a requester: the clinical gate (engine/clinical.py)
 decides on the text alone.
 
+Task check (docs/DECISIONS.md 19, 'No task, no data'): the schema also asks `actionable_clinical_task`
+(boolean) + `task_reason` (short): does the request name a clinical task at all (a greeting, filler, test
+input or a bare role does not).  It can only RESTRICT: engine/screen.py switches to the 'needs_task' screen
+when the rules found no KB task and the model says false.  It never turns needs_task / not_authorised into
+data; timeout / error -> the rules result.
+
 Focus facts: with the record's concept labels (engine/focus.concepts: deduplicated English diagnosis labels
 plus result/plan categories, short labels only, no other patient text) the schema also asks for
 `focus_concepts`, 0-5 labels from that enum.  Code keeps only labels of the record (max MAX_FOCUS) and
@@ -128,6 +134,10 @@ def static_prompt(kb, concepts=()):
         "- bundle_ids: 1-3 task bundles that match what the person is doing, most relevant first; "
         "an empty list if no bundle fits.\n"
         "- reason: one short plain-English line (max 20 words) explaining the reading, without patient facts.\n"
+        "- actionable_clinical_task: true only if the request states or clearly implies a clinical task or "
+        "question about the patient (e.g. pre-op check, medication review, 'anything I should worry about before "
+        "surgery'); false for a greeting, filler, a test message, gibberish or a role with no task.\n"
+        "- task_reason: max 12 words, why the request is or is not an actionable clinical task.\n"
         + ("- focus_concepts: 0-5 labels, copied exactly from the record concept list, that this person needs "
            "highlighted for this task, most important first: especially a condition the task bundles may not "
            "cover but that changes the plan (e.g. a comorbidity that is a caution for the planned treatment, "
@@ -144,8 +154,10 @@ def static_prompt(kb, concepts=()):
             "role_id": {"type": "string", "enum": role_ids + [NO_ROLE]},
             "bundle_ids": {"type": "array", "items": {"type": "string", "enum": bundle_ids}},
             "reason": {"type": "string"},
+            "actionable_clinical_task": {"type": "boolean"},
+            "task_reason": {"type": "string"},
         },
-        "required": ["role_id", "bundle_ids", "reason"],
+        "required": ["role_id", "bundle_ids", "reason", "actionable_clinical_task", "task_reason"],
         "additionalProperties": False,
     }
     if concepts:  # 0-5 is enforced in validate() (array length constraints are not supported by the API)
@@ -170,7 +182,8 @@ def request_params(text, kb, concepts=()):
 
 def validate(raw, kb, concepts=()):
     """Untrusted model output -> {"role_id": str|None, "bundle_ids": [...], "reason": str,
-    "focus_concepts": [...]} or None.  focus_concepts: only labels of this record, deduplicated, at most
+    "focus_concepts": [...], "actionable_clinical_task": bool|None, "task_reason": str} or None.
+    actionable_clinical_task: None when missing or not a boolean (no restriction).  focus_concepts: only labels of this record, deduplicated, at most
     MAX_FOCUS."""
     _s, _schema, role_ids, bundle_ids, concepts = static_prompt(kb, concepts)
     if not isinstance(raw, dict):
@@ -190,7 +203,12 @@ def validate(raw, kb, concepts=()):
     for x in given:
         if isinstance(x, str) and x in allowed and x not in focus:
             focus.append(x)
-    return {"role_id": rid, "bundle_ids": bids[:MAX_BUNDLES], "reason": reason, "focus_concepts": focus[:MAX_FOCUS]}
+    act = raw.get("actionable_clinical_task")
+    act = act if isinstance(act, bool) else None
+    treason = raw.get("task_reason")
+    treason = _short(treason, MAX_REASON) if isinstance(treason, str) else ""
+    return {"role_id": rid, "bundle_ids": bids[:MAX_BUNDLES], "reason": reason, "focus_concepts": focus[:MAX_FOCUS],
+            "actionable_clinical_task": act, "task_reason": treason}
 
 
 def _call(params):

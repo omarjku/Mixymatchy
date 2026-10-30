@@ -27,6 +27,9 @@ Mapping rules (documented once, applied everywhere)
   open follow-ups      -> Finding(kind=followup)
   clinical gate        -> screen_mode "not_authorised" (no clinical role stated): no needs, findings or
                           blind spot; routing.message / routing.suggestions say what to type instead
+  no task, no data     -> screen_mode "needs_task" (clinical role but no recognisable clinical task: greeting,
+                          filler, role only; docs/DECISIONS.md 19): same as not_authorised, its own message
+  gated screens        -> no as_of / anchor date either (the record's dates are patient data)
   task scope (KB)      -> contradictions, blind-spot items and open follow-ups that touch no slot on this
                           screen are counted in stats.other_record_issues and listed with on_screen=False
                           in the long view only
@@ -389,6 +392,9 @@ def stats_of(b: Briefing, facts_dropped: int, task_concepts: int | None, other_i
     }
 
 
+GATED_MODES = ("not_authorised", "needs_task")
+
+
 def _routing(screen: dict) -> dict:
     u = screen["understood"]
     if screen.get("rulebook") != "kb":
@@ -424,13 +430,16 @@ def build_briefing(situation: str, as_of: str | None = None, use_llm: bool | Non
         if c["need"] not in seen:
             seen.add(c["need"])
             cards.append(c)
-    found, blind = findings(st, screen)
+    gated = screen.get("screen_mode") in GATED_MODES  # zero patient data: no counts or dates from the record either
+    found, blind = ([], []) if gated else findings(st, screen)
     b = Briefing(situation=situation, role=u.get("role_id") or "other",
-                 task=", ".join(u.get("task_labels") or []) or situation, as_of=u.get("as_of_date") or "",
+                 task=", ".join(u.get("task_labels") or []) or situation,
+                 as_of="" if gated else (u.get("as_of_date") or ""),
                  needs=[need_result(st, c) for c in cards], blind_spot=blind, findings=found,
                  detail=screen.get("detail"), routing=_routing(screen))
     bs = screen.get("blind_spot") or {}
-    gated = screen.get("screen_mode") == "not_authorised"  # no counts derived from the record either
+    if gated:
+        b.routing["anchor_date"] = None
     b.stats = stats_of(b, 0 if gated else len(st.removed), bs.get("of_total_problems"),
                        screen.get("other_record_issues", 0))
     b.stats["engine_ms"] = screen.get("timing_ms")

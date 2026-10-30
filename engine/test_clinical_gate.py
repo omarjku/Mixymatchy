@@ -87,7 +87,7 @@ class TestClinical(unittest.TestCase):
         self.assertEqual(match_role(norm_text("anesthesiologst here"), k)[0], "anaesthetist")  # typos still match
 
     def test_kb_roles_unchanged(self):
-        for text, rid in (("Family doctor, diabetes review", "gp"), ("I am a nurse and her neighbour", "ward_nurse"),
+        for text, rid in (("Family doctor, diabetes review", "gp"), ("I am a nurse, admission handover", "ward_nurse"),
                           ("GP, prostate exam", "gp")):
             s = screen(text)
             with self.subTest(text=text):
