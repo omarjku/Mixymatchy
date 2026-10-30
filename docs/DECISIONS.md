@@ -42,5 +42,11 @@ Submission UI = Zoha's `mobile/` app on main (backend-wired). The Next.js `front
     - Named topics inside the role's own task keep its bundle ("oncologist: receptor status" stays B11 instead of the core summary).
     - A question asking for a judgement (`task_intent.json` `judgement`: clearance, fit to, yes or no, Sportfreigabe ...) keeps the role's view and gets no word-search cards; not used by the gate.
     - Holdout v2.1 125 -> 136/234; official 15/15, v1 170/170, key facts 15/15, red-team unchanged.
+23. **Statistics (30 Oct, organisers' sheet "statistics-worth-displaying"; engine/stats.py):** arithmetic on verified facts only, each result a computed line linking every input passage; shown on its card and, marked `key`, in the key facts (each statistic once per screen).
+    - Daily dose change on every medication card (`current_meds`, `med_changes`): German schedules (1-0-1, 1-0-1/2, 1 0 1/2 0, 0-1-0) x dose -> daily total on the earliest and the latest list of a drug, e.g. Candesartan 24 -> 32 mg/day: +8 mg/day (+33%). Needs two lists dated by the as-of date. The prescribed schedule, not adherence or dose appropriateness.
+    - Recorded vs calculated BMI per letter with exactly one height, weight and BMI (`stats: ["bmi_check"]` on weight and height_bmi): 29.4 vs 26.99 (+2.41, inconsistent), 29 vs 22.91 (+6.09, inconsistent), 22.8 vs 22.84 (agrees within 0.5). Tolerance 0.5 kg/m² is a data-quality tolerance, not a clinical threshold; the recorded value is never replaced; the counted contradiction stays. The newest letter's check goes into the key facts.
+    - Blood pressure day vs night of one 24-h report (`stats: ["bp_day_night"]` on vitals_bp_hr): day 140/88, night 128/80 mmHg: -12/-8 mmHg (-8.6% / -9.1% of the daytime mean); never pooled with admission readings or peaks; only where the BP card is on the screen.
+    - Weight change also as a percentage of the first value: -12 kg (-15.4%) over 10 months.
+    - HbA1c, ejection fraction and height stay dated facts: no trend or change (170 / 171 cm is not a change).
 
 Working mode: commit straight to `main` after the full test suite passes; checkpoints are branches `checkpoint/N-*`.
