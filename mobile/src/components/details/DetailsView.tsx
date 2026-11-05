@@ -1,5 +1,6 @@
 import { CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { ContradictionCard } from "@/components/ContradictionCard";
+import { ChangeFlow } from "@/components/details/ChangeFlow";
 import { parseGermanNumber } from "@/components/Sparkline";
 import { hasHistory } from "@/components/ValueHistory";
 import { intlLocale } from "@/i18n/locale";
@@ -71,6 +72,15 @@ export default function DetailsView({ brief, onOpenSources }: DetailsViewProps) 
                     onOpenSources={onOpenSources}
                   />
                 </div>
+                <ChangeFlow
+                  title={fact.label}
+                  steps={[...(fact.superseded ?? []), ...(fact.rows ?? []).filter((r) => !r.computed)].map((r) => ({
+                    date: r.date,
+                    value: r.text,
+                    sources: r.sources,
+                  }))}
+                  onOpenSources={onOpenSources}
+                />
               </li>
             ))}
           </ul>
@@ -239,6 +249,17 @@ function TrendBlock({ fact, onOpenSources }: { fact: Fact; onOpenSources: OpenSo
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* one source per reading when the brief has one for each, otherwise the latest reading links the fact */}
+      <ChangeFlow
+        title={fact.label}
+        steps={points.map((p, i) => ({
+          date: formatDate(p.date),
+          value: withUnit(formatNumber(p.value, decimals)),
+          sources: sources.length === points.length ? [sources[i]] : i === points.length - 1 ? sources.slice(0, 1) : [],
+        }))}
+        onOpenSources={onOpenSources}
+      />
 
       {fact.trend?.formula && (
         <p className="mt-1 text-[13px] text-ink-muted">
